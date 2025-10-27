@@ -123,7 +123,8 @@ class StoryboardProcessorService:
         # Call TTS
         audio_path = await self.core.tts(
             text=frame.narration,
-            voice=config.voice_id
+            voice=config.voice_id,
+            rate="+20%",
         )
         
         frame.audio_path = audio_path

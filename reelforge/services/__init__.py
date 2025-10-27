@@ -4,9 +4,9 @@ ReelForge Services
 Unified service layer providing simplified access to capabilities.
 """
 
-from reelforge.services.base import BaseService
-from reelforge.services.llm import LLMService
-from reelforge.services.tts import TTSService
+from reelforge.services.comfy_base_service import ComfyBaseService
+from reelforge.services.llm_service import LLMService
+from reelforge.services.tts_service import TTSService
 from reelforge.services.image import ImageService
 from reelforge.services.video import VideoService
 from reelforge.services.narration_generator import NarrationGeneratorService
@@ -16,7 +16,7 @@ from reelforge.services.storyboard_processor import StoryboardProcessorService
 from reelforge.services.video_generator import VideoGeneratorService
 
 __all__ = [
-    "BaseService",
+    "ComfyBaseService",
     "LLMService",
     "TTSService",
     "ImageService",

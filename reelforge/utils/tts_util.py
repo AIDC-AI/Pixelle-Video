@@ -1,25 +1,16 @@
 """
-TTS Capabilities using edge-tts
+Edge TTS Utility - Temporarily not used
 
-edge-tts provides free access to Microsoft Edge's online text-to-speech service:
-- 400+ voices across 100+ languages
-- Natural sounding speech
-- No API key required
-- Free to use
-
-Convention: Tool names must be tts_{id}
+This is the original edge-tts implementation, kept here for potential future use.
+Currently, TTS service uses ComfyUI workflows only.
 """
 
 import asyncio
-import base64
 import ssl
-import certifi
-import edge_tts
+import edge_tts as edge_tts_sdk
 from loguru import logger
-from pydantic import Field
 from aiohttp import WSServerHandshakeError, ClientResponseError
 
-from reelforge.core.mcp_server import reelforge_mcp
 
 # Global flag for SSL verification (set to False for development only)
 _SSL_VERIFY_ENABLED = False
@@ -29,35 +20,39 @@ _RETRY_COUNT = 3       # Default retry count
 _RETRY_DELAY = 2.0     # Retry delay in seconds
 
 
-@reelforge_mcp.tool(
-    description="Convert text to speech using Microsoft Edge TTS - free and natural sounding",
-    meta={
-        "reelforge": {
-            "display_name": "Edge TTS",
-            "description": "Microsoft Edge Text-to-Speech - 免费且音质自然",
-            "is_default": True,
-        }
-    },
-)
-async def tts_edge(
-    text: str = Field(description="Text to convert to speech"),
-    voice: str = Field(default="zh-CN-YunjianNeural", description="Voice ID (e.g., zh-CN-YunjianNeural, en-US-JennyNeural)"),
-    rate: str = Field(default="+0%", description="Speech rate (e.g., +0%, +50%, -20%)"),
-    volume: str = Field(default="+0%", description="Speech volume (e.g., +0%, +50%, -20%)"),
-    pitch: str = Field(default="+0Hz", description="Speech pitch (e.g., +0Hz, +10Hz, -5Hz)"),
-    retry_count: int = Field(default=_RETRY_COUNT, description="Number of retries on failure (default: 3)"),
-    retry_delay: float = Field(default=_RETRY_DELAY, description="Delay between retries in seconds (default: 2.0)"),
-) -> str:
+async def edge_tts(
+    text: str,
+    voice: str = "zh-CN-YunjianNeural",
+    rate: str = "+0%",
+    volume: str = "+0%",
+    pitch: str = "+0Hz",
+    output_path: str = None,
+    retry_count: int = _RETRY_COUNT,
+    retry_delay: float = _RETRY_DELAY,
+) -> bytes:
     """
     Convert text to speech using Microsoft Edge TTS
     
     This service is free and requires no API key.
     Supports 400+ voices across 100+ languages.
     
-    Returns audio data as base64-encoded string (MP3 format).
+    Returns audio data as bytes (MP3 format).
     
     Includes automatic retry mechanism to handle 401 authentication errors
     and temporary network issues (default: 3 retries with 2s delay).
+    
+    Args:
+        text: Text to convert to speech
+        voice: Voice ID (e.g., zh-CN-YunjianNeural, en-US-JennyNeural)
+        rate: Speech rate (e.g., +0%, +50%, -20%)
+        volume: Speech volume (e.g., +0%, +50%, -20%)
+        pitch: Speech pitch (e.g., +0Hz, +10Hz, -5Hz)
+        output_path: Optional output file path to save audio
+        retry_count: Number of retries on failure (default: 3)
+        retry_delay: Delay between retries in seconds (default: 2.0)
+    
+    Returns:
+        Audio data as bytes (MP3 format)
     
     Popular Chinese voices:
     - zh-CN-YunjianNeural (male, default)
@@ -71,12 +66,11 @@ async def tts_edge(
     - en-GB-SoniaNeural (female, British)
     
     Example:
-        audio_base64 = await tts_edge(
+        audio_bytes = await edge_tts(
             text="你好，世界！",
             voice="zh-CN-YunjianNeural",
             rate="+20%"
         )
-        # Decode: audio_bytes = base64.b64decode(audio_base64)
     """
     logger.debug(f"Calling Edge TTS with voice: {voice}, rate: {rate}, retry_count: {retry_count}")
     
@@ -106,7 +100,7 @@ async def tts_edge(
             
             try:
                 # Create communicate instance
-                communicate = edge_tts.Communicate(
+                communicate = edge_tts_sdk.Communicate(
                     text=text,
                     voice=voice,
                     rate=rate,
@@ -127,9 +121,13 @@ async def tts_edge(
                 
                 logger.info(f"Generated {len(audio_data)} bytes of audio data")
                 
-                # Encode as base64 for JSON serialization
-                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                return audio_base64
+                # Save to file if output_path is provided
+                if output_path:
+                    with open(output_path, "wb") as f:
+                        f.write(audio_data)
+                    logger.info(f"Audio saved to: {output_path}")
+                
+                return audio_data
             
             finally:
                 # Restore original function if we patched it
@@ -160,21 +158,7 @@ async def tts_edge(
         raise RuntimeError("Edge TTS failed without error (unexpected)")
 
 
-@reelforge_mcp.tool(
-    description="List all available voices for Edge TTS",
-    meta={
-        "reelforge": {
-            "display_name": "List Edge TTS Voices",
-            "description": "获取所有可用的Edge TTS音色列表",
-            "is_default": False,
-        }
-    },
-)
-async def tts_edge_list_voices(
-    locale: str | None = Field(default=None, description="Filter by locale (e.g., zh-CN, en-US, ja-JP)"),
-    retry_count: int = Field(default=_RETRY_COUNT, description="Number of retries on failure (default: 3)"),
-    retry_delay: float = Field(default=_RETRY_DELAY, description="Delay between retries in seconds (default: 2.0)"),
-) -> list[str]:
+async def list_voices(locale: str = None, retry_count: int = _RETRY_COUNT, retry_delay: float = _RETRY_DELAY) -> list[str]:
     """
     List all available voices for Edge TTS
     
@@ -184,13 +168,21 @@ async def tts_edge_list_voices(
     Includes automatic retry mechanism to handle network errors
     (default: 3 retries with 2s delay).
     
+    Args:
+        locale: Filter by locale (e.g., zh-CN, en-US, ja-JP)
+        retry_count: Number of retries on failure (default: 3)
+        retry_delay: Delay between retries in seconds (default: 2.0)
+    
+    Returns:
+        List of voice IDs
+    
     Example:
         # List all voices
-        voices = await tts_edge_list_voices()
+        voices = await list_voices()
         # Returns: ['zh-CN-YunjianNeural', 'zh-CN-XiaoxiaoNeural', ...]
         
         # List Chinese voices only
-        voices = await tts_edge_list_voices(locale="zh-CN")
+        voices = await list_voices(locale="zh-CN")
         # Returns: ['zh-CN-YunjianNeural', 'zh-CN-XiaoxiaoNeural', ...]
     """
     logger.debug(f"Fetching Edge TTS voices, locale filter: {locale}, retry_count: {retry_count}")
@@ -220,7 +212,7 @@ async def tts_edge_list_voices(
             
             try:
                 # Get all voices
-                voices = await edge_tts.list_voices()
+                voices = await edge_tts_sdk.list_voices()
                 
                 # Filter by locale if specified
                 if locale:

@@ -46,8 +46,19 @@ llm:
   model: ""  # Model name
 
 # ==================== TTS Configuration ====================
-# TTS uses Edge TTS by default (free, no configuration needed)
-# Optional: Override default voice in code using voice parameter
+# TTS supports two modes:
+# 1. Edge TTS (default) - Free local SDK, no setup needed
+# 2. ComfyUI Workflow - Workflow-based, requires ComfyUI
+#
+# Configuration (optional):
+tts:
+  default_workflow: "edge"  # Default: "edge" (Edge TTS) or "tts_default.json" (ComfyUI workflow)
+  # comfyui_url: http://127.0.0.1:8188  # Only needed for ComfyUI workflows
+  
+# Usage in code:
+#   await reelforge.tts(text="hello")  # Uses default (edge)
+#   await reelforge.tts(text="hello", workflow="edge")  # Explicitly use Edge TTS
+#   await reelforge.tts(text="hello", workflow="tts_custom.json")  # Use ComfyUI workflow
 
 # ==================== Image Generation Configuration ====================
 # Image generation uses ComfyUI workflows
@@ -76,8 +87,10 @@ image:
 #    - WebUI provides quick preset selection
 #
 # 2. TTS Configuration:
-#    - No configuration needed, uses Edge TTS by default (free)
-#    - Override voice in code: await reelforge.tts(text="...", voice="zh-CN-XiaoxiaoNeural")
+#    - Two modes: Edge TTS (default, free) or ComfyUI Workflow
+#    - Edge TTS: No setup needed, just use default
+#    - ComfyUI: Create workflow files in workflows/tts_*.json
+#    - Override in code: await reelforge.tts(text="...", workflow="edge" or "tts_xxx.json")
 #
 # 3. Image Generation:
 #    - Add workflow files: workflows/image_*.json

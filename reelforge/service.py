@@ -1,7 +1,7 @@
 """
-ReelForge Core - Capability Layer
+ReelForge Core - Service Layer
 
-Provides unified access to all capabilities (LLM, TTS, etc.)
+Provides unified access to all capabilities (LLM, TTS, Image, etc.)
 """
 
 from typing import Optional
@@ -9,19 +9,21 @@ from typing import Optional
 from loguru import logger
 
 from reelforge.config import load_config
-from reelforge.core.discovery import CapabilityRegistry
-from reelforge.core.mcp_server import reelforge_mcp
-from reelforge.core.config_manager import ConfigManager
-from reelforge.services import LLMService, TTSService
+from reelforge.services.llm_service import LLMService
+from reelforge.services.tts_service import TTSService
 from reelforge.services.image import ImageService
+from reelforge.services.narration_generator import NarrationGeneratorService
+from reelforge.services.image_prompt_generator import ImagePromptGeneratorService
+from reelforge.services.frame_composer import FrameComposerService
+from reelforge.services.storyboard_processor import StoryboardProcessorService
+from reelforge.services.video_generator import VideoGeneratorService
 
 
 class ReelForgeCore:
     """
-    ReelForge Core - Capability Layer
+    ReelForge Core - Service Layer
     
     Provides unified access to all capabilities.
-    This is the foundation layer, no business logic here.
     
     Usage:
         from reelforge import reelforge
@@ -32,18 +34,18 @@ class ReelForgeCore:
         # Use capabilities directly
         answer = await reelforge.llm("Explain atomic habits")
         audio = await reelforge.tts("Hello world")
+        image = await reelforge.image(prompt="a cat")
         
         # Check active capabilities
         print(f"Using LLM: {reelforge.llm.active}")
-        print(f"Available: {reelforge.llm.available}")
+        print(f"Available TTS: {reelforge.tts.available}")
     
     Architecture (Simplified):
         ReelForgeCore (this class)
           ├── config (configuration)
-          ├── config_manager (config injection + MCP calls)
-          ├── llm (LLM service)
-          ├── tts (TTS service)
-          └── image (Image service)
+          ├── llm (LLM service - direct OpenAI SDK)
+          ├── tts (TTS service - ComfyKit workflows)
+          └── image (Image service - ComfyKit workflows)
     """
     
     def __init__(self, config_path: str = "config.yaml"):
@@ -54,32 +56,29 @@ class ReelForgeCore:
             config_path: Path to configuration file
         """
         self.config = load_config(config_path)
-        self.registry: Optional[CapabilityRegistry] = None
-        self.config_manager: Optional[ConfigManager] = None
         self._initialized = False
         
-        # Services (initialized in initialize())
+        # Core services (initialized in initialize())
         self.llm: Optional[LLMService] = None
         self.tts: Optional[TTSService] = None
         self.image: Optional[ImageService] = None
         
         # Content generation services
-        self.narration_generator = None
-        self.image_prompt_generator = None
+        self.narration_generator: Optional[NarrationGeneratorService] = None
+        self.image_prompt_generator: Optional[ImagePromptGeneratorService] = None
         
         # Frame processing services
-        self.frame_composer = None
-        self.storyboard_processor = None
+        self.frame_composer: Optional[FrameComposerService] = None
+        self.storyboard_processor: Optional[StoryboardProcessorService] = None
         
         # Video generation service (named as verb for direct calling)
-        self.generate_video = None
+        self.generate_video: Optional[VideoGeneratorService] = None
     
     async def initialize(self):
         """
         Initialize core capabilities
         
-        This registers built-in capabilities and initializes services.
-        Must be called before using any capabilities.
+        This initializes all services and must be called before using any capabilities.
         
         Example:
             await reelforge.initialize()
@@ -90,51 +89,24 @@ class ReelForgeCore:
         
         logger.info("🚀 Initializing ReelForge...")
         
-        # 1. Import all built-in capabilities (registers them with reelforge_mcp)
-        self._import_builtin_capabilities()
-        
-        # 2. Register all built-in capabilities
-        self.registry = CapabilityRegistry(reelforge_mcp)
-        await self.registry.register_all()
-        
-        # 3. Create config manager
-        self.config_manager = ConfigManager(self.registry, self.config)
-        
-        # 4. Initialize capability-based services
-        self.llm = LLMService(self.config_manager)
-        self.tts = TTSService(self.config_manager)
-        
-        # Initialize workflow-based services (no capability layer)
+        # 1. Initialize core services (no capability layer)
+        self.llm = LLMService(self.config)
+        self.tts = TTSService(self.config)
         self.image = ImageService(self.config)
         
-        # 5. Initialize content generation services
-        from reelforge.services.narration_generator import NarrationGeneratorService
-        from reelforge.services.image_prompt_generator import ImagePromptGeneratorService
-        
+        # 2. Initialize content generation services
         self.narration_generator = NarrationGeneratorService(self)
         self.image_prompt_generator = ImagePromptGeneratorService(self)
         
-        # 6. Initialize frame processing services
-        from reelforge.services.frame_composer import FrameComposerService
-        from reelforge.services.storyboard_processor import StoryboardProcessorService
-        
+        # 3. Initialize frame processing services
         self.frame_composer = FrameComposerService()
         self.storyboard_processor = StoryboardProcessorService(self)
         
-        # 7. Initialize video generation service
-        from reelforge.services.video_generator import VideoGeneratorService
-        
+        # 4. Initialize video generation service
         self.generate_video = VideoGeneratorService(self)
         
         self._initialized = True
         logger.info("✅ ReelForge initialized successfully\n")
-    
-    def _import_builtin_capabilities(self):
-        """Import all built-in capability modules to register them"""
-        # This triggers the @reelforge_mcp.tool decorators
-        from reelforge.capabilities import llm  # noqa: F401
-        from reelforge.capabilities import tts  # noqa: F401
-        # Note: image no longer uses capability layer (workflow-based)
     
     @property
     def project_name(self) -> str:
@@ -149,4 +121,3 @@ class ReelForgeCore:
 
 # Global instance
 reelforge = ReelForgeCore()
-
