@@ -56,13 +56,13 @@ Pixelle-Video 采用模块化设计，整个视频生成流程清晰简洁：
 <table>
 <tr>
 <td width="33%">
-<h3>📚 知识科普类</h3>
-<video src="https://github.com/user-attachments/assets/4687df95-dd21-4a7b-b01e-f33a7b646644" controls width="100%"></video>
-<p align="center"><b>养生知识</b></p>
+<h3>🏛️ 历史文化类</h3>
+<video src="https://github.com/user-attachments/assets/56e0a018-fa99-47eb-a97f-fc2fa8915724" controls width="100%"></video>
+<p align="center"><b>资治通鉴</b></p>
 </td>
 <td width="33%">
 <h3>💡 个人成长类</h3>
-<video src="https://github.com/user-attachments/assets/d354465e-3fa8-40b4-93e9-61ad75ef0697" controls width="100%"></video>
+<video src="https://github.com/user-attachments/assets/1bad9a49-df83-4905-9cc8-9a7640e9c7d8" controls width="100%"></video>
 <p align="center"><b>如何提升自己</b></p>
 </td>
 <td width="33%">
@@ -74,18 +74,18 @@ Pixelle-Video 采用模块化设计，整个视频生成流程清晰简洁：
 <tr>
 <td width="33%">
 <h3>🌅 情感类</h3>
-<video src="https://github.com/user-attachments/assets/1bad9a49-df83-4905-9cc8-9a7640e9c7d8" controls width="100%"></video>
+<video src="https://github.com/user-attachments/assets/4687df95-dd21-4a7b-b01e-f33a7b646644" controls width="100%"></video>
 <p align="center"><b>冬日暖阳</b></p>
 </td>
 <td width="33%">
 <h3>📖 小说解说类</h3>
-<video src="https://github.com/user-attachments/assets/8ac21768-41ce-4d41-acdd-e3dd3eb9725a" controls width="100%"></video>
+<video src="https://github.com/user-attachments/assets/d354465e-3fa8-40b4-93e9-61ad75ef0697" controls width="100%"></video>
 <p align="center"><b>斗破苍穹</b></p>
 </td>
 <td width="33%">
-<h3>🏛️ 历史文化类</h3>
-<video src="https://github.com/user-attachments/assets/56e0a018-fa99-47eb-a97f-fc2fa8915724" controls width="100%"></video>
-<p align="center"><b>资治通鉴</b></p>
+<h3>📚 知识科普类</h3>
+<video src="https://github.com/user-attachments/assets/8ac21768-41ce-4d41-acdd-e3dd3eb9725a" controls width="100%"></video>
+<p align="center"><b>养生知识</b></p>
 </td>
 </tr>
 </table>
