@@ -63,6 +63,9 @@ temp/
 tmp/
 .cache/
 
+# Packaging tools
+packaging/
+
 # MkDocs build output
 site/
 
