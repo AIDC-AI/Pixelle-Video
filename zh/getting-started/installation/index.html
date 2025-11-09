@@ -637,13 +637,37 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#windows-windows" class="md-nav__link">
     <span class="md-ellipsis">
-      安装步骤
+      🪟 Windows 一键整合包（推荐 Windows 用户使用）
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="安装步骤">
+    <nav class="md-nav" aria-label="🪟 Windows 一键整合包（推荐 Windows 用户使用）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      下载和安装
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#macos-linux" class="md-nav__link">
+    <span class="md-ellipsis">
+      从源码安装（适合 macOS / Linux 用户或需要自定义的用户）
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="从源码安装（适合 macOS / Linux 用户或需要自定义的用户）">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1393,13 +1417,37 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#windows-windows" class="md-nav__link">
     <span class="md-ellipsis">
-      安装步骤
+      🪟 Windows 一键整合包（推荐 Windows 用户使用）
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="安装步骤">
+    <nav class="md-nav" aria-label="🪟 Windows 一键整合包（推荐 Windows 用户使用）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      下载和安装
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#macos-linux" class="md-nav__link">
+    <span class="md-ellipsis">
+      从源码安装（适合 macOS / Linux 用户或需要自定义的用户）
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="从源码安装（适合 macOS / Linux 用户或需要自定义的用户）">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1535,7 +1583,25 @@
 <li><strong>网络</strong>: 稳定的网络连接（用于调用 LLM API 和图像生成服务）</li>
 </ul>
 <hr />
-<h2 id="_5">安装步骤<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<h2 id="windows-windows">🪟 Windows 一键整合包（推荐 Windows 用户使用）<a class="headerlink" href="#windows-windows" title="Permanent link">&para;</a></h2>
+<p><strong>无需安装 Python、uv 或 ffmpeg，一键开箱即用！</strong></p>
+<h3 id="_5">下载和安装<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<ol>
+<li>访问 <a href="https://github.com/AIDC-AI/Pixelle-Video/releases/latest">GitHub Releases</a> 下载最新版本</li>
+<li>下载最新的 Windows 一键整合包并解压到任意目录</li>
+<li>双击运行 <code>start.bat</code> 启动 Web 界面</li>
+<li>浏览器会自动打开 <code>http://localhost:8501</code></li>
+</ol>
+<div class="admonition success">
+<p class="admonition-title">安装完成！</p>
+<p>整合包已包含所有依赖，无需手动安装任何环境。首次使用只需在「⚙️ 系统配置」中配置 API 密钥即可开始使用。</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">下一步</p>
+<p>安装完成后，请查看 <a href="../configuration/">配置说明</a> 来设置 LLM 和图像生成服务，然后查看 <a href="../quick-start/">快速开始</a> 生成第一个视频。</p>
+</div>
+<hr />
+<h2 id="macos-linux">从源码安装（适合 macOS / Linux 用户或需要自定义的用户）<a class="headerlink" href="#macos-linux" title="Permanent link">&para;</a></h2>
 <h3 id="_6">第一步：克隆项目<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/AIDC-AI/Pixelle-Video.git
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>Pixelle-Video
@@ -1626,7 +1692,7 @@
     <span class="md-icon" title="最后更新">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="2025年11月6日 03:07:36 UTC">2025年11月6日 03:07:36</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="2025年11月9日 14:43:46 UTC">2025年11月9日 14:43:46</span>
   </span>
 
     
