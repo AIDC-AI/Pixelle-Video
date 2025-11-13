@@ -1,4 +1,4 @@
-<h1 align="center">Pixelle-Video 🎬</h1>
+<h1 align="center">🎬 Pixelle-Video —— AI Fully Automated Short Video Engine</h1>
 
 <p align="center"><b>English</b> | <a href="README.md">中文</a></p>
 
@@ -8,8 +8,6 @@
   <a href="https://github.com/AIDC-AI/Pixelle-Video/network/members"><img src="https://img.shields.io/github/forks/AIDC-AI/Pixelle-Video.svg?style=for-the-badge" alt="Forks"></a>
   <a href="https://github.com/AIDC-AI/Pixelle-Video/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AIDC-AI/Pixelle-Video.svg?style=for-the-badge" alt="License"></a>
 </p>
-
-<h3 align="center">🚀 AI Fully Automated Short Video Engine</h3>
 
 Just input a **topic**, and Pixelle-Video will automatically:
 - ✍️ Write video script
