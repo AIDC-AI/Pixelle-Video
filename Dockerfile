@@ -46,13 +46,14 @@ RUN uv --version
 COPY pyproject.toml uv.lock README.md ./
 COPY pixelle_video ./pixelle_video
 
-# Install Python dependencies using uv pip install
-# Use --system flag for Docker environment, -i flag to specify mirror when USE_CN_MIRROR=true
+# Create virtual environment and install dependencies
+# Use -i flag to specify mirror when USE_CN_MIRROR=true
 RUN export UV_HTTP_TIMEOUT=300 && \
+    uv venv && \
     if [ "$USE_CN_MIRROR" = "true" ]; then \
-        uv pip install --system -e . -i https://pypi.tuna.tsinghua.edu.cn/simple; \
+        uv pip install -e . -i https://pypi.tuna.tsinghua.edu.cn/simple; \
     else \
-        uv pip install --system -e .; \
+        uv pip install -e .; \
     fi
 
 # Copy rest of application code
