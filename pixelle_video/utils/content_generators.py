@@ -225,7 +225,8 @@ async def generate_image_prompts(
     max_words: int = 60,
     batch_size: int = 10,
     max_retries: int = 3,
-    progress_callback: Optional[callable] = None
+    progress_callback: Optional[callable] = None,
+    ref_image_description: Optional[str] = None
 ) -> List[str]:
     """
     Generate image prompts from narrations (with batching and retry)
@@ -238,6 +239,8 @@ async def generate_image_prompts(
         batch_size: Max narrations per batch (default: 10)
         max_retries: Max retry attempts per batch (default: 3)
         progress_callback: Optional callback(completed, total, message) for progress updates
+        ref_image_description: Optional natural language description of reference image
+                               from Vision API analysis (for style consistency)
     
     Returns:
         List of image prompts (base prompts, without prefix applied)
@@ -245,6 +248,8 @@ async def generate_image_prompts(
     from pixelle_video.prompts import build_image_prompt_prompt
     
     logger.info(f"Generating image prompts for {len(narrations)} narrations (batch_size={batch_size})")
+    if ref_image_description:
+        logger.info("  Using reference image description for style consistency")
     
     # Split narrations into batches
     batches = [narrations[i:i + batch_size] for i in range(0, len(narrations), batch_size)]
@@ -263,7 +268,8 @@ async def generate_image_prompts(
                 prompt = build_image_prompt_prompt(
                     narrations=batch_narrations,
                     min_words=min_words,
-                    max_words=max_words
+                    max_words=max_words,
+                    ref_image_description=ref_image_description
                 )
                 
                 response = await llm_service(

@@ -359,13 +359,31 @@ class StandardPipeline(BasePipeline):
                             extra_info=message
                         )
                     
+                    # Analyze reference image if provided (for style consistency)
+                    ref_image_description = None
+                    if config.ref_image:
+                        logger.info("🖼️  Analyzing reference image for style consistency...")
+                        from pixelle_video.utils.vision_util import analyze_ref_image
+                        
+                        ref_image_description = await analyze_ref_image(
+                            config.ref_image,
+                            self.llm
+                        )
+                        
+                        if ref_image_description:
+                            logger.info(f"   ✅ Reference image analyzed ({len(ref_image_description)} chars)")
+                            logger.debug(f"   Description: {ref_image_description[:150]}...")
+                        else:
+                            logger.warning("   ⚠️  Reference image analysis failed, continuing without it")
+                    
                     # Generate base image prompts
                     base_image_prompts = await generate_image_prompts(
                         self.llm,
                         narrations=narrations,
                         min_words=min_image_prompt_words,
                         max_words=max_image_prompt_words,
-                        progress_callback=image_prompt_progress
+                        progress_callback=image_prompt_progress,
+                        ref_image_description=ref_image_description
                     )
                     
                     # Apply prompt prefix

@@ -55,6 +55,8 @@ IMAGE_PROMPT_GENERATION_PROMPT = """# 角色定位
 
 **重要：输入包含 {narrations_count} 个旁白，你必须为每个旁白都生成一个对应的图像提示词，总共输出 {narrations_count} 个图像提示词。**
 
+{ref_image_context}
+
 # 输入内容
 {narrations_json}
 
@@ -117,10 +119,36 @@ IMAGE_PROMPT_GENERATION_PROMPT = """# 角色定位
 """
 
 
+# Reference image context template (when ref_image is provided)
+REF_IMAGE_CONTEXT_TEMPLATE = """
+# 参考图片信息
+用户提供了一张参考图片，希望生成的所有图片都与之保持风格一致。参考图片的详细描述如下：
+
+---
+{ref_image_description}
+---
+
+## 关键要求
+在生成每个image_prompt时，请务必：
+
+1. **主体一致性**：使用参考图片中描述的主体人物/角色/物体的外貌特征和造型
+2. **风格一致性**：严格保持参考图片的艺术风格、绘画手法、色调和视觉表现
+3. **场景适配**：根据对应的旁白内容描述具体场景和动作，但始终用参考图片的主体来演绎
+4. **特征融合**：自然地融入参考图片中提到的关键视觉元素、情感氛围和表现手法
+
+## 反面示例
+❌ 错误：如果参考图片是"老年男性，水墨画风格"，却生成"a young woman, digital art style"
+✅ 正确：如果参考图片是"老年男性，水墨画风格"，应生成"an elderly man... ink wash painting style"
+
+请确保所有image_prompt都遵循参考图片的核心特征，不要生成与之冲突的内容。
+"""
+
+
 def build_image_prompt_prompt(
     narrations: List[str],
     min_words: int,
-    max_words: int
+    max_words: int,
+    ref_image_description: Optional[str] = None
 ) -> str:
     """
     Build image prompt generation prompt
@@ -131,12 +159,19 @@ def build_image_prompt_prompt(
         narrations: List of narrations
         min_words: Minimum word count
         max_words: Maximum word count
+        ref_image_description: Optional natural language description of reference image
+                               from Vision API analysis
     
     Returns:
         Formatted prompt for LLM
     
     Example:
+        >>> # Without reference image
         >>> build_image_prompt_prompt(narrations, 50, 100)
+        
+        >>> # With reference image
+        >>> description = await analyze_ref_image("ref.jpg", llm)
+        >>> build_image_prompt_prompt(narrations, 50, 100, description)
     """
     narrations_json = json.dumps(
         {"narrations": narrations},
@@ -144,10 +179,19 @@ def build_image_prompt_prompt(
         indent=2
     )
     
+    # Add reference image context if available
+    if ref_image_description:
+        ref_context = REF_IMAGE_CONTEXT_TEMPLATE.format(
+            ref_image_description=ref_image_description
+        )
+    else:
+        ref_context = ""
+    
     return IMAGE_PROMPT_GENERATION_PROMPT.format(
         narrations_json=narrations_json,
         narrations_count=len(narrations),
         min_words=min_words,
-        max_words=max_words
+        max_words=max_words,
+        ref_image_context=ref_context
     )
 

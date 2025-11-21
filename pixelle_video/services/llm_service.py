@@ -108,7 +108,8 @@ class LLMService:
     
     async def __call__(
         self,
-        prompt: str,
+        prompt: Optional[str] = None,
+        messages: Optional[list] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         model: Optional[str] = None,
@@ -119,8 +120,15 @@ class LLMService:
         """
         Generate text using LLM
         
+        Supports both simple prompt and messages format (for vision, multi-turn chat, etc.)
+        
         Args:
-            prompt: The prompt to generate from
+            prompt: Simple text prompt (for basic text generation)
+            messages: OpenAI messages format (for vision, multi-turn chat)
+                     Example: [{"role": "user", "content": [
+                         {"type": "text", "text": "..."},
+                         {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}}
+                     ]}]
             api_key: API key (optional, uses config if not provided)
             base_url: Base URL (optional, uses config if not provided)
             model: Model name (optional, uses config if not provided)
@@ -132,8 +140,19 @@ class LLMService:
             Generated text
         
         Examples:
-            # Use config from config.yaml
+            # Simple text prompt
             answer = await pixelle_video.llm("Explain atomic habits")
+            
+            # Vision with messages format
+            answer = await pixelle_video.llm(
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "What's in this image?"},
+                        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}}
+                    ]
+                }]
+            )
             
             # Override with custom parameters
             answer = await pixelle_video.llm(
@@ -145,6 +164,12 @@ class LLMService:
                 max_tokens=500
             )
         """
+        # Validate input: must provide either prompt or messages
+        if prompt is None and messages is None:
+            raise ValueError("Either 'prompt' or 'messages' must be provided")
+        if prompt is not None and messages is not None:
+            raise ValueError("Cannot provide both 'prompt' and 'messages', choose one")
+        
         # Create client (new instance each time to support parameter overrides)
         client = self._create_client(api_key=api_key, base_url=base_url)
         
@@ -158,9 +183,15 @@ class LLMService:
         logger.debug(f"LLM call: model={final_model}, base_url={client.base_url}")
         
         try:
+            # Convert simple prompt to messages format if needed
+            if prompt is not None:
+                final_messages = [{"role": "user", "content": prompt}]
+            else:
+                final_messages = messages
+            
             response = await client.chat.completions.create(
                 model=final_model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=final_messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
                 **kwargs

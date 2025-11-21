@@ -32,7 +32,6 @@ from pixelle_video.services.frame_processor import FrameProcessor
 from pixelle_video.services.persistence import PersistenceService
 from pixelle_video.services.history_manager import HistoryManager
 from pixelle_video.pipelines.standard import StandardPipeline
-from pixelle_video.pipelines.custom import CustomPipeline
 
 
 class PixelleVideoCore:
@@ -195,7 +194,6 @@ class PixelleVideoCore:
         # 2. Register video generation pipelines
         self.pipelines = {
             "standard": StandardPipeline(self),
-            "custom": CustomPipeline(self),
         }
         logger.info(f"📹 Registered pipelines: {', '.join(self.pipelines.keys())}")
         
