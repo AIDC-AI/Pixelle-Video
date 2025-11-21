@@ -76,12 +76,12 @@ async def list_tts_workflows(pixelle_video: PixelleVideoDep):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/workflows/image", response_model=WorkflowListResponse)
-async def list_image_workflows(pixelle_video: PixelleVideoDep):
+@router.get("/workflows/media", response_model=WorkflowListResponse)
+async def list_media_workflows(pixelle_video: PixelleVideoDep):
     """
-    List available image generation workflows
+    List available media workflows (both image and video)
     
-    Returns list of image workflows from both RunningHub and self-hosted sources.
+    Returns list of all media workflows from both RunningHub and self-hosted sources.
     
     Example response:
     ```json
@@ -94,13 +94,41 @@ async def list_image_workflows(pixelle_video: PixelleVideoDep):
                 "path": "workflows/runninghub/image_flux.json",
                 "key": "runninghub/image_flux.json",
                 "workflow_id": "123456"
+            },
+            {
+                "name": "video_wan2.1.json",
+                "display_name": "video_wan2.1.json - Runninghub",
+                "source": "runninghub",
+                "path": "workflows/runninghub/video_wan2.1.json",
+                "key": "runninghub/video_wan2.1.json",
+                "workflow_id": "123457"
             }
         ]
     }
     ```
     """
     try:
-        # Get all workflows from media service (image generation is handled by media service)
+        # Get all workflows from media service (includes both image and video)
+        all_workflows = pixelle_video.media.list_workflows()
+        
+        media_workflows = [WorkflowInfo(**wf) for wf in all_workflows]
+        
+        return WorkflowListResponse(workflows=media_workflows)
+        
+    except Exception as e:
+        logger.error(f"List media workflows error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Keep old endpoint for backward compatibility
+@router.get("/workflows/image", response_model=WorkflowListResponse)
+async def list_image_workflows(pixelle_video: PixelleVideoDep):
+    """
+    List available image workflows (deprecated, use /workflows/media instead)
+    
+    This endpoint is kept for backward compatibility but will filter to image_ workflows only.
+    """
+    try:
         all_workflows = pixelle_video.media.list_workflows()
         
         # Filter to image workflows only (filename starts with "image_")

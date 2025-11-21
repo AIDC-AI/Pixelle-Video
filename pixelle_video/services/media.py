@@ -119,6 +119,7 @@ class MediaService(ComfyBaseService):
         # Common workflow parameters
         width: Optional[int] = None,
         height: Optional[int] = None,
+        duration: Optional[float] = None,  # Video duration in seconds (for video workflows)
         negative_prompt: Optional[str] = None,
         steps: Optional[int] = None,
         seed: Optional[int] = None,
@@ -140,6 +141,7 @@ class MediaService(ComfyBaseService):
             runninghub_api_key: RunningHub API key (optional, overrides config)
             width: Media width
             height: Media height
+            duration: Target video duration in seconds (only for video workflows, typically from TTS audio duration)
             negative_prompt: Negative prompt
             steps: Sampling steps
             seed: Random seed
@@ -203,6 +205,10 @@ class MediaService(ComfyBaseService):
             workflow_params["width"] = width
         if height is not None:
             workflow_params["height"] = height
+        if duration is not None:
+            workflow_params["duration"] = duration
+            if media_type == "video":
+                logger.info(f"📏 Target video duration: {duration:.2f}s (from TTS audio)")
         if negative_prompt is not None:
             workflow_params["negative_prompt"] = negative_prompt
         if steps is not None:

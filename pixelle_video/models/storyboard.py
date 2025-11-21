@@ -23,6 +23,10 @@ from typing import List, Optional, Dict, Any
 class StoryboardConfig:
     """Storyboard configuration parameters"""
     
+    # Required parameters (must come first in dataclass)
+    media_width: int                           # Media width (image or video, required)
+    media_height: int                          # Media height (image or video, required)
+    
     # Task isolation
     task_id: Optional[str] = None              # Task ID for file isolation (auto-generated if None)
     
@@ -42,10 +46,8 @@ class StoryboardConfig:
     tts_speed: Optional[float] = None          # TTS speed multiplier (0.5-2.0, 1.0 = normal)
     ref_audio: Optional[str] = None            # Reference audio for voice cloning (ComfyUI mode only)
     
-    # Image parameters
-    image_width: int = 1024
-    image_height: int = 1024
-    image_workflow: Optional[str] = None       # Image workflow filename (None = use default)
+    # Media workflow
+    media_workflow: Optional[str] = None       # Media workflow filename (image or video, None = use default)
     
     # Frame template (includes size information in path)
     frame_template: str = "1080x1920/default.html"  # Template path with size (e.g., "1080x1920/default.html")

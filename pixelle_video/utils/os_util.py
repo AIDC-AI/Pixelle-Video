@@ -83,6 +83,8 @@ def get_temp_path(*paths: str) -> str:
     """
     Get path relative to Pixelle-Video temp folder
     
+    Ensures temp directory exists before returning path.
+    
     Args:
         *paths: Path components to join
     
@@ -94,6 +96,10 @@ def get_temp_path(*paths: str) -> str:
         # Returns: "/path/to/project/temp/audio.mp3"
     """
     temp_path = get_root_path("temp")
+    
+    # Ensure temp directory exists
+    os.makedirs(temp_path, exist_ok=True)
+    
     if paths:
         return os.path.join(temp_path, *paths)
     return temp_path
@@ -102,6 +108,8 @@ def get_temp_path(*paths: str) -> str:
 def get_data_path(*paths: str) -> str:
     """
     Get path relative to Pixelle-Video data folder
+
+    Ensures data directory exists before returning path.
     
     Args:
         *paths: Path components to join
@@ -114,6 +122,10 @@ def get_data_path(*paths: str) -> str:
         # Returns: "/path/to/project/data/videos/output.mp4"
     """
     data_path = get_root_path("data")
+
+    # Ensure data directory exists
+    os.makedirs(data_path, exist_ok=True)
+    
     if paths:
         return os.path.join(data_path, *paths)
     return data_path
@@ -122,6 +134,8 @@ def get_data_path(*paths: str) -> str:
 def get_output_path(*paths: str) -> str:
     """
     Get path relative to Pixelle-Video output folder
+
+    Ensures output directory exists before returning path.
     
     Args:
         *paths: Path components to join
@@ -134,6 +148,10 @@ def get_output_path(*paths: str) -> str:
         # Returns: "/path/to/project/output/video.mp4"
     """
     output_path = get_root_path("output")
+
+    # Ensure output directory exists
+    os.makedirs(output_path, exist_ok=True)
+    
     if paths:
         return os.path.join(output_path, *paths)
     return output_path

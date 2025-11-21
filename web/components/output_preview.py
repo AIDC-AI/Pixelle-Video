@@ -58,7 +58,7 @@ def render_single_output(pixelle_video, video_params):
     
     frame_template = video_params.get("frame_template")
     custom_values_for_video = video_params.get("template_params", {})
-    workflow_key = video_params.get("image_workflow")
+    workflow_key = video_params.get("media_workflow")
     prompt_prefix = video_params.get("prompt_prefix", "")
     
     with st.container(border=True):
@@ -123,18 +123,20 @@ def render_single_output(pixelle_video, video_params):
                     progress_bar.progress(min(int(event.progress * 100), 99))  # Cap at 99% until complete
                 
                 # Generate video (directly pass parameters)
-                # Note: image_width and image_height are now auto-determined from template
+                # Note: media_width and media_height are auto-determined from template
                 video_params = {
                     "text": text,
                     "mode": mode,
                     "title": title if title else None,
                     "n_scenes": n_scenes,
-                    "image_workflow": workflow_key,
+                    "media_workflow": workflow_key,
                     "frame_template": frame_template,
                     "prompt_prefix": prompt_prefix,
                     "bgm_path": bgm_path,
                     "bgm_volume": bgm_volume if bgm_path else 0.2,
                     "progress_callback": update_progress,
+                    "media_width": st.session_state.get('template_media_width'),
+                    "media_height": st.session_state.get('template_media_height'),
                 }
                 
                 # Add TTS parameters based on mode
@@ -245,12 +247,14 @@ def render_batch_output(pixelle_video, video_params):
             shared_config = {
                 "title_prefix": video_params.get("title_prefix"),
                 "n_scenes": video_params.get("n_scenes") or 5,
-                "image_workflow": video_params.get("image_workflow"),
+                "media_workflow": video_params.get("media_workflow"),
                 "frame_template": video_params.get("frame_template"),
                 "prompt_prefix": video_params.get("prompt_prefix") or "",
                 "bgm_path": video_params.get("bgm_path"),
                 "bgm_volume": video_params.get("bgm_volume") or 0.2,
                 "tts_inference_mode": video_params.get("tts_inference_mode") or "local",
+                "media_width": video_params.get("media_width"),
+                "media_height": video_params.get("media_height"),
             }
             
             # Add TTS parameters based on mode (only add non-None values)
@@ -368,13 +372,28 @@ def render_batch_output(pixelle_video, video_params):
             st.success(tr("batch.success_message"))
             st.info(tr("batch.view_in_history"))
             
-            # Button to go to History page
-            if st.button(
-                f"📚 {tr('batch.goto_history')}",
-                type="secondary",
-                use_container_width=True
-            ):
-                st.switch_page("pages/2_📚_History.py")
+            # Button to go to History page using JavaScript URL navigation
+            st.markdown(
+                f"""
+                <a href="/History" target="_blank">
+                    <button style="
+                        width: 100%;
+                        padding: 0.5rem 1rem;
+                        background-color: white;
+                        color: rgb(49, 51, 63);
+                        border: 1px solid rgba(49, 51, 63, 0.2);
+                        border-radius: 0.5rem;
+                        cursor: pointer;
+                        font-size: 1rem;
+                        font-weight: 400;
+                        text-align: center;
+                    ">
+                        📚 {tr('batch.goto_history')}
+                    </button>
+                </a>
+                """,
+                unsafe_allow_html=True
+            )
             
             # Show failed tasks if any
             if batch_result["errors"]:

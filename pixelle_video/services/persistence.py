@@ -380,9 +380,9 @@ class PersistenceService:
             "tts_workflow": config.tts_workflow,
             "tts_speed": config.tts_speed,
             "ref_audio": config.ref_audio,
-            "image_width": config.image_width,
-            "image_height": config.image_height,
-            "image_workflow": config.image_workflow,
+            "media_width": config.media_width,
+            "media_height": config.media_height,
+            "media_workflow": config.media_workflow,
             "frame_template": config.frame_template,
             "template_params": config.template_params,
         }
@@ -402,9 +402,9 @@ class PersistenceService:
             tts_workflow=data.get("tts_workflow"),
             tts_speed=data.get("tts_speed"),
             ref_audio=data.get("ref_audio"),
-            image_width=data.get("image_width", 1024),
-            image_height=data.get("image_height", 1024),
-            image_workflow=data.get("image_workflow"),
+            media_width=data.get("media_width", data.get("image_width", 1024)),  # Backward compatibility
+            media_height=data.get("media_height", data.get("image_height", 1024)),  # Backward compatibility
+            media_workflow=data.get("media_workflow", data.get("image_workflow")),  # Backward compatibility
             frame_template=data.get("frame_template", "1080x1920/default.html"),
             template_params=data.get("template_params"),
         )

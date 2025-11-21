@@ -56,9 +56,9 @@ class VideoGenerateRequest(BaseModel):
     min_image_prompt_words: int = Field(30, ge=10, le=100, description="Min image prompt words")
     max_image_prompt_words: int = Field(60, ge=10, le=200, description="Max image prompt words")
     
-    # === Image Parameters ===
-    # Note: image_width and image_height are now auto-determined from template meta tags
-    image_workflow: Optional[str] = Field(None, description="Custom image workflow")
+    # === Media Parameters ===
+    # Note: media_width and media_height are auto-determined from template meta tags
+    media_workflow: Optional[str] = Field(None, description="Custom media workflow (image or video)")
     
     # === Video Parameters ===
     video_fps: int = Field(30, ge=15, le=60, description="Video FPS")

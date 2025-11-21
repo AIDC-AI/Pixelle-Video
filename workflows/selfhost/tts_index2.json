@@ -1,0 +1,64 @@
+{
+  "3": {
+    "inputs": {
+      "text": "床前明月光，疑是地上霜。"
+    },
+    "class_type": "Text _O",
+    "_meta": {
+      "title": "$text.text!"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": [
+        "3",
+        0
+      ],
+      "mode": "Auto",
+      "do_sample_mode": "on",
+      "temperature": 0.8,
+      "top_p": 0.9,
+      "top_k": 30,
+      "num_beams": 3,
+      "repetition_penalty": 10,
+      "length_penalty": 0,
+      "max_mel_tokens": 1815,
+      "max_tokens_per_sentence": 120,
+      "seed": 4266796044,
+      "reference_audio": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "IndexTTS2BaseNode",
+    "_meta": {
+      "title": "Index TTS 2 - Base"
+    }
+  },
+  "8": {
+    "inputs": {
+      "filename_prefix": "audio/ComfyUI",
+      "quality": "V0",
+      "audioUI": "",
+      "audio": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "SaveAudioMP3",
+    "_meta": {
+      "title": "Save Audio (MP3)"
+    }
+  },
+  "12": {
+    "inputs": {
+      "audio": "小裴钱.wav",
+      "start_time": 0,
+      "duration": 0
+    },
+    "class_type": "VHS_LoadAudioUpload",
+    "_meta": {
+      "title": "$ref_audio.audio"
+    }
+  }
+}

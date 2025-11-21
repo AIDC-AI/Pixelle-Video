@@ -93,8 +93,8 @@ class CustomPipeline(BasePipeline):
         tts_speed: float = 1.2,
         ref_audio: Optional[str] = None,
         
-        image_workflow: Optional[str] = None,
-        # Note: image_width and image_height are now auto-determined from template
+        media_workflow: Optional[str] = None,
+        # Note: media_width and media_height are auto-determined from template
         
         frame_template: Optional[str] = None,
         video_fps: int = 30,
@@ -189,8 +189,8 @@ class CustomPipeline(BasePipeline):
         # Read media size from template meta tags
         template_path = resolve_template_path(frame_template)
         generator = HTMLFrameGenerator(template_path)
-        image_width, image_height = generator.get_media_size()
-        logger.info(f"📐 Media size from template: {image_width}x{image_height}")
+        media_width, media_height = generator.get_media_size()
+        logger.info(f"📐 Media size from template: {media_width}x{media_height}")
         
         if template_type == "image":
             logger.info(f"📸 Template requires image generation")
@@ -270,9 +270,9 @@ class CustomPipeline(BasePipeline):
             tts_workflow=final_tts_workflow,  # Use processed workflow
             tts_speed=tts_speed,
             ref_audio=ref_audio,
-            image_width=image_width,
-            image_height=image_height,
-            image_workflow=image_workflow,
+            media_width=media_width,
+            media_height=media_height,
+            media_workflow=media_workflow,
             frame_template=frame_template
         )
         
@@ -387,7 +387,7 @@ class CustomPipeline(BasePipeline):
                     "tts_workflow": tts_workflow,
                     "tts_speed": tts_speed,
                     "ref_audio": ref_audio,
-                    "image_workflow": image_workflow,
+                    "media_workflow": media_workflow,
                     "frame_template": frame_template,
                     "bgm_path": bgm_path,
                     "bgm_volume": bgm_volume,

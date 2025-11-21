@@ -14,6 +14,10 @@
 Frame processor - Process single frame through complete pipeline
 
 Orchestrates: TTS → Image Generation → Frame Composition → Video Segment
+
+Key Feature:
+- TTS-driven video duration: Audio duration from TTS is passed to video generation workflows
+  to ensure perfect sync between audio and video (no padding, no trimming needed)
 """
 
 from typing import Callable, Optional
@@ -187,20 +191,29 @@ class FrameProcessor:
         
         # Determine media type based on workflow
         # video_ prefix in workflow name indicates video generation
-        workflow_name = config.image_workflow or ""
+        workflow_name = config.media_workflow or ""
         is_video_workflow = "video_" in workflow_name.lower()
         media_type = "video" if is_video_workflow else "image"
         
         logger.debug(f"  → Media type: {media_type} (workflow: {workflow_name})")
         
-        # Call Media generation (with optional preset)
-        media_result = await self.core.media(
-            prompt=frame.image_prompt,
-            workflow=config.image_workflow,  # Pass workflow from config (None = use default)
-            media_type=media_type,
-            width=config.image_width,
-            height=config.image_height
-        )
+        # Build media generation parameters
+        media_params = {
+            "prompt": frame.image_prompt,
+            "workflow": config.media_workflow,  # Pass workflow from config (None = use default)
+            "media_type": media_type,
+            "width": config.media_width,
+            "height": config.media_height
+        }
+        
+        # For video workflows: pass audio duration as target video duration
+        # This ensures video length matches audio length from the source
+        if is_video_workflow and frame.duration:
+            media_params["duration"] = frame.duration
+            logger.info(f"  → Generating video with target duration: {frame.duration:.2f}s (from TTS audio)")
+        
+        # Call Media generation
+        media_result = await self.core.media(**media_params)
         
         # Store media type
         frame.media_type = media_result.media_type

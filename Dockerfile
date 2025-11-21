@@ -46,16 +46,15 @@ RUN uv --version
 COPY pyproject.toml uv.lock README.md ./
 COPY pixelle_video ./pixelle_video
 
-# Install Python dependencies using uv with configurable index URL
-# Create uv.toml config file to force using the mirror (most reliable method)
-# Only create config when USE_CN_MIRROR=true, otherwise use default PyPI
-RUN if [ "$USE_CN_MIRROR" = "true" ]; then \
-        echo '[[index]]' > uv.toml && \
-        echo 'url = "https://pypi.tuna.tsinghua.edu.cn/simple"' >> uv.toml && \
-        echo 'default = true' >> uv.toml; \
-    fi && \
-    export UV_HTTP_TIMEOUT=300 && \
-    uv sync --frozen --no-dev
+# Create virtual environment and install dependencies
+# Use -i flag to specify mirror when USE_CN_MIRROR=true
+RUN export UV_HTTP_TIMEOUT=300 && \
+    uv venv && \
+    if [ "$USE_CN_MIRROR" = "true" ]; then \
+        uv pip install -e . -i https://pypi.tuna.tsinghua.edu.cn/simple; \
+    else \
+        uv pip install -e .; \
+    fi
 
 # Copy rest of application code
 COPY api ./api
@@ -65,8 +64,8 @@ COPY templates ./templates
 COPY workflows ./workflows
 COPY resources ./resources
 
-# Create output and data directories
-RUN mkdir -p /app/output /app/data
+# Create output, data and temp directories
+RUN mkdir -p /app/output /app/data /app/temp
 
 # Set environment variables for html2image to use chromium
 ENV BROWSER_EXECUTABLE_PATH=/usr/bin/chromium

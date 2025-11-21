@@ -63,6 +63,17 @@ async def generate_video_sync(
     try:
         logger.info(f"Sync video generation: {request_body.text[:50]}...")
         
+        # Auto-determine media_width and media_height from template meta tags (required)
+        if not request_body.frame_template:
+            raise ValueError("frame_template is required to determine media size")
+        
+        from pixelle_video.services.frame_html import HTMLFrameGenerator
+        from pixelle_video.utils.template_util import resolve_template_path
+        template_path = resolve_template_path(request_body.frame_template)
+        generator = HTMLFrameGenerator(template_path)
+        media_width, media_height = generator.get_media_size()
+        logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
+        
         # Build video generation parameters
         video_params = {
             "text": request_body.text,
@@ -73,8 +84,9 @@ async def generate_video_sync(
             "max_narration_words": request_body.max_narration_words,
             "min_image_prompt_words": request_body.min_image_prompt_words,
             "max_image_prompt_words": request_body.max_image_prompt_words,
-            # Note: image_width and image_height are now auto-determined from template
-            "image_workflow": request_body.image_workflow,
+            "media_width": media_width,
+            "media_height": media_height,
+            "media_workflow": request_body.media_workflow,
             "video_fps": request_body.video_fps,
             "frame_template": request_body.frame_template,
             "prompt_prefix": request_body.prompt_prefix,
@@ -150,6 +162,17 @@ async def generate_video_async(
         # Define async execution function
         async def execute_video_generation():
             """Execute video generation in background"""
+            # Auto-determine media_width and media_height from template meta tags (required)
+            if not request_body.frame_template:
+                raise ValueError("frame_template is required to determine media size")
+            
+            from pixelle_video.services.frame_html import HTMLFrameGenerator
+            from pixelle_video.utils.template_util import resolve_template_path
+            template_path = resolve_template_path(request_body.frame_template)
+            generator = HTMLFrameGenerator(template_path)
+            media_width, media_height = generator.get_media_size()
+            logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
+            
             # Build video generation parameters
             video_params = {
                 "text": request_body.text,
@@ -160,8 +183,9 @@ async def generate_video_async(
                 "max_narration_words": request_body.max_narration_words,
                 "min_image_prompt_words": request_body.min_image_prompt_words,
                 "max_image_prompt_words": request_body.max_image_prompt_words,
-                # Note: image_width and image_height are now auto-determined from template
-                "image_workflow": request_body.image_workflow,
+                "media_width": media_width,
+                "media_height": media_height,
+                "media_workflow": request_body.media_workflow,
                 "video_fps": request_body.video_fps,
                 "frame_template": request_body.frame_template,
                 "prompt_prefix": request_body.prompt_prefix,

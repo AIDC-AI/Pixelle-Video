@@ -68,8 +68,10 @@ class StandardPipeline(BasePipeline):
     
     async def __call__(
         self,
-        # === Input ===
+        # === Input (Required) ===
         text: str,
+        media_width: int,  # Required: Media width (from template)
+        media_height: int,  # Required: Media height (from template)
         
         # === Processing Mode ===
         mode: Literal["generate", "fixed"] = "generate",
@@ -95,10 +97,8 @@ class StandardPipeline(BasePipeline):
         min_image_prompt_words: int = 30,
         max_image_prompt_words: int = 60,
         
-        # === Image Parameters ===
-        image_width: int = 1024,
-        image_height: int = 1024,
-        image_workflow: Optional[str] = None,
+        # === Media Workflow ===
+        media_workflow: Optional[str] = None,
         
         # === Video Parameters ===
         video_fps: int = 30,
@@ -155,9 +155,9 @@ class StandardPipeline(BasePipeline):
             min_image_prompt_words: Min image prompt length
             max_image_prompt_words: Max image prompt length
             
-            image_width: Generated image width (default 1024)
-            image_height: Generated image height (default 1024)
-            image_workflow: Image workflow filename (e.g., "image_flux.json", None = use default)
+            media_width: Media width (image or video, required)
+            media_height: Media height (image or video, required)
+            media_workflow: Media workflow filename (image or video, e.g., "image_flux.json", "video_wan.json", None = use default)
             
             video_fps: Video frame rate (default 30)
             
@@ -254,9 +254,9 @@ class StandardPipeline(BasePipeline):
             tts_workflow=final_tts_workflow,  # Use processed workflow
             tts_speed=tts_speed,
             ref_audio=ref_audio,
-            image_width=image_width,
-            image_height=image_height,
-            image_workflow=image_workflow,
+            media_width=media_width,
+            media_height=media_height,
+            media_workflow=media_workflow,
             frame_template=frame_template or "1080x1920/default.html",
             template_params=template_params  # Custom template parameters
         )
@@ -374,13 +374,13 @@ class StandardPipeline(BasePipeline):
             # Enable parallel if either TTS or Image uses RunningHub (most time-consuming parts)
             is_runninghub = (
                 (config.tts_workflow and config.tts_workflow.startswith("runninghub/")) or
-                (config.image_workflow and config.image_workflow.startswith("runninghub/"))
+                (config.media_workflow and config.media_workflow.startswith("runninghub/"))
             )
             
             if is_runninghub and RUNNING_HUB_PARALLEL_LIMIT > 1:
                 logger.info(f"🚀 Using parallel processing for RunningHub workflows (max {RUNNING_HUB_PARALLEL_LIMIT} concurrent)")
                 logger.info(f"   TTS: {'runninghub' if config.tts_workflow and config.tts_workflow.startswith('runninghub/') else 'local'}")
-                logger.info(f"   Image: {'runninghub' if config.image_workflow and config.image_workflow.startswith('runninghub/') else 'local'}")
+                logger.info(f"   Media: {'runninghub' if config.media_workflow and config.media_workflow.startswith('runninghub/') else 'local'}")
                 
                 semaphore = asyncio.Semaphore(RUNNING_HUB_PARALLEL_LIMIT)
                 completed_count = 0
@@ -541,7 +541,7 @@ class StandardPipeline(BasePipeline):
                     "tts_workflow": tts_workflow,
                     "tts_speed": tts_speed,
                     "ref_audio": ref_audio,
-                    "image_workflow": image_workflow,
+                    "media_workflow": media_workflow,
                     "prompt_prefix": prompt_prefix,
                     "frame_template": frame_template,
                     "template_params": template_params,

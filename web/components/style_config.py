@@ -610,7 +610,7 @@ def render_style_config(pixelle_video):
                 workflow_options if workflow_options else ["No workflows found"],
                 index=default_workflow_index,
                 label_visibility="collapsed",
-                key="image_workflow_select"
+                key="media_workflow_select"
             )
         
             # Get the actual workflow key (e.g., "runninghub/image_flux.json")
@@ -621,14 +621,14 @@ def render_style_config(pixelle_video):
                 workflow_key = "runninghub/image_flux.json"  # fallback
         
             # Get media size from template
-            image_width = st.session_state.get('template_media_width', 1024)
-            image_height = st.session_state.get('template_media_height', 1024)
+            media_width = st.session_state.get('template_media_width')
+            media_height = st.session_state.get('template_media_height')
             
             # Display media size info (read-only)
             if template_media_type == "video":
-                size_info_text = tr('style.video_size_info', width=image_width, height=image_height)
+                size_info_text = tr('style.video_size_info', width=media_width, height=media_height)
             else:
-                size_info_text = tr('style.image_size_info', width=image_width, height=image_height)
+                size_info_text = tr('style.image_size_info', width=media_width, height=media_height)
             st.info(f"📐 {size_info_text}")
         
             # Prompt prefix input
@@ -679,8 +679,8 @@ def render_style_config(pixelle_video):
                                 prompt=final_prompt,
                                 workflow=workflow_key,
                                 media_type=template_media_type,
-                                width=int(image_width),
-                                height=int(image_height)
+                                width=int(media_width),
+                                height=int(media_height)
                             ))
                             preview_media_path = media_result.url
                         
@@ -725,8 +725,8 @@ def render_style_config(pixelle_video):
             st.caption(tr("image.not_required_hint"))
             
             # Get media size from template (even though not used, for consistency)
-            image_width = st.session_state.get('template_media_width', 1024)
-            image_height = st.session_state.get('template_media_height', 1024)
+            media_width = st.session_state.get('template_media_width')
+            media_height = st.session_state.get('template_media_height')
             
             # Set default values for later use
             workflow_key = None
@@ -741,6 +741,8 @@ def render_style_config(pixelle_video):
         "ref_audio": str(ref_audio_path) if ref_audio_path else None,
         "frame_template": frame_template,
         "template_params": custom_values_for_video if custom_values_for_video else None,
-        "image_workflow": workflow_key,
-        "prompt_prefix": prompt_prefix if prompt_prefix else ""
+        "media_workflow": workflow_key,
+        "prompt_prefix": prompt_prefix if prompt_prefix else "",
+        "media_width": media_width,
+        "media_height": media_height
     }
