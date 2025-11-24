@@ -125,6 +125,9 @@ Pixelle-Video 采用模块化设计，整个视频生成流程清晰简洁：
 > 💡 **提示**: 这些视频都是通过输入一个主题关键词，由 AI 全自动生成的，无需任何视频剪辑经验！
 
 
+<div id="tutorial-start" />
+
+
 ## 🚀 快速开始
 
 ### 🪟 Windows 一键整合包（推荐 Windows 用户使用）
@@ -199,6 +202,7 @@ uv run streamlit run web/app.py
 
 配置好后点击「保存配置」，就可以开始生成视频了！
 
+<div id="tutorial-end" />
 
 ## 💻 使用方法
 
