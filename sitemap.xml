@@ -8,6 +8,13 @@
         <xhtml:link rel="alternate" hreflang="zh" href="https://AIDC-AI.github.io/Pixelle-Video/zh/FAQ/"/>
     </url>
     <url>
+        <loc>https://AIDC-AI.github.io/Pixelle-Video/FAQ_CN/</loc>
+        <lastmod>2025-11-24</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://AIDC-AI.github.io/Pixelle-Video/FAQ_CN/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://AIDC-AI.github.io/Pixelle-Video/zh/FAQ_CN/"/>
+    </url>
+    <url>
         <loc>https://AIDC-AI.github.io/Pixelle-Video/</loc>
         <lastmod>2025-11-24</lastmod>
         <changefreq>daily</changefreq>
@@ -139,6 +146,13 @@
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://AIDC-AI.github.io/Pixelle-Video/zh/FAQ/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://AIDC-AI.github.io/Pixelle-Video/FAQ/"/>
+    </url>
+    <url>
+        <loc>https://AIDC-AI.github.io/Pixelle-Video/zh/FAQ_CN/</loc>
+        <lastmod>2025-11-24</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://AIDC-AI.github.io/Pixelle-Video/zh/FAQ_CN/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://AIDC-AI.github.io/Pixelle-Video/FAQ_CN/"/>
     </url>
     <url>
         <loc>https://AIDC-AI.github.io/Pixelle-Video/zh/</loc>
