@@ -28,6 +28,7 @@ from pixelle_video.services.llm_service import LLMService
 from pixelle_video.services.tts_service import TTSService
 from pixelle_video.services.media import MediaService
 from pixelle_video.services.image_analysis import ImageAnalysisService
+from pixelle_video.services.video_analysis import VideoAnalysisService
 from pixelle_video.services.video import VideoService
 from pixelle_video.services.frame_processor import FrameProcessor
 from pixelle_video.services.persistence import PersistenceService
@@ -192,6 +193,7 @@ class PixelleVideoCore:
         self.media = MediaService(self.config, core=self)
         self.image = self.media  # Alias for backward compatibility
         self.image_analysis = ImageAnalysisService(self.config, core=self)
+        self.video_analysis = VideoAnalysisService(self.config, core=self)
         self.video = VideoService()
         self.frame_processor = FrameProcessor(self)
         self.persistence = PersistenceService(output_dir="output")

@@ -234,16 +234,27 @@ class AssetBasedPipeline(LinearVideoPipeline):
                 logger.info(f"✅ Image analyzed: {description[:50]}...")
             
             elif asset_type == "video":
-                # TODO: Extract keyframes and analyze
-                # For MVP, we'll skip video analysis and just record metadata
-                self.asset_index[asset_path] = {
-                    "path": asset_path,
-                    "type": "video",
-                    "name": asset_path_obj.name,
-                    "description": "Video asset"
-                }
-                
-                logger.info(f"⏭️ Video registered (analysis not yet implemented)")
+                # Analyze video using VideoAnalysisService
+                analysis_source = context.request.get("source", "runninghub")
+                try:
+                    description = await self.core.video_analysis(asset_path, source=analysis_source)
+                    
+                    self.asset_index[asset_path] = {
+                        "path": asset_path,
+                        "type": "video",
+                        "name": asset_path_obj.name,
+                        "description": description
+                    }
+                    
+                    logger.info(f"✅ Video analyzed: {description[:50]}...")
+                except Exception as e:
+                    logger.warning(f"Video analysis failed for {asset_path_obj.name}: {e}, using fallback")
+                    self.asset_index[asset_path] = {
+                        "path": asset_path,
+                        "type": "video",
+                        "name": asset_path_obj.name,
+                        "description": "Video asset (analysis failed)"
+                    }
             
             else:
                 logger.warning(f"Unknown asset type: {asset_path}")
