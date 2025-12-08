@@ -43,7 +43,11 @@ build:
     - "temp/*"
     - "plans/*"  # Don't include planning docs
     - "repositories/*"  # Don't include referenced repos
-    - "docs/*"  # Don't include docs in package
+    - "docs/en/*"  # Don't include English docs
+    - "docs/zh/*"  # Don't include Chinese docs
+    - "docs/gallery/*"  # Don't include gallery docs
+    - "docs/stylesheets/*"  # Don't include doc stylesheets
+    - "docs/*.md"  # Don't include doc markdown files
     - "test_*.py"  # Don't include test files
     - ".venv"
     - "venv"
