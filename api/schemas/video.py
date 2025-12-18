@@ -79,6 +79,12 @@ class VideoGenerateRequest(BaseModel):
     # === Image Style ===
     prompt_prefix: Optional[str] = Field(None, description="Image style prefix")
     
+    # === Image-to-Video (I2V) ===
+    source_image_url: Optional[str] = Field(
+        None, 
+        description="Source image URL for image-to-video (I2V) workflow. When provided, uses I2V workflow instead of T2V."
+    )
+    
     # === BGM ===
     bgm_path: Optional[str] = Field(None, description="Background music path")
     bgm_volume: float = Field(0.3, ge=0.0, le=1.0, description="BGM volume (0.0-1.0)")

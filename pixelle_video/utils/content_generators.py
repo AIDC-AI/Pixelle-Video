@@ -97,7 +97,8 @@ async def generate_narrations_from_topic(
     topic: str,
     n_scenes: int = 5,
     min_words: int = 5,
-    max_words: int = 20
+    max_words: int = 20,
+    scene_mode: str = "marketing"
 ) -> List[str]:
     """
     Generate narrations from topic using LLM
@@ -108,15 +109,18 @@ async def generate_narrations_from_topic(
         n_scenes: Number of narrations to generate
         min_words: Minimum narration length
         max_words: Maximum narration length
+        scene_mode: Scene mode key (e.g., "marketing", "advertisement", "storytelling")
     
     Returns:
         List of narration texts
     """
-    from pixelle_video.prompts import build_topic_narration_prompt
+    from pixelle_video.prompts.scene_modes import get_scene_mode_prompt, DEFAULT_SCENE_MODE
     
-    logger.info(f"Generating {n_scenes} narrations from topic: {topic}")
+    logger.info(f"Generating {n_scenes} narrations from topic: {topic} (scene_mode: {scene_mode})")
     
-    prompt = build_topic_narration_prompt(
+    # Use scene mode prompt instead of default
+    prompt = get_scene_mode_prompt(
+        key=scene_mode or DEFAULT_SCENE_MODE,
         topic=topic,
         n_storyboard=n_scenes,
         min_words=min_words,

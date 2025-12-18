@@ -151,12 +151,16 @@ async def generate_video_sync(
             logger.warning("voice_id parameter is deprecated, please use tts_workflow instead")
             video_params["voice_id"] = request_body.voice_id
         
-        # Add custom template parameters if specified
-        if request_body.template_params:
-            video_params["template_params"] = request_body.template_params
-        
-        # Call video generator service
-        result = await pixelle_video.generate_video(**video_params)
+            # Add custom template parameters if specified
+            if request_body.template_params:
+                video_params["template_params"] = request_body.template_params
+            
+            # Add source_image_url for I2V workflow
+            if request_body.source_image_url:
+                video_params["source_image_url"] = request_body.source_image_url
+            
+            # Call video generator service
+            result = await pixelle_video.generate_video(**video_params)
         
         # Get file size
         file_size = os.path.getsize(result.video_path) if os.path.exists(result.video_path) else 0
@@ -259,6 +263,10 @@ async def generate_video_async(
             # Add custom template parameters if specified
             if request_body.template_params:
                 video_params["template_params"] = request_body.template_params
+            
+            # Add source_image_url for I2V workflow
+            if request_body.source_image_url:
+                video_params["source_image_url"] = request_body.source_image_url
             
             result = await pixelle_video.generate_video(**video_params)
             

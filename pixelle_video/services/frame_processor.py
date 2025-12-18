@@ -203,9 +203,9 @@ class FrameProcessor:
         logger.debug(f"  2/4: Generating media for frame {frame.index}...")
         
         # Determine media type based on workflow
-        # video_ prefix in workflow name indicates video generation
+        # video_ or i2v_ prefix in workflow name indicates video generation
         workflow_name = config.media_workflow or ""
-        is_video_workflow = "video_" in workflow_name.lower()
+        is_video_workflow = "video_" in workflow_name.lower() or "i2v_" in workflow_name.lower()
         media_type = "video" if is_video_workflow else "image"
         
         logger.debug(f"  → Media type: {media_type} (workflow: {workflow_name})")
@@ -225,6 +225,11 @@ class FrameProcessor:
         if is_video_workflow and frame.duration:
             media_params["duration"] = frame.duration
             logger.info(f"  → Generating video with target duration: {frame.duration:.2f}s (from TTS audio)")
+        
+        # For I2V workflows: pass source image URL
+        if config.source_image_url:
+            media_params["image_url"] = config.source_image_url
+            logger.info(f"  → I2V mode: using source image URL")
         
         # Call Media generation
         media_result = await self.core.media(**media_params)

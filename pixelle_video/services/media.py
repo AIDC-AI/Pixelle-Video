@@ -88,10 +88,10 @@ class MediaService(ComfyBaseService):
             # Get all JSON files for this source
             workflow_files = list_resource_files("workflows", source_name)
             
-            # Filter to only files matching image_ or video_ prefix
+            # Filter to only files matching image_, video_, or i2v_ prefix
             matching_files = [
                 f for f in workflow_files 
-                if (f.startswith("image_") or f.startswith("video_")) and f.endswith('.json')
+                if (f.startswith("image_") or f.startswith("video_") or f.startswith("i2v_")) and f.endswith('.json')
             ]
             
             for filename in matching_files:
@@ -125,6 +125,8 @@ class MediaService(ComfyBaseService):
         seed: Optional[int] = None,
         cfg: Optional[float] = None,
         sampler: Optional[str] = None,
+        # Image-to-Video (I2V) parameters
+        image_url: Optional[str] = None,  # Source image URL for I2V workflow
         **params
     ) -> MediaResult:
         """
@@ -219,6 +221,11 @@ class MediaService(ComfyBaseService):
             workflow_params["cfg"] = cfg
         if sampler is not None:
             workflow_params["sampler"] = sampler
+        
+        # Add image_url for I2V workflow
+        if image_url is not None:
+            workflow_params["image_url"] = image_url
+            logger.info(f"🖼️ I2V mode: using source image URL")
         
         # Add any additional parameters
         workflow_params.update(params)

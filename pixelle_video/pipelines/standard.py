@@ -115,14 +115,16 @@ class StandardPipeline(LinearVideoPipeline):
         
         if mode == "generate":
             self._report_progress(ctx.progress_callback, "generating_narrations", 0.05)
+            scene_mode = ctx.params.get("scene_mode", "marketing")
             ctx.narrations = await generate_narrations_from_topic(
                 self.llm,
                 topic=text,
                 n_scenes=n_scenes,
                 min_words=min_words,
-                max_words=max_words
+                max_words=max_words,
+                scene_mode=scene_mode
             )
-            logger.info(f"✅ Generated {len(ctx.narrations)} narrations")
+            logger.info(f"✅ Generated {len(ctx.narrations)} narrations (scene_mode: {scene_mode})")
         else:  # fixed
             self._report_progress(ctx.progress_callback, "splitting_script", 0.05)
             split_mode = ctx.params.get("split_mode", "paragraph")
@@ -271,7 +273,8 @@ class StandardPipeline(LinearVideoPipeline):
             media_height=ctx.params.get("media_height"),
             media_workflow=ctx.params.get("media_workflow"),
             frame_template=ctx.params.get("frame_template") or "1080x1920/default.html",
-            template_params=ctx.params.get("template_params")
+            template_params=ctx.params.get("template_params"),
+            source_image_url=ctx.params.get("source_image_url")
         )
         
         # Create storyboard

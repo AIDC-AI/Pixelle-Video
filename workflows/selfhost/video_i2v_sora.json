@@ -1,0 +1,67 @@
+{
+  "1": {
+    "inputs": {
+      "filename_prefix": "video/OpenAI-Sora",
+      "format": "auto",
+      "codec": "auto",
+      "video": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Save Video"
+    }
+  },
+  "2": {
+    "inputs": {
+      "model": "sora-2",
+      "prompt": [
+        "5",
+        0
+      ],
+      "size": "720x1280",
+      "duration": 8,
+      "seed": 1526483688,
+      "image": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "OpenAIVideoSora2",
+    "_meta": {
+      "title": "OpenAI Sora - Video"
+    }
+  },
+  "3": {
+    "inputs": {
+      "images": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "ImageListToImageBatch",
+    "_meta": {
+      "title": "Image List to Image Batch"
+    }
+  },
+  "4": {
+    "inputs": {
+      "url": ""
+    },
+    "class_type": "LoadImagesFromURL",
+    "_meta": {
+      "title": "$image_url.url!:The image must be url，Multiple urls can be uploaded, but each url must have a carriage return directly"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": "a dog runnig"
+    },
+    "class_type": "Text _O",
+    "_meta": {
+      "title": "$prompt.text!:User-entered prompt word"
+    }
+  }
+}

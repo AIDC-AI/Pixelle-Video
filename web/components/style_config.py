@@ -704,11 +704,11 @@ def render_style_config(pixelle_video):
             
             # Filter workflows based on template media type
             if template_media_type == "video":
-                # Only show video_ workflows
-                workflows = [wf for wf in all_workflows if "video_" in wf["key"].lower()]
+                # Only show video_ and i2v_ workflows
+                workflows = [wf for wf in all_workflows if "video_" in wf["key"].lower() or "i2v_" in wf["key"].lower()]
             else:
-                # Only show image_ workflows (exclude video_)
-                workflows = [wf for wf in all_workflows if "video_" not in wf["key"].lower()]
+                # Only show image_ workflows (exclude video_ and i2v_)
+                workflows = [wf for wf in all_workflows if "video_" not in wf["key"].lower() and "i2v_" not in wf["key"].lower()]
         
             # Build options for selectbox
             # Display: "image_flux.json - Runninghub"
@@ -753,6 +753,30 @@ def render_style_config(pixelle_video):
                 size_info_text = tr('style.image_size_info', width=media_width, height=media_height)
             st.info(f"📐 {size_info_text}")
         
+            # Check if selected workflow is I2V (image-to-video)
+            is_i2v_workflow = "i2v_" in workflow_key.lower() if workflow_key else False
+            
+            # I2V: Show source image URL input
+            source_image_url = None
+            if is_i2v_workflow:
+                st.markdown(f"**🖼️ {tr('style.source_image')}**")
+                source_image_url = st.text_input(
+                    tr('style.source_image_url'),
+                    value="",
+                    placeholder="https://example.com/image.jpg",
+                    help=tr('style.source_image_help'),
+                    key="i2v_source_image_url"
+                )
+                
+                # Show preview if URL provided
+                if source_image_url:
+                    try:
+                        st.image(source_image_url, use_container_width=True)
+                    except Exception:
+                        st.caption(tr('style.source_image_preview_failed'))
+                else:
+                    st.warning(tr('style.source_image_required'))
+            
             # Prompt prefix input
             # Get current prompt_prefix from config (based on media type)
             current_prefix = comfyui_config.get(media_config_key, {}).get("prompt_prefix", "")
@@ -854,6 +878,9 @@ def render_style_config(pixelle_video):
             workflow_key = None
             prompt_prefix = ""
     
+    # Get source_image_url from session state if I2V workflow
+    source_image_url = st.session_state.get('i2v_source_image_url', None)
+    
     # Return all style configuration parameters
     return {
         "tts_inference_mode": tts_mode,
@@ -866,5 +893,6 @@ def render_style_config(pixelle_video):
         "media_workflow": workflow_key,
         "prompt_prefix": prompt_prefix if prompt_prefix else "",
         "media_width": media_width,
-        "media_height": media_height
+        "media_height": media_height,
+        "source_image_url": source_image_url if source_image_url else None
     }

@@ -47,6 +47,39 @@ def render_content_input():
                 label_visibility="collapsed"
             )
             
+            # Scene mode selection (only in generate mode)
+            scene_mode = "marketing"  # Default
+            if mode == "generate":
+                from pixelle_video.prompts.scene_modes import list_scene_modes, DEFAULT_SCENE_MODE
+                from web.i18n import get_language
+                
+                scene_modes = list_scene_modes()
+                current_lang = get_language()
+                
+                # Build options
+                scene_mode_options = {
+                    m.key: f"{m.icon} {m.name_zh if current_lang == 'zh_CN' else m.name_en}"
+                    for m in scene_modes
+                }
+                scene_mode_keys = list(scene_mode_options.keys())
+                
+                with st.expander(tr("scene_mode.title"), expanded=False):
+                    st.caption(tr("scene_mode.description"))
+                    scene_mode = st.radio(
+                        tr("scene_mode.select"),
+                        options=scene_mode_keys,
+                        format_func=lambda x: scene_mode_options[x],
+                        index=scene_mode_keys.index(DEFAULT_SCENE_MODE),
+                        label_visibility="collapsed",
+                        key="scene_mode_selector"
+                    )
+                    
+                    # Show description of selected mode
+                    selected_mode = next((m for m in scene_modes if m.key == scene_mode), None)
+                    if selected_mode:
+                        desc = selected_mode.description_zh if current_lang == 'zh_CN' else selected_mode.description_en
+                        st.info(f"💡 {desc}")
+            
             # Text input (unified for both modes)
             text_placeholder = tr("input.topic_placeholder") if mode == "generate" else tr("input.content_placeholder")
             text_height = 120 if mode == "generate" else 200
@@ -102,6 +135,7 @@ def render_content_input():
             return {
                 "batch_mode": False,
                 "mode": mode,
+                "scene_mode": scene_mode,
                 "text": text,
                 "title": title,
                 "n_scenes": n_scenes,
