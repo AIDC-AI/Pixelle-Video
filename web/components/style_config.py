@@ -820,14 +820,21 @@ def render_style_config(pixelle_video):
                             # Build final prompt with prefix
                             final_prompt = build_image_prompt(test_prompt, prompt_prefix)
                         
+                            # Prepare media call parameters
+                            media_params = {
+                                "prompt": final_prompt,
+                                "workflow": workflow_key,
+                                "media_type": template_media_type,
+                                "width": int(media_width),
+                                "height": int(media_height)
+                            }
+                            
+                            # Add image_url for I2V workflows
+                            if is_i2v_workflow and source_image_url:
+                                media_params["image_url"] = source_image_url
+                            
                             # Generate preview media (use user-specified size and media type)
-                            media_result = run_async(pixelle_video.media(
-                                prompt=final_prompt,
-                                workflow=workflow_key,
-                                media_type=template_media_type,
-                                width=int(media_width),
-                                height=int(media_height)
-                            ))
+                            media_result = run_async(pixelle_video.media(**media_params))
                             preview_media_path = media_result.url
                         
                             # Display preview (support both URL and local path)
