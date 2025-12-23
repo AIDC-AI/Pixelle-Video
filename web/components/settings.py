@@ -19,27 +19,44 @@ import streamlit as st
 from web.i18n import tr, get_language
 from web.utils.streamlit_helpers import safe_rerun
 from pixelle_video.config import config_manager
+from pixelle_video.utils.llm_connection import test_connection
 
 
 def render_advanced_settings():
     """Render system configuration (required) with 2-column layout"""
+    # Initialize session state for LLM connection test
+    if "available_llm_models" not in st.session_state:
+        st.session_state.available_llm_models = []
+    if "llm_connection_tested" not in st.session_state:
+        st.session_state.llm_connection_tested = False
+    if "llm_connection_status" not in st.session_state:
+        st.session_state.llm_connection_status = ""
+    if "llm_manual_model_input" not in st.session_state:
+        st.session_state.llm_manual_model_input = False
+
     # Check if system is configured
     is_configured = config_manager.validate()
-    
+
     # Expand if not configured, collapse if configured
     with st.expander(tr("settings.title"), expanded=not is_configured):
         # 2-column layout: LLM | ComfyUI
         llm_col, comfyui_col = st.columns(2)
-        
+
         # ====================================================================
         # Column 1: LLM Settings
         # ====================================================================
         with llm_col:
             with st.container(border=True):
                 st.markdown(f"**{tr('settings.llm.title')}**")
-                
+
                 # Quick preset selection
-                from pixelle_video.llm_presets import get_preset_names, get_preset, find_preset_by_base_url_and_model
+                from pixelle_video.llm_presets import (
+                    get_preset_names,
+                    get_preset,
+                    find_preset_by_base_url_and_model,
+                    supports_connection_test,
+                    requires_api_key,
+                )
                 
                 # Custom at the end
                 preset_names = get_preset_names() + ["Custom"]
@@ -66,23 +83,34 @@ def render_advanced_settings():
                     options=preset_names,
                     index=default_index,
                     help=tr("settings.llm.quick_select_help"),
-                    key="llm_preset_select"
+                    key="llm_preset_select",
                 )
-                
+
+                # Track preset changes to reset connection state
+                if "llm_last_preset" not in st.session_state:
+                    st.session_state.llm_last_preset = selected_preset
+                elif st.session_state.llm_last_preset != selected_preset:
+                    # Preset changed - reset connection state
+                    st.session_state.llm_last_preset = selected_preset
+                    st.session_state.available_llm_models = []
+                    st.session_state.llm_connection_tested = False
+                    st.session_state.llm_connection_status = ""
+                    st.session_state.llm_manual_model_input = False
+
                 # Auto-fill based on selected preset
                 if selected_preset != "Custom":
                     # Preset selected
                     preset_config = get_preset(selected_preset)
-                    
+
                     # If user switched to a different preset (not current one), clear API key
                     # If it's the same as current config, keep API key
                     if selected_preset == current_preset:
                         # Same preset as saved config: keep API key
                         default_api_key = current_llm["api_key"]
                     else:
-                        # Different preset: use default_api_key if provided (e.g., Ollama), otherwise clear
-                        default_api_key = preset_config.get("default_api_key", "")
-                    
+                        # Different preset: clear API key
+                        default_api_key = ""
+
                     default_base_url = preset_config.get("base_url", "")
                     default_model = preset_config.get("model", "")
                     
@@ -96,31 +124,108 @@ def render_advanced_settings():
                     default_model = current_llm["model"]
                 
                 st.markdown("---")
-                
+
+                # Determine if API key is required for this preset
+                api_key_required = requires_api_key(selected_preset)
+                api_key_label = (
+                    tr("settings.llm.api_key_optional")
+                    if not api_key_required
+                    else f"{tr('settings.llm.api_key')} *"
+                )
+
                 # API Key (use unique key to force refresh when switching preset)
                 llm_api_key = st.text_input(
-                    f"{tr('settings.llm.api_key')} *",
+                    api_key_label,
                     value=default_api_key,
                     type="password",
                     help=tr("settings.llm.api_key_help"),
-                    key=f"llm_api_key_input_{selected_preset}"
+                    key=f"llm_api_key_input_{selected_preset}",
                 )
-                
+
                 # Base URL (use unique key based on preset to force refresh)
                 llm_base_url = st.text_input(
                     f"{tr('settings.llm.base_url')} *",
                     value=default_base_url,
                     help=tr("settings.llm.base_url_help"),
-                    key=f"llm_base_url_input_{selected_preset}"
+                    key=f"llm_base_url_input_{selected_preset}",
                 )
-                
-                # Model (use unique key based on preset to force refresh)
-                llm_model = st.text_input(
-                    f"{tr('settings.llm.model')} *",
-                    value=default_model,
-                    help=tr("settings.llm.model_help"),
-                    key=f"llm_model_input_{selected_preset}"
-                )
+
+                # Test Connection button for LLM
+                # Show for: known presets that support it, OR Custom (assume OpenAI-compatible)
+                show_test_button = supports_connection_test(selected_preset) or selected_preset == "Custom"
+                if show_test_button:
+                    if st.button(
+                        tr("btn.test_connection"),
+                        key="test_llm_connection",
+                        use_container_width=True,
+                    ):
+                        # Reset previous state
+                        st.session_state.available_llm_models = []
+                        st.session_state.llm_connection_tested = False
+                        st.session_state.llm_connection_status = ""
+                        st.session_state.llm_manual_model_input = False
+
+                        with st.spinner(tr("status.fetching_models")):
+                            result = test_connection(
+                                api_key=llm_api_key,
+                                base_url=llm_base_url,
+                                preset_name=selected_preset if selected_preset != "Custom" else None,
+                            )
+
+                        st.session_state.llm_connection_tested = True
+                        if result.success:
+                            st.session_state.available_llm_models = result.models
+                            st.session_state.llm_connection_status = "success"
+                            st.success(
+                                tr("status.llm_connection_success").format(count=len(result.models))
+                            )
+                        else:
+                            st.session_state.llm_connection_status = "failed"
+                            st.error(f"{tr('status.llm_connection_failed')}: {result.message}")
+                else:
+                    # Claude or other non-supported presets
+                    st.caption(f"ℹ️ {tr('settings.llm.test_not_supported')}")
+
+                # Model selection: dropdown if models available, text input otherwise
+                if (
+                    st.session_state.llm_connection_tested
+                    and st.session_state.llm_connection_status == "success"
+                    and st.session_state.available_llm_models
+                    and not st.session_state.llm_manual_model_input
+                ):
+                    # Show dropdown with fetched models
+                    available_models = st.session_state.available_llm_models
+
+                    # Determine default index: try to find current model in list
+                    try:
+                        default_idx = available_models.index(default_model)
+                    except ValueError:
+                        default_idx = 0
+
+                    llm_model = st.selectbox(
+                        f"{tr('settings.llm.select_model')} *",
+                        options=available_models,
+                        index=default_idx,
+                        help=tr("settings.llm.model_help"),
+                        key=f"llm_model_select_{selected_preset}",
+                    )
+
+                    # Option to switch to manual input
+                    if st.checkbox(
+                        tr("settings.llm.manual_model_input"),
+                        value=False,
+                        key="llm_switch_to_manual",
+                    ):
+                        st.session_state.llm_manual_model_input = True
+                        safe_rerun()
+                else:
+                    # Default text input for model
+                    llm_model = st.text_input(
+                        f"{tr('settings.llm.model')} *",
+                        value=default_model,
+                        help=tr("settings.llm.model_help"),
+                        key=f"llm_model_input_{selected_preset}",
+                    )
         
         # ====================================================================
         # Column 2: ComfyUI Settings
@@ -134,22 +239,12 @@ def render_advanced_settings():
                 
                 # Local/Self-hosted ComfyUI configuration
                 st.markdown(f"**{tr('settings.comfyui.local_title')}**")
-                url_col, key_col = st.columns(2)
-                with url_col:
-                    comfyui_url = st.text_input(
-                        tr("settings.comfyui.comfyui_url"),
-                        value=comfyui_config.get("comfyui_url", "http://127.0.0.1:8188"),
-                        help=tr("settings.comfyui.comfyui_url_help"),
-                        key="comfyui_url_input"
-                    )
-                with key_col:
-                    comfyui_api_key = st.text_input(
-                        tr("settings.comfyui.comfyui_api_key"),
-                        value=comfyui_config.get("comfyui_api_key", ""),
-                        type="password",
-                        help=tr("settings.comfyui.comfyui_api_key_help"),
-                        key="comfyui_api_key_input"
-                    )
+                comfyui_url = st.text_input(
+                    tr("settings.comfyui.comfyui_url"),
+                    value=comfyui_config.get("comfyui_url", "http://127.0.0.1:8188"),
+                    help=tr("settings.comfyui.comfyui_url_help"),
+                    key="comfyui_url_input"
+                )
                 
                 # Test connection button
                 if st.button(tr("btn.test_connection"), key="test_comfyui", use_container_width=True):
@@ -189,24 +284,26 @@ def render_advanced_settings():
         with col1:
             if st.button(tr("btn.save_config"), use_container_width=True, key="save_config_btn"):
                 try:
-                    # Validate and save LLM configuration
-                    if not (llm_api_key and llm_base_url and llm_model):
-                        st.error(tr("status.llm_config_incomplete"))
-                    else:
-                        config_manager.set_llm_config(llm_api_key, llm_base_url, llm_model)
+                    # Save LLM configuration
+                    # API key is optional for some providers (e.g., Ollama)
+                    api_key_needed = requires_api_key(selected_preset)
+                    can_save_llm = llm_base_url and llm_model and (llm_api_key or not api_key_needed)
+                    if can_save_llm:
+                        # Use empty string or "dummy-key" for providers that don't need API key
+                        effective_api_key = llm_api_key if llm_api_key else "dummy-key"
+                        config_manager.set_llm_config(effective_api_key, llm_base_url, llm_model)
                     
-                    # Save ComfyUI configuration (optional fields, always save what's provided)
+                    # Save ComfyUI configuration
                     config_manager.set_comfyui_config(
                         comfyui_url=comfyui_url if comfyui_url else None,
-                        comfyui_api_key=comfyui_api_key if comfyui_api_key else None,
                         runninghub_api_key=runninghub_api_key if runninghub_api_key else None
                     )
                     
-                    # Only save to file if LLM config is valid
-                    if llm_api_key and llm_base_url and llm_model:
-                        config_manager.save()
-                        st.success(tr("status.config_saved"))
-                        safe_rerun()
+                    # Save to file
+                    config_manager.save()
+                    
+                    st.success(tr("status.config_saved"))
+                    safe_rerun()
                 except Exception as e:
                     st.error(f"{tr('status.save_failed')}: {str(e)}")
         
