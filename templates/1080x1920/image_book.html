@@ -23,21 +23,28 @@
             background: #1a1a1a;
             background-image: url("{{image}}");
             background-size: cover;
-            background-position: center;
+            background-position: center bottom 400px;
         }
 
         /* 顶部区域 */
         .top-section {
             position: absolute;
-            top: 18%;
+            top: 10%;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
             width: 90%;
         }
 
+        .image {
+            position: absolute;
+            top: 400px;
+            left: 50%;
+            transform: translate(-50%);
+        }   
+
         .title {
-            font-size: 120px;
+            font-size: 100px;
             font-weight: 900;
             line-height: 1.1;
             font-family: 'Noto Sans SC', sans-serif;
@@ -51,7 +58,7 @@
         }
 
         .subtitle {
-            font-size: 36px;
+            font-size: 30px;
             font-weight: 500;
             font-family: 'Noto Sans SC', sans-serif;
             color: #000;
@@ -65,7 +72,7 @@
         /* 底部文字区域 */
         .bottom-section {
             position: absolute;
-            bottom: 200px;
+            top: 1000px;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
@@ -73,7 +80,7 @@
         }
 
         .main-text {
-            font-size: 60px;
+            font-size: 50px;
             font-weight: 700;
             font-family: 'Noto Sans SC', sans-serif;
             text-shadow: -2px -2px 0 #000,
@@ -101,6 +108,8 @@
         <div class="subtitle">{{subtitle=作者}}</div>
     </div>
 
+    <!-- <img class="img" src="{{image}}" alt="内容图片"> -->
+    
     <!-- 底部文字区 -->
     <div class="bottom-section">
         <div class="main-text">{{text}}</div>
