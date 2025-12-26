@@ -269,10 +269,10 @@ class EcommercePipelineUI(PipelineUI):
                 if not browser_data.exists():
                     st.warning(
                         "⚠️ 首次使用需要登录淘宝。请在终端运行：\n"
-                        "`uv run python tests/test_ecommerce_scraper.py --login`"
+                        "`uv run python scripts/taobao_login.py --login`"
                         if lang == "zh_CN" else
                         "⚠️ First time use requires Taobao login. Run in terminal:\n"
-                        "`uv run python tests/test_ecommerce_scraper.py --login`"
+                        "`uv run python scripts/taobao_login.py --login`"
                     )
                     st.stop()
                 
