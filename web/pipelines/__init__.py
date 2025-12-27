@@ -26,6 +26,7 @@ from web.pipelines.base import (
 # Import all pipeline UI modules to ensure they register themselves
 from web.pipelines import standard
 from web.pipelines import asset_based
+from web.pipelines import sora
 
 __all__ = [
     "PipelineUI",

@@ -25,155 +25,179 @@ from web.utils.async_helpers import run_async
 from pixelle_video.config import config_manager
 
 
-def render_style_config(pixelle_video):
-    """Render style configuration section (middle column)"""
-    # TTS Section (moved from left column)
-    # ====================================================================
-    with st.container(border=True):
-        st.markdown(f"**{tr('section.tts')}**")
-        
-        with st.expander(tr("help.feature_description"), expanded=False):
-            st.markdown(f"**{tr('help.what')}**")
-            st.markdown(tr("tts.what"))
-            st.markdown(f"**{tr('help.how')}**")
-            st.markdown(tr("tts.how"))
-        
-        # Get TTS config
-        comfyui_config = config_manager.get_comfyui_config()
-        tts_config = comfyui_config["tts"]
-        
-        # Inference mode selection
-        tts_mode = st.radio(
-            tr("tts.inference_mode"),
-            ["local", "comfyui"],
-            horizontal=True,
-            format_func=lambda x: tr(f"tts.mode.{x}"),
-            index=0 if tts_config.get("inference_mode", "local") == "local" else 1,
-            key="tts_inference_mode"
-        )
-        
-        # Show hint based on mode
-        if tts_mode == "local":
-            st.caption(tr("tts.mode.local_hint"))
-        else:
-            st.caption(tr("tts.mode.comfyui_hint"))
-        
-        # ================================================================
-        # Local Mode UI
-        # ================================================================
-        if tts_mode == "local":
-            # Import voice configuration
-            from pixelle_video.tts_voices import EDGE_TTS_VOICES, get_voice_display_name
+def render_style_config(
+    pixelle_video,
+    key_prefix: str = "",
+    force_template_type: str | None = None,
+    show_tts: bool = True,
+):
+    """Render style configuration section (middle column)
+
+    Args:
+        pixelle_video: Pixelle core instance
+        key_prefix: Prefix for Streamlit widget keys (to avoid conflicts across pipelines)
+        force_template_type: If provided, can be used to lock template type (e.g. "video")
+        show_tts: Whether to render the TTS configuration panel.
+                  For Sora pipeline we hide it and rely on default config.
+    """
+    # Helper for namespacing widget keys across different pipelines
+    def kp(name: str) -> str:
+        return f"{key_prefix}{name}" if key_prefix else name
+    # ================================================================
+    # TTS Section (can be hidden for Sora pipeline)
+    # ================================================================
+    comfyui_config = config_manager.get_comfyui_config()
+    tts_config = comfyui_config["tts"]
+    # Defaults in case we don't render any widgets
+    # If show_tts=False, set tts_mode to None to skip TTS generation
+    tts_mode = None if not show_tts else tts_config.get("inference_mode", "local")
+    selected_voice = None
+    tts_speed = None
+    tts_workflow_key = None
+    ref_audio_path = None
+
+    if show_tts:
+        with st.container(border=True):
+            st.markdown(f"**{tr('section.tts')}**")
             
-            # Get saved voice from config
-            local_config = tts_config.get("local", {})
-            saved_voice = local_config.get("voice", "zh-CN-YunjianNeural")
-            saved_speed = local_config.get("speed", 1.2)
+            with st.expander(tr("help.feature_description"), expanded=False):
+                st.markdown(f"**{tr('help.what')}**")
+                st.markdown(tr("tts.what"))
+                st.markdown(f"**{tr('help.how')}**")
+                st.markdown(tr("tts.how"))
             
-            # Build voice options with i18n
-            voice_options = []
-            voice_ids = []
-            default_voice_index = 0
-            
-            for idx, voice_config in enumerate(EDGE_TTS_VOICES):
-                voice_id = voice_config["id"]
-                display_name = get_voice_display_name(voice_id, tr, get_language())
-                voice_options.append(display_name)
-                voice_ids.append(voice_id)
-                
-                # Set default index if matches saved voice
-                if voice_id == saved_voice:
-                    default_voice_index = idx
-            
-            # Two-column layout: Voice | Speed
-            voice_col, speed_col = st.columns([1, 1])
-            
-            with voice_col:
-                # Voice selector
-                selected_voice_display = st.selectbox(
-                    tr("tts.voice_selector"),
-                    voice_options,
-                    index=default_voice_index,
-                    key="tts_local_voice"
-                )
-                
-                # Get actual voice ID
-                selected_voice_index = voice_options.index(selected_voice_display)
-                selected_voice = voice_ids[selected_voice_index]
-            
-            with speed_col:
-                # Speed slider
-                tts_speed = st.slider(
-                    tr("tts.speed"),
-                    min_value=0.5,
-                    max_value=2.0,
-                    value=saved_speed,
-                    step=0.1,
-                    format="%.1fx",
-                    key="tts_local_speed"
-                )
-                st.caption(tr("tts.speed_label", speed=f"{tts_speed:.1f}"))
-            
-            # Variables for video generation
-            tts_workflow_key = None
-            ref_audio_path = None
-        
-        # ================================================================
-        # ComfyUI Mode UI
-        # ================================================================
-        else:  # comfyui mode
-            # Get available TTS workflows
-            tts_workflows = pixelle_video.tts.list_workflows()
-            
-            # Build options for selectbox
-            tts_workflow_options = [wf["display_name"] for wf in tts_workflows]
-            tts_workflow_keys = [wf["key"] for wf in tts_workflows]
-            
-            # Default to saved workflow if exists
-            default_tts_index = 0
-            saved_tts_workflow = tts_config.get("comfyui", {}).get("default_workflow")
-            if saved_tts_workflow and saved_tts_workflow in tts_workflow_keys:
-                default_tts_index = tts_workflow_keys.index(saved_tts_workflow)
-            
-            tts_workflow_display = st.selectbox(
-                "TTS Workflow",
-                tts_workflow_options if tts_workflow_options else ["No TTS workflows found"],
-                index=default_tts_index,
-                label_visibility="collapsed",
-                key="tts_workflow_select"
+            # Inference mode selection
+            tts_mode = st.radio(
+                tr("tts.inference_mode"),
+                ["local", "comfyui"],
+                horizontal=True,
+                format_func=lambda x: tr(f"tts.mode.{x}"),
+                index=0 if tts_config.get("inference_mode", "local") == "local" else 1,
+                key=kp("tts_inference_mode"),
             )
             
-            # Get the actual workflow key
-            if tts_workflow_options:
-                tts_selected_index = tts_workflow_options.index(tts_workflow_display)
-                tts_workflow_key = tts_workflow_keys[tts_selected_index]
+            # Show hint based on mode
+            if tts_mode == "local":
+                st.caption(tr("tts.mode.local_hint"))
             else:
-                tts_workflow_key = "selfhost/tts_edge.json"  # fallback
+                st.caption(tr("tts.mode.comfyui_hint"))
             
-            # Reference audio upload (optional, for voice cloning)
-            ref_audio_file = st.file_uploader(
-                tr("tts.ref_audio"),
-                type=["mp3", "wav", "flac", "m4a", "aac", "ogg"],
-                help=tr("tts.ref_audio_help"),
-                key="ref_audio_upload"
-            )
-            
-            # Save uploaded ref_audio to temp file if provided
-            ref_audio_path = None
-            if ref_audio_file is not None:
-                # Audio preview player (directly play uploaded file)
-                st.audio(ref_audio_file)
+            # ============================================================
+            # Local Mode UI
+            # ============================================================
+            if tts_mode == "local":
+                # Import voice configuration
+                from pixelle_video.tts_voices import EDGE_TTS_VOICES, get_voice_display_name
                 
-                # Save to temp directory
-                temp_dir = Path("temp")
-                temp_dir.mkdir(exist_ok=True)
-                ref_audio_path = temp_dir / f"ref_audio_{ref_audio_file.name}"
-                with open(ref_audio_path, "wb") as f:
-                    f.write(ref_audio_file.getbuffer())
+                # Get saved voice from config
+                local_config = tts_config.get("local", {})
+                saved_voice = local_config.get("voice", "zh-CN-YunjianNeural")
+                saved_speed = local_config.get("speed", 1.2)
+                
+                # Build voice options with i18n
+                voice_options = []
+                voice_ids = []
+                default_voice_index = 0
+                
+                for idx, voice_config in enumerate(EDGE_TTS_VOICES):
+                    voice_id = voice_config["id"]
+                    display_name = get_voice_display_name(voice_id, tr, get_language())
+                    voice_options.append(display_name)
+                    voice_ids.append(voice_id)
+                    
+                    # Set default index if matches saved voice
+                    if voice_id == saved_voice:
+                        default_voice_index = idx
+                
+                # Two-column layout: Voice | Speed
+                voice_col, speed_col = st.columns([1, 1])
+                
+                with voice_col:
+                    # Voice selector
+                    selected_voice_display = st.selectbox(
+                        tr("tts.voice_selector"),
+                        voice_options,
+                        index=default_voice_index,
+                        key=kp("tts_local_voice"),
+                    )
+                    
+                    # Get actual voice ID
+                    selected_voice_index = voice_options.index(selected_voice_display)
+                    selected_voice = voice_ids[selected_voice_index]
+                
+                with speed_col:
+                    # Speed slider
+                    tts_speed = st.slider(
+                        tr("tts.speed"),
+                        min_value=0.5,
+                        max_value=2.0,
+                        value=saved_speed,
+                        step=0.1,
+                        format="%.1fx",
+                        key=kp("tts_local_speed"),
+                    )
+                    st.caption(tr("tts.speed_label", speed=f"{tts_speed:.1f}"))
+                
+                # Variables for video generation
+                tts_workflow_key = None
+                ref_audio_path = None
             
-            # Variables for video generation
-            selected_voice = None
-            tts_speed = None
+            # ============================================================
+            # ComfyUI Mode UI
+            # ============================================================
+            else:  # comfyui mode
+                # Get available TTS workflows
+                tts_workflows = pixelle_video.tts.list_workflows()
+                
+                # Build options for selectbox
+                tts_workflow_options = [wf["display_name"] for wf in tts_workflows]
+                tts_workflow_keys = [wf["key"] for wf in tts_workflows]
+                
+                # Default to saved workflow if exists
+                default_tts_index = 0
+                saved_tts_workflow = tts_config.get("comfyui", {}).get("default_workflow")
+                if saved_tts_workflow and saved_tts_workflow in tts_workflow_keys:
+                    default_tts_index = tts_workflow_keys.index(saved_tts_workflow)
+                
+                tts_workflow_display = st.selectbox(
+                    "TTS Workflow",
+                    tts_workflow_options if tts_workflow_options else ["No TTS workflows found"],
+                    index=default_tts_index,
+                    label_visibility="collapsed",
+                    key=kp("tts_workflow_select"),
+                )
+                
+                # Get the actual workflow key
+                if tts_workflow_options:
+                    tts_selected_index = tts_workflow_options.index(tts_workflow_display)
+                    tts_workflow_key = tts_workflow_keys[tts_selected_index]
+                else:
+                    tts_workflow_key = "selfhost/tts_edge.json"  # fallback
+                
+                # Reference audio upload (optional, for voice cloning)
+                ref_audio_file = st.file_uploader(
+                    tr("tts.ref_audio"),
+                    type=["mp3", "wav", "flac", "m4a", "aac", "ogg"],
+                    help=tr("tts.ref_audio_help"),
+                    key=kp("ref_audio_upload"),
+                )
+                
+                # Save uploaded ref_audio to temp file if provided
+                ref_audio_path = None
+                if ref_audio_file is not None:
+                    # Audio preview player (directly play uploaded file)
+                    st.audio(ref_audio_file)
+                    
+                    # Save to temp directory
+                    temp_dir = Path("temp")
+                    temp_dir.mkdir(exist_ok=True)
+                    ref_audio_path = temp_dir / f"ref_audio_{ref_audio_file.name}"
+                    with open(ref_audio_path, "wb") as f:
+                        f.write(ref_audio_file.getbuffer())
+                
+                # Variables for video generation
+                selected_voice = None
+                tts_speed = None
         
         # ================================================================
         # TTS Preview (works for both modes)
@@ -184,11 +208,11 @@ def render_style_config(pixelle_video):
                 tr("tts.preview_text"),
                 value="大家好，这是一段测试语音。",
                 placeholder=tr("tts.preview_text_placeholder"),
-                key="tts_preview_text"
+                key=kp("tts_preview_text"),
             )
             
             # Preview button
-            if st.button(tr("tts.preview_button"), key="preview_tts", use_container_width=True):
+            if st.button(tr("tts.preview_button"), key=kp("preview_tts"), use_container_width=True):
                 with st.spinner(tr("tts.previewing")):
                     try:
                         # Build TTS params based on mode
@@ -268,8 +292,30 @@ def render_style_config(pixelle_video):
         # If no preview found, return empty string
         return ""
     
-    with st.container(border=True):
-        st.markdown(f"**{tr('section.template')}**")
+    # Sora pipeline: skip storyboard UI and use no template (no subtitles, no overlay)
+    if force_template_type is not None and key_prefix == "sora_":
+        # For Sora I2V, we don't want templates, subtitles, or overlays
+        # Just use the raw video from I2V workflow
+        frame_template = None
+        custom_params_for_video = {}
+        # Use default media size (will be determined from workflow or config)
+        media_width = None
+        media_height = None
+        st.session_state["template_media_width"] = media_width
+        st.session_state["template_media_height"] = media_height
+        # Media type: video (since we're using I2V workflow)
+        template_media_type = "video"
+        template_requires_media = True
+        st.session_state["template_media_type"] = template_media_type
+        st.session_state["template_requires_media"] = template_requires_media
+        st.session_state["template_requires_image"] = False
+        # Do not expose custom params in Sora UI
+        custom_values_for_video = {}
+        selected_template_name = None
+    else:
+        # Default pipelines: full storyboard template UI
+        with st.container(border=True):
+            st.markdown(f"**{tr('section.template')}**")
         
         with st.expander(tr("help.feature_description"), expanded=False):
             st.markdown(f"**{tr('help.what')}**")
@@ -292,16 +338,24 @@ def render_style_config(pixelle_video):
             'video': tr('template.type.video')
         }
         
-        # Radio buttons in horizontal layout
-        selected_template_type = st.radio(
-            tr('template.type_selector'),
-            options=list(template_type_options.keys()),
-            format_func=lambda x: template_type_options[x],
-            index=1,  # Default to 'image'
-            key="template_type_selector",
-            label_visibility="collapsed",
-            horizontal=True
-        )
+        # For Sora pipeline we force video type and hide the switch,
+        # while for other pipelines we keep the full selector.
+        if force_template_type is not None:
+            selected_template_type = force_template_type
+            # Show read-only label instead of interactive radio
+            label = template_type_options.get(force_template_type, force_template_type)
+            st.markdown(f"✅ {label}")
+        else:
+            # Radio buttons in horizontal layout
+            selected_template_type = st.radio(
+                tr('template.type_selector'),
+                options=list(template_type_options.keys()),
+                format_func=lambda x: template_type_options[x],
+                index=1,  # Default to 'image'
+                key=kp("template_type_selector"),
+                label_visibility="collapsed",
+                horizontal=True,
+            )
         
         # Display hint based on selected type (below radio buttons)
         if selected_template_type == 'static':
@@ -461,7 +515,7 @@ def render_style_config(pixelle_video):
                                 
                                 if st.button(
                                     button_label,
-                                    key=f"template_{template.template_path}",
+                                    key=kp(f"template_{template.template_path}"),
                                     use_container_width=True,
                                     type=button_type,
                                 ):
@@ -540,25 +594,25 @@ def render_style_config(pixelle_video):
                         custom_values_for_video[param_name] = st.text_input(
                             label,
                             value=default,
-                            key=f"video_custom_{param_name}"
+                            key=kp(f"video_custom_{param_name}"),
                         )
                     elif param_type == 'number':
                         custom_values_for_video[param_name] = st.number_input(
                             label,
                             value=default,
-                            key=f"video_custom_{param_name}"
+                            key=kp(f"video_custom_{param_name}"),
                         )
                     elif param_type == 'color':
                         custom_values_for_video[param_name] = st.color_picker(
                             label,
                             value=default,
-                            key=f"video_custom_{param_name}"
+                            key=kp(f"video_custom_{param_name}"),
                         )
                     elif param_type == 'bool':
                         custom_values_for_video[param_name] = st.checkbox(
                             label,
                             value=default,
-                            key=f"video_custom_{param_name}"
+                            key=kp(f"video_custom_{param_name}"),
                         )
             
             # Right column parameters
@@ -572,25 +626,25 @@ def render_style_config(pixelle_video):
                         custom_values_for_video[param_name] = st.text_input(
                             label,
                             value=default,
-                            key=f"video_custom_{param_name}"
+                            key=kp(f"video_custom_{param_name}"),
                         )
                     elif param_type == 'number':
                         custom_values_for_video[param_name] = st.number_input(
                             label,
                             value=default,
-                            key=f"video_custom_{param_name}"
+                            key=kp(f"video_custom_{param_name}"),
                         )
                     elif param_type == 'color':
                         custom_values_for_video[param_name] = st.color_picker(
                             label,
                             value=default,
-                            key=f"video_custom_{param_name}"
+                            key=kp(f"video_custom_{param_name}"),
                         )
                     elif param_type == 'bool':
                         custom_values_for_video[param_name] = st.checkbox(
                             label,
                             value=default,
-                            key=f"video_custom_{param_name}"
+                            key=kp(f"video_custom_{param_name}"),
                         )
         
         # Template preview expander
@@ -601,13 +655,13 @@ def render_style_config(pixelle_video):
                 preview_title = st.text_input(
                     tr("template.preview_param_title"), 
                     value=tr("template.preview_default_title"),
-                    key="preview_title"
+                    key=kp("preview_title"),
                 )
                 preview_image = st.text_input(
                     tr("template.preview_param_image"), 
                     value="resources/example.png",
                     help=tr("template.preview_image_help"),
-                    key="preview_image"
+                    key=kp("preview_image"),
                 )
             
             with col2:
@@ -615,7 +669,7 @@ def render_style_config(pixelle_video):
                     tr("template.preview_param_text"), 
                     value=tr("template.preview_default_text"),
                     height=100,
-                    key="preview_text"
+                    key=kp("preview_text"),
                 )
             
             # Info: Size is auto-determined from template
@@ -624,7 +678,7 @@ def render_style_config(pixelle_video):
             st.info(f"📐 {tr('template.size_info')}: {template_width} × {template_height}")
             
             # Preview button
-            if st.button(tr("template.preview_button"), key="btn_preview_template", use_container_width=True):
+            if st.button(tr("template.preview_button"), key=kp("btn_preview_template"), use_container_width=True):
                 with st.spinner(tr("template.preview_generating")):
                     try:
                         from pixelle_video.services.frame_html import HTMLFrameGenerator
@@ -704,11 +758,11 @@ def render_style_config(pixelle_video):
             
             # Filter workflows based on template media type
             if template_media_type == "video":
-                # Only show video_ workflows
-                workflows = [wf for wf in all_workflows if "video_" in wf["key"].lower()]
+                # Only show video_ and i2v_ workflows
+                workflows = [wf for wf in all_workflows if "video_" in wf["key"].lower() or "i2v_" in wf["key"].lower()]
             else:
-                # Only show image_ workflows (exclude video_)
-                workflows = [wf for wf in all_workflows if "video_" not in wf["key"].lower()]
+                # Only show image_ workflows (exclude video_ and i2v_)
+                workflows = [wf for wf in all_workflows if "video_" not in wf["key"].lower() and "i2v_" not in wf["key"].lower()]
         
             # Build options for selectbox
             # Display: "image_flux.json - Runninghub"
@@ -732,12 +786,18 @@ def render_style_config(pixelle_video):
                 workflow_options if workflow_options else ["No workflows found"],
                 index=default_workflow_index,
                 label_visibility="collapsed",
-                key="media_workflow_select"
+                key=kp("media_workflow_select"),
             )
         
             # Get the actual workflow key (e.g., "runninghub/image_flux.json")
             if workflow_options:
-                workflow_selected_index = workflow_options.index(workflow_display)
+                # Guard against inconsistent session state where the stored
+                # selection is not in the current options list.
+                if workflow_display not in workflow_options:
+                    workflow_selected_index = 0
+                    workflow_display = workflow_options[0]
+                else:
+                    workflow_selected_index = workflow_options.index(workflow_display)
                 workflow_key = workflow_keys[workflow_selected_index]
             else:
                 workflow_key = "runninghub/image_flux.json"  # fallback
@@ -753,6 +813,32 @@ def render_style_config(pixelle_video):
                 size_info_text = tr('style.image_size_info', width=media_width, height=media_height)
             st.info(f"📐 {size_info_text}")
         
+            # Check if selected workflow is I2V (image-to-video)
+            is_i2v_workflow = "i2v_" in workflow_key.lower() if workflow_key else False
+            
+            # I2V: Show source image URL input
+            source_image_url = None
+            if is_i2v_workflow:
+                st.markdown(f"**🖼️ {tr('style.source_image')}**")
+                # Get existing value from session_state to preserve user input
+                existing_url = st.session_state.get(kp("i2v_source_image_url"), "")
+                source_image_url = st.text_input(
+                    tr('style.source_image_url'),
+                    value=existing_url,  # Use existing value to preserve user input
+                    placeholder="https://example.com/image.jpg",
+                    help=tr('style.source_image_help'),
+                    key=kp("i2v_source_image_url"),
+                )
+                
+                # Show preview if URL provided
+                if source_image_url:
+                    try:
+                        st.image(source_image_url, use_container_width=True)
+                    except Exception:
+                        st.caption(tr('style.source_image_preview_failed'))
+                else:
+                    st.warning(tr('style.source_image_required'))
+            
             # Prompt prefix input
             # Get current prompt_prefix from config (based on media type)
             current_prefix = comfyui_config.get(media_config_key, {}).get("prompt_prefix", "")
@@ -764,7 +850,8 @@ def render_style_config(pixelle_video):
                 placeholder=tr("style.prompt_prefix_placeholder"),
                 height=80,
                 label_visibility="visible",
-                help=tr("style.prompt_prefix_help")
+                help=tr("style.prompt_prefix_help"),
+                key=kp("prompt_prefix"),
             )
         
             # Media preview expander
@@ -782,12 +869,12 @@ def render_style_config(pixelle_video):
                     test_prompt_label,
                     value=test_prompt_value,
                     help=tr("style.test_prompt_help"),
-                    key="style_test_prompt"
+                    key=kp("style_test_prompt"),
                 )
             
                 # Preview button
                 preview_button_label = tr("style.video_preview") if template_media_type == "video" else tr("style.preview")
-                if st.button(preview_button_label, key="preview_style", use_container_width=True):
+                if st.button(preview_button_label, key=kp("preview_style"), use_container_width=True):
                     previewing_text = tr("style.video_previewing") if template_media_type == "video" else tr("style.previewing")
                     with st.spinner(previewing_text):
                         try:
@@ -796,14 +883,23 @@ def render_style_config(pixelle_video):
                             # Build final prompt with prefix
                             final_prompt = build_image_prompt(test_prompt, prompt_prefix)
                         
+                            # Prepare media call parameters
+                            media_params = {
+                                "prompt": final_prompt,
+                                "workflow": workflow_key,
+                                "media_type": template_media_type,
+                                "width": int(media_width),
+                                "height": int(media_height)
+                            }
+                            
+                            # Add image_url for I2V workflows
+                            # Use current input value first, then fallback to session state
+                            current_source_url = source_image_url if source_image_url else st.session_state.get(kp('i2v_source_image_url'), None)
+                            if is_i2v_workflow and current_source_url:
+                                media_params["image_url"] = current_source_url
+                            
                             # Generate preview media (use user-specified size and media type)
-                            media_result = run_async(pixelle_video.media(
-                                prompt=final_prompt,
-                                workflow=workflow_key,
-                                media_type=template_media_type,
-                                width=int(media_width),
-                                height=int(media_height)
-                            ))
+                            media_result = run_async(pixelle_video.media(**media_params))
                             preview_media_path = media_result.url
                         
                             # Display preview (support both URL and local path)
@@ -854,9 +950,23 @@ def render_style_config(pixelle_video):
             workflow_key = None
             prompt_prefix = ""
     
+    # Get source_image_url from session state
+    # st.text_input automatically saves to session_state, so we can always read from there
+    session_key = kp('i2v_source_image_url')
+    current_source_url = st.session_state.get(session_key, None)
+    # Normalize empty string to None
+    if current_source_url == "":
+        current_source_url = None
+    
+    # Debug: Log the source_image_url value
+    if current_source_url:
+        logger.info(f"📸 Retrieved source_image_url from session state (key={session_key}): {current_source_url}")
+    else:
+        logger.warning(f"📸 No source_image_url in session state (key={session_key}). Available keys with 'i2v': {[k for k in st.session_state.keys() if 'i2v' in k.lower()]}")
+    
     # Return all style configuration parameters
     return {
-        "tts_inference_mode": tts_mode,
+        "tts_inference_mode": tts_mode,  # None if show_tts=False, otherwise "local" or "comfyui"
         "tts_voice": selected_voice if tts_mode == "local" else None,
         "tts_speed": tts_speed if tts_mode == "local" else None,
         "tts_workflow": tts_workflow_key if tts_mode == "comfyui" else None,
@@ -866,5 +976,6 @@ def render_style_config(pixelle_video):
         "media_workflow": workflow_key,
         "prompt_prefix": prompt_prefix if prompt_prefix else "",
         "media_width": media_width,
-        "media_height": media_height
+        "media_height": media_height,
+        "source_image_url": current_source_url  # Already normalized to None if empty
     }

@@ -27,20 +27,20 @@ from pixelle_video.models.progress import ProgressEvent
 from pixelle_video.config import config_manager
 
 
-def render_output_preview(pixelle_video, video_params):
+def render_output_preview(pixelle_video, video_params, key_prefix: str = ""):
     """Render output preview section (right column)"""
     # Check if batch mode
     is_batch = video_params.get("batch_mode", False)
     
     if is_batch:
         # Batch generation mode
-        render_batch_output(pixelle_video, video_params)
+        render_batch_output(pixelle_video, video_params, key_prefix=key_prefix)
     else:
         # Single video generation mode (original logic)
-        render_single_output(pixelle_video, video_params)
+        render_single_output(pixelle_video, video_params, key_prefix=key_prefix)
 
 
-def render_single_output(pixelle_video, video_params):
+def render_single_output(pixelle_video, video_params, key_prefix: str = ""):
     """Render single video generation output (original logic, unchanged)"""
     # Extract parameters from video_params dict
     text = video_params.get("text", "")
@@ -61,6 +61,7 @@ def render_single_output(pixelle_video, video_params):
     custom_values_for_video = video_params.get("template_params", {})
     workflow_key = video_params.get("media_workflow")
     prompt_prefix = video_params.get("prompt_prefix", "")
+    source_image_url = video_params.get("source_image_url")  # Extract source_image_url for I2V workflows
     
     with st.container(border=True):
         st.markdown(f"**{tr('section.video_generation')}**")
@@ -70,7 +71,12 @@ def render_single_output(pixelle_video, video_params):
             st.warning(tr("settings.not_configured"))
         
         # Generate Button
-        if st.button(tr("btn.generate"), type="primary", use_container_width=True):
+        if st.button(
+            tr("btn.generate"),
+            type="primary",
+            use_container_width=True,
+            key=f"{key_prefix}single_generate",
+        ):
             # Validate system configuration
             if not config_manager.validate():
                 st.error(tr("settings.not_configured"))
@@ -155,6 +161,11 @@ def render_single_output(pixelle_video, video_params):
                 if custom_values_for_video:
                     video_params["template_params"] = custom_values_for_video
                 
+                # Add source_image_url for I2V workflows
+                if source_image_url:
+                    video_params["source_image_url"] = source_image_url
+                    logger.info(f"📸 Passing source_image_url to pipeline: {source_image_url}")
+                
                 result = run_async(pixelle_video.generate_video(**video_params))
                 
                 # Calculate total generation time
@@ -199,7 +210,8 @@ def render_single_output(pixelle_video, video_params):
                             data=video_bytes,
                             file_name=video_filename,
                             mime="video/mp4",
-                            use_container_width=True
+                            use_container_width=True,
+                            key=f"{key_prefix}download_video",
                         )
                 else:
                     st.error(tr("status.video_not_found", path=result.video_path))
@@ -212,7 +224,7 @@ def render_single_output(pixelle_video, video_params):
                 st.stop()
 
 
-def render_batch_output(pixelle_video, video_params):
+def render_batch_output(pixelle_video, video_params, key_prefix: str = ""):
     """Render batch generation output (minimal, redirect to History)"""
     topics = video_params.get("topics", [])
     
@@ -243,7 +255,8 @@ def render_batch_output(pixelle_video, video_params):
             tr("batch.generate_button", count=batch_count),
             type="primary",
             use_container_width=True,
-            help=tr("batch.generate_help")
+            help=tr("batch.generate_help"),
+            key=f"{key_prefix}batch_generate",
         ):
             # Prepare shared config
             shared_config = {
@@ -278,6 +291,12 @@ def render_batch_output(pixelle_video, video_params):
             # Add template parameters
             if video_params.get("template_params"):
                 shared_config["template_params"] = video_params["template_params"]
+            
+            # Add source_image_url for I2V workflows
+            source_image_url = video_params.get("source_image_url")
+            if source_image_url:
+                shared_config["source_image_url"] = source_image_url
+                logger.info(f"📸 Passing source_image_url to batch pipeline: {source_image_url}")
             
             # UI containers
             overall_progress_container = st.container()

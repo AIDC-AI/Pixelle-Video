@@ -78,8 +78,8 @@ class FrameProcessor:
         needs_generation = frame.image_prompt is not None
         
         try:
-            # Step 1: Generate audio (TTS)
-            if not frame.audio_path:
+            # Step 1: Generate audio (TTS) - skip if TTS is disabled (no inference_mode)
+            if not frame.audio_path and config.tts_inference_mode:
                 if progress_callback:
                     progress_callback(ProgressEvent(
                         event_type="frame_step",
@@ -90,8 +90,10 @@ class FrameProcessor:
                         action="audio"
                     ))
                 await self._step_generate_audio(frame, config)
-            else:
+            elif frame.audio_path:
                 logger.debug(f"  1/4: Using existing audio: {frame.audio_path}")
+            else:
+                logger.debug(f"  1/4: Skipping TTS (no inference_mode configured)")
             
             # Step 2: Generate media (image or video, conditional)
             if needs_generation:
@@ -203,9 +205,9 @@ class FrameProcessor:
         logger.debug(f"  2/4: Generating media for frame {frame.index}...")
         
         # Determine media type based on workflow
-        # video_ prefix in workflow name indicates video generation
+        # video_ or i2v_ prefix in workflow name indicates video generation
         workflow_name = config.media_workflow or ""
-        is_video_workflow = "video_" in workflow_name.lower()
+        is_video_workflow = "video_" in workflow_name.lower() or "i2v_" in workflow_name.lower()
         media_type = "video" if is_video_workflow else "image"
         
         logger.debug(f"  → Media type: {media_type} (workflow: {workflow_name})")
@@ -225,6 +227,25 @@ class FrameProcessor:
         if is_video_workflow and frame.duration:
             media_params["duration"] = frame.duration
             logger.info(f"  → Generating video with target duration: {frame.duration:.2f}s (from TTS audio)")
+        
+        # For I2V workflows: pass source image URL (required)
+        is_i2v_workflow = "i2v_" in workflow_name.lower()
+        if is_i2v_workflow:
+            logger.debug(f"  → I2V workflow detected, checking source_image_url in config...")
+            logger.debug(f"  → config.source_image_url = {config.source_image_url}")
+            if config.source_image_url:
+                media_params["image_url"] = config.source_image_url
+                logger.info(f"  → I2V mode (frame {frame.index}): using source image URL: {config.source_image_url}")
+            else:
+                # I2V workflow requires image_url, but it's missing
+                error_msg = (
+                    f"I2V workflow '{workflow_name}' requires 'image_url' parameter for frame {frame.index}, "
+                    f"but source_image_url is not provided in config. "
+                    f"Please provide an image URL in the UI."
+                )
+                logger.error(f"  ❌ {error_msg}")
+                logger.error(f"  ❌ Config details: media_workflow={config.media_workflow}, source_image_url={config.source_image_url}")
+                raise ValueError(error_msg)
         
         # Call Media generation
         media_result = await self.core.media(**media_params)
@@ -273,6 +294,20 @@ class FrameProcessor:
     ):
         """Step 3: Compose frame with subtitle using HTML template"""
         logger.debug(f"  3/4: Composing frame {frame.index}...")
+        
+        # Skip composition if no template is specified (e.g., Sora I2V without subtitles)
+        if config.frame_template is None:
+            logger.debug(f"  → Skipping frame composition (no template specified)")
+            # For video: use original video path directly
+            if frame.media_type == "video" and frame.video_path:
+                frame.composed_image_path = None  # No overlay needed
+            # For image: use original image path directly
+            elif frame.media_type == "image" and frame.image_path:
+                frame.composed_image_path = frame.image_path
+            else:
+                frame.composed_image_path = None
+            logger.debug(f"  ✓ Frame composition skipped (using raw media)")
+            return
         
         # Generate output path using task_id
         from pixelle_video.utils.os_util import get_task_frame_path
@@ -347,46 +382,82 @@ class FrameProcessor:
         
         # Branch based on media type
         if frame.media_type == "video":
-            # Video workflow: overlay HTML template on video, then add audio
-            logger.debug(f"  → Using video-based composition with HTML overlay")
+            # Video workflow: overlay HTML template on video (if template exists), then handle audio
+            has_template = frame.composed_image_path is not None
             
-            # Step 1: Overlay transparent HTML image on video
-            # The composed_image_path contains the rendered HTML with transparent background
-            temp_video_with_overlay = get_task_frame_path(config.task_id, frame.index, "video") + "_overlay.mp4"
+            if has_template:
+                # Step 1: Overlay transparent HTML image on video
+                # The composed_image_path contains the rendered HTML with transparent background
+                logger.debug(f"  → Using video-based composition with HTML overlay")
+                temp_video_with_overlay = get_task_frame_path(config.task_id, frame.index, "video") + "_overlay.mp4"
+                
+                video_service.overlay_image_on_video(
+                    video=frame.video_path,
+                    overlay_image=frame.composed_image_path,
+                    output=temp_video_with_overlay,
+                    scale_mode="contain"  # Scale video to fit template size (contain mode)
+                )
+                video_to_use = temp_video_with_overlay
+            else:
+                # No template: use original video directly (no overlay, no subtitles)
+                logger.debug(f"  → Using raw video without template overlay")
+                if not frame.video_path:
+                    raise ValueError(f"No video available for frame {frame.index} (video_path={frame.video_path})")
+                video_to_use = frame.video_path
             
-            video_service.overlay_image_on_video(
-                video=frame.video_path,
-                overlay_image=frame.composed_image_path,
-                output=temp_video_with_overlay,
-                scale_mode="contain"  # Scale video to fit template size (contain mode)
-            )
+            # Step 2: Handle audio
+            if frame.audio_path:
+                # TTS audio available: replace video audio with narration
+                logger.debug(f"  → Replacing video audio with TTS narration")
+                segment_path = video_service.merge_audio_video(
+                    video=video_to_use,
+                    audio=frame.audio_path,
+                    output=output_path,
+                    replace_audio=True,  # Replace video audio with narration
+                    audio_volume=1.0
+                )
+            else:
+                # No TTS audio: preserve video's original audio (if any)
+                logger.debug(f"  → No TTS audio, preserving video's original audio")
+                import shutil
+                shutil.copy2(video_to_use, output_path)
+                segment_path = output_path
             
-            # Step 2: Add narration audio to the overlaid video
-            # Note: The video might have audio (replaced) or be silent (audio added)
-            segment_path = video_service.merge_audio_video(
-                video=temp_video_with_overlay,
-                audio=frame.audio_path,
-                output=output_path,
-                replace_audio=True,  # Replace video audio with narration
-                audio_volume=1.0
-            )
-            
-            # Clean up temp file
-            import os
-            if os.path.exists(temp_video_with_overlay):
-                os.unlink(temp_video_with_overlay)
+            # Clean up temp file if it was created
+            if has_template:
+                import os
+                temp_video_with_overlay = get_task_frame_path(config.task_id, frame.index, "video") + "_overlay.mp4"
+                if os.path.exists(temp_video_with_overlay):
+                    os.unlink(temp_video_with_overlay)
         
         elif frame.media_type == "image" or frame.media_type is None:
-            # Image workflow: Use composed image directly
-            # The asset_default.html template includes the image in the composition
-            logger.debug(f"  → Using image-based composition")
+            # Image workflow: Use composed image or original image directly
+            # If no template, use original image_path; otherwise use composed_image_path
+            image_to_use = frame.composed_image_path if frame.composed_image_path else frame.image_path
             
-            segment_path = video_service.create_video_from_image(
-                image=frame.composed_image_path,
-                audio=frame.audio_path,
-                output=output_path,
-                fps=config.video_fps
-            )
+            if not image_to_use:
+                raise ValueError(f"No image available for frame {frame.index} (image_path={frame.image_path}, composed_image_path={frame.composed_image_path})")
+            
+            logger.debug(f"  → Using image-based composition (image: {image_to_use})")
+            
+            if frame.audio_path:
+                segment_path = video_service.create_video_from_image(
+                    image=image_to_use,
+                    audio=frame.audio_path,
+                    output=output_path,
+                    fps=config.video_fps
+                )
+            else:
+                # No audio available (TTS skipped) - create silent video with default duration
+                logger.debug(f"  → No audio available, creating silent video")
+                default_duration = frame.duration if frame.duration else 5.0  # Default to 5 seconds if no duration
+                segment_path = video_service.create_video_from_image(
+                    image=image_to_use,
+                    audio=None,  # No audio
+                    output=output_path,
+                    fps=config.video_fps,
+                    duration=default_duration
+                )
         
         else:
             raise ValueError(f"Unknown media type: {frame.media_type}")

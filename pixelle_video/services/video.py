@@ -609,18 +609,20 @@ class VideoService:
     def create_video_from_image(
         self,
         image: str,
-        audio: str,
-        output: str,
+        audio: Optional[str] = None,
+        output: str = None,
         fps: int = 30,
+        duration: Optional[float] = None,
     ) -> str:
         """
-        Create video from static image and audio
+        Create video from static image and audio (or silent video if no audio)
         
         Args:
             image: Image file path
-            audio: Audio file path
+            audio: Audio file path (optional, if None creates silent video)
             output: Output video path
             fps: Frames per second
+            duration: Video duration in seconds (only used if audio is None)
         
         Returns:
             Path to the output video
@@ -629,8 +631,8 @@ class VideoService:
             RuntimeError: If FFmpeg execution fails
         
         Note:
-            - Image is displayed as static frame for the duration of audio
-            - Video duration matches audio duration
+            - If audio is provided: Image is displayed as static frame for the duration of audio
+            - If audio is None: Creates silent video with specified duration (default 5s)
             - Useful for creating video segments from storyboard frames
         
         Example:
@@ -639,43 +641,81 @@ class VideoService:
             ...     "narration.mp3",
             ...     "segment.mp4"
             ... )
+            >>> # Or create silent video
+            >>> compositor.create_video_from_image(
+            ...     "frame.png",
+            ...     audio=None,
+            ...     output="segment.mp4",
+            ...     duration=5.0
+            ... )
         """
-        logger.info("Creating video from image and audio")
+        if audio:
+            logger.info("Creating video from image and audio")
+        else:
+            logger.info(f"Creating silent video from image (duration: {duration or 5.0}s)")
         
         try:
-            # Get audio duration to ensure exact video duration match
-            probe = ffmpeg.probe(audio)
-            audio_duration = float(probe['format']['duration'])
-            logger.debug(f"Audio duration: {audio_duration:.3f}s")
-            
-            # Input image with loop (loop=1 means loop indefinitely)
-            # Use framerate to set input framerate
-            input_image = ffmpeg.input(image, loop=1, framerate=fps)
-            input_audio = ffmpeg.input(audio)
-            
-            # Combine image and audio
-            # Use -t to explicitly set video duration = audio duration
-            (
-                ffmpeg
-                .output(
-                    input_image,
-                    input_audio,
-                    output,
-                    t=audio_duration,  # Force video duration to match audio exactly
-                    vcodec='libx264',
-                    acodec='aac',
-                    pix_fmt='yuv420p',
-                    audio_bitrate='192k',
-                    preset='medium',
-                    crf=23,
-                    **{'b:v': '2M'}  # Video bitrate
+            if audio:
+                # Get audio duration to ensure exact video duration match
+                probe = ffmpeg.probe(audio)
+                audio_duration = float(probe['format']['duration'])
+                logger.debug(f"Audio duration: {audio_duration:.3f}s")
+                
+                # Input image with loop (loop=1 means loop indefinitely)
+                # Use framerate to set input framerate
+                input_image = ffmpeg.input(image, loop=1, framerate=fps)
+                input_audio = ffmpeg.input(audio)
+                
+                # Combine image and audio
+                # Use -t to explicitly set video duration = audio duration
+                (
+                    ffmpeg
+                    .output(
+                        input_image,
+                        input_audio,
+                        output,
+                        t=audio_duration,  # Force video duration to match audio exactly
+                        vcodec='libx264',
+                        acodec='aac',
+                        pix_fmt='yuv420p',
+                        audio_bitrate='192k',
+                        preset='medium',
+                        crf=23,
+                        **{'b:v': '2M'}  # Video bitrate
+                    )
+                    .overwrite_output()
+                    .run(capture_stdout=True, capture_stderr=True)
                 )
-                .overwrite_output()
-                .run(capture_stdout=True, capture_stderr=True)
-            )
-            
-            logger.success(f"Video created from image: {output} (duration: {audio_duration:.3f}s)")
-            return output
+                
+                logger.success(f"Video created from image: {output} (duration: {audio_duration:.3f}s)")
+                return output
+            else:
+                # No audio - create silent video
+                video_duration = duration or 5.0  # Default to 5 seconds
+                logger.debug(f"Video duration: {video_duration:.3f}s")
+                
+                # Input image with loop
+                input_image = ffmpeg.input(image, loop=1, framerate=fps)
+                
+                # Create silent video
+                (
+                    ffmpeg
+                    .output(
+                        input_image,
+                        output,
+                        t=video_duration,  # Set video duration
+                        vcodec='libx264',
+                        pix_fmt='yuv420p',
+                        preset='medium',
+                        crf=23,
+                        **{'b:v': '2M'}  # Video bitrate
+                    )
+                    .overwrite_output()
+                    .run(capture_stdout=True, capture_stderr=True)
+                )
+                
+                logger.success(f"Silent video created from image: {output} (duration: {video_duration:.3f}s)")
+                return output
         except ffmpeg.Error as e:
             error_msg = e.stderr.decode() if e.stderr else str(e)
             logger.error(f"FFmpeg error creating video from image: {error_msg}")

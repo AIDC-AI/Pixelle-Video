@@ -49,6 +49,9 @@ class StoryboardConfig:
     # Media workflow
     media_workflow: Optional[str] = None       # Media workflow filename (image or video, None = use default)
     
+    # Image-to-Video (I2V) parameters
+    source_image_url: Optional[str] = None     # Source image URL for I2V workflow
+    
     # Frame template (includes size information in path)
     frame_template: str = "1080x1920/default.html"  # Template path with size (e.g., "1080x1920/default.html")
     template_params: Optional[Dict[str, Any]] = None  # Custom template parameters (e.g., {"accent_color": "#ff0000"})
