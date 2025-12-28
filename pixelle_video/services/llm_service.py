@@ -215,8 +215,8 @@ class LLMService:
         """
         Call LLM with structured output support
         
-        Tries OpenAI beta.chat.completions.parse first, falls back to JSON parsing
-        if the provider doesn't support structured outputs.
+        Uses JSON schema instruction appended to prompt for maximum compatibility
+        across all OpenAI-compatible providers (Qwen, DeepSeek, etc.).
         
         Args:
             client: OpenAI client
@@ -230,41 +230,53 @@ class LLMService:
         Returns:
             Parsed Pydantic model instance
         """
-        # Try OpenAI structured output API first (beta.chat.completions.parse)
-        try:
-            response = await client.beta.chat.completions.parse(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                response_format=response_type,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs
-            )
-            
-            parsed = response.choices[0].message.parsed
-            if parsed is not None:
-                logger.debug(f"Structured output parsed successfully via beta API")
-                return parsed
-            
-            # If parsed is None, fall through to fallback
-            logger.warning("Structured output API returned None, falling back to JSON parsing")
-            content = response.choices[0].message.content
-            
-        except Exception as e:
-            # If beta API not supported, fall back to JSON mode
-            logger.debug(f"Structured output API not available ({e}), falling back to JSON parsing")
-            
-            response = await client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs
-            )
-            content = response.choices[0].message.content
+        # Build JSON schema instruction and append to prompt
+        json_schema_instruction = self._get_json_schema_instruction(response_type)
+        enhanced_prompt = f"{prompt}\n\n{json_schema_instruction}"
         
-        # Fallback: Parse JSON from response content
+        # Call LLM with enhanced prompt
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": enhanced_prompt}],
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs
+        )
+        content = response.choices[0].message.content
+        
+        logger.debug(f"Structured output response length: {len(content)} chars")
+        
+        # Parse JSON from response content
         return self._parse_response_as_model(content, response_type)
+    
+    def _get_json_schema_instruction(self, response_type: Type[T]) -> str:
+        """
+        Generate JSON schema instruction for LLM fallback mode
+        
+        Args:
+            response_type: Pydantic model class
+        
+        Returns:
+            Formatted instruction string with JSON schema
+        """
+        try:
+            # Get JSON schema from Pydantic model
+            schema = response_type.model_json_schema()
+            schema_str = json.dumps(schema, indent=2, ensure_ascii=False)
+            
+            return f"""## IMPORTANT: JSON Output Format Required
+You MUST respond with ONLY a valid JSON object (no markdown, no extra text).
+The JSON must strictly follow this schema:
+
+```json
+{schema_str}
+```
+
+Output ONLY the JSON object, nothing else."""
+        except Exception as e:
+            logger.warning(f"Failed to generate JSON schema: {e}")
+            return """## IMPORTANT: JSON Output Format Required
+You MUST respond with ONLY a valid JSON object (no markdown, no extra text)."""
     
     def _parse_response_as_model(self, content: str, response_type: Type[T]) -> T:
         """
