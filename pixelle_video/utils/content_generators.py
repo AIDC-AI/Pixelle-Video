@@ -97,7 +97,8 @@ async def generate_narrations_from_topic(
     topic: str,
     n_scenes: int = 5,
     min_words: int = 5,
-    max_words: int = 20
+    max_words: int = 20,
+    scene_mode: str = "marketing"
 ) -> List[str]:
     """
     Generate narrations from topic using LLM
@@ -108,15 +109,18 @@ async def generate_narrations_from_topic(
         n_scenes: Number of narrations to generate
         min_words: Minimum narration length
         max_words: Maximum narration length
+        scene_mode: Scene mode key (e.g., "marketing", "advertisement", "storytelling")
     
     Returns:
         List of narration texts
     """
-    from pixelle_video.prompts import build_topic_narration_prompt
+    from pixelle_video.prompts.scene_modes import get_scene_mode_prompt, DEFAULT_SCENE_MODE
     
-    logger.info(f"Generating {n_scenes} narrations from topic: {topic}")
+    logger.info(f"Generating {n_scenes} narrations from topic: {topic} (scene_mode: {scene_mode})")
     
-    prompt = build_topic_narration_prompt(
+    # Use scene mode prompt instead of default
+    prompt = get_scene_mode_prompt(
+        key=scene_mode or DEFAULT_SCENE_MODE,
         topic=topic,
         n_storyboard=n_scenes,
         min_words=min_words,
@@ -500,4 +504,138 @@ def _parse_json(text: str) -> dict:
     
     # If all fails, raise error
     raise json.JSONDecodeError("No valid JSON found", text, 0)
+
+
+async def generate_scene_based_video_prompts(
+    llm_service,
+    video_title: str,
+    scene_mode_key: str,
+    narrations: List[str],
+    min_words: int = 60,
+    max_words: int = 120,
+    batch_size: int = 10,
+    max_retries: int = 3,
+    progress_callback: Optional[callable] = None
+) -> List[str]:
+    """
+    Generate scene-based video prompts from title, scene mode, and narrations
+    
+    This function generates detailed visual descriptions for each scene based on:
+    - Video title (e.g., "给这张图片做一个宣传视频")
+    - Creative style (scene_mode_key, e.g., "advertisement")
+    - Each narration script
+    
+    Args:
+        llm_service: LLM service instance
+        video_title: Video title or theme
+        scene_mode_key: Scene mode key (e.g., "advertisement", "marketing")
+        narrations: List of narrations for each scene
+        min_words: Min video prompt length
+        max_words: Max video prompt length
+        batch_size: Max narrations per batch (default: 10)
+        max_retries: Max retry attempts per batch (default: 3)
+        progress_callback: Optional callback(completed, total, message) for progress updates
+    
+    Returns:
+        List of video prompts (detailed visual descriptions for each scene)
+    
+    Example:
+        >>> prompts = await generate_scene_based_video_prompts(
+        ...     llm,
+        ...     "给这张图片做一个宣传视频",
+        ...     "advertisement",
+        ...     ["第一段旁白", "第二段旁白"],
+        ...     60, 120
+        ... )
+    """
+    from pixelle_video.prompts.video_generation import build_scene_based_video_prompt_prompt
+    from pixelle_video.prompts.scene_modes import get_scene_mode
+    
+    logger.info(f"Generating scene-based video prompts for '{video_title}' (scene_mode: {scene_mode_key}, {len(narrations)} scenes)")
+    
+    # Get scene mode info
+    scene_mode = get_scene_mode(scene_mode_key)
+    if not scene_mode:
+        from pixelle_video.prompts.scene_modes import DEFAULT_SCENE_MODE, get_scene_mode
+        scene_mode = get_scene_mode(DEFAULT_SCENE_MODE)
+        logger.warning(f"Unknown scene_mode '{scene_mode_key}', using default: {DEFAULT_SCENE_MODE}")
+    
+    scene_mode_name = scene_mode.name_zh if scene_mode else "默认风格"
+    scene_mode_description = scene_mode.description_zh if scene_mode else "默认创作风格"
+    
+    # Split narrations into batches
+    batches = [narrations[i:i + batch_size] for i in range(0, len(narrations), batch_size)]
+    logger.info(f"Split into {len(batches)} batches")
+    
+    all_prompts = []
+    
+    # Process each batch
+    for batch_idx, batch_narrations in enumerate(batches, 1):
+        logger.info(f"Processing batch {batch_idx}/{len(batches)} ({len(batch_narrations)} narrations)")
+        
+        # Retry logic for this batch
+        for attempt in range(1, max_retries + 1):
+            try:
+                # Generate prompts for this batch
+                prompt = build_scene_based_video_prompt_prompt(
+                    video_title=video_title,
+                    scene_mode_key=scene_mode_key,
+                    scene_mode_name=scene_mode_name,
+                    scene_mode_description=scene_mode_description,
+                    narrations=batch_narrations,
+                    min_words=min_words,
+                    max_words=max_words
+                )
+                
+                response = await llm_service(
+                    prompt=prompt,
+                    temperature=0.7,
+                    max_tokens=8192
+                )
+                
+                logger.debug(f"Batch {batch_idx} attempt {attempt}: LLM response length: {len(response)} chars")
+                
+                # Parse JSON
+                result = _parse_json(response)
+                
+                if "video_prompts" not in result:
+                    raise KeyError("Invalid response format: missing 'video_prompts'")
+                
+                batch_prompts = result["video_prompts"]
+                
+                # Validate batch result
+                if len(batch_prompts) != len(batch_narrations):
+                    error_msg = (
+                        f"Batch {batch_idx} prompt count mismatch (attempt {attempt}/{max_retries}):\n"
+                        f"  Expected: {len(batch_narrations)} prompts\n"
+                        f"  Got: {len(batch_prompts)} prompts"
+                    )
+                    logger.warning(error_msg)
+                    
+                    if attempt < max_retries:
+                        logger.info(f"Retrying batch {batch_idx}...")
+                        continue
+                    else:
+                        raise ValueError(error_msg)
+                
+                # Success - add to all_prompts
+                all_prompts.extend(batch_prompts)
+                logger.info(f"✅ Batch {batch_idx} completed: {len(batch_prompts)} scene-based video prompts")
+                
+                # Report progress
+                if progress_callback:
+                    completed = len(all_prompts)
+                    total = len(narrations)
+                    progress_callback(completed, total, f"Batch {batch_idx}/{len(batches)} completed")
+                
+                break  # Success, move to next batch
+            
+            except Exception as e:
+                logger.warning(f"✗ Batch {batch_idx} attempt {attempt} failed: {e}")
+                if attempt >= max_retries:
+                    raise
+                logger.info(f"Retrying batch {batch_idx}...")
+    
+    logger.info(f"✅ Generated {len(all_prompts)} scene-based video prompts")
+    return all_prompts
 

@@ -22,6 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Callable, Literal, List
 import asyncio
+import os
 import shutil
 
 from loguru import logger
@@ -113,14 +114,16 @@ class StandardPipeline(LinearVideoPipeline):
         
         if mode == "generate":
             self._report_progress(ctx.progress_callback, "generating_narrations", 0.05)
+            scene_mode = ctx.params.get("scene_mode", "marketing")
             ctx.narrations = await generate_narrations_from_topic(
                 self.llm,
                 topic=text,
                 n_scenes=n_scenes,
                 min_words=min_words,
-                max_words=max_words
+                max_words=max_words,
+                scene_mode=scene_mode
             )
-            logger.info(f"✅ Generated {len(ctx.narrations)} narrations")
+            logger.info(f"✅ Generated {len(ctx.narrations)} narrations (scene_mode: {scene_mode})")
         else:  # fixed
             self._report_progress(ctx.progress_callback, "splitting_script", 0.05)
             split_mode = ctx.params.get("split_mode", "paragraph")
@@ -196,23 +199,65 @@ class StandardPipeline(LinearVideoPipeline):
                         extra_info=message
                     )
                 
-                # Generate base image prompts
-                base_image_prompts = await generate_image_prompts(
-                    self.llm,
-                    narrations=ctx.narrations,
-                    min_words=min_words,
-                    max_words=max_words,
-                    progress_callback=image_prompt_progress
-                )
+                # Check if using Sora I2V workflow - use scene-based prompt generation
+                media_workflow = ctx.params.get("media_workflow") or ""
+                scene_mode_key = ctx.params.get("scene_mode")
+                is_sora_workflow = "video_i2v_sora" in media_workflow.lower()
                 
-                # Apply prompt prefix
-                image_config = self.core.config.get("comfyui", {}).get("image", {})
-                prompt_prefix_to_use = prompt_prefix if prompt_prefix is not None else image_config.get("prompt_prefix", "")
-                
-                ctx.image_prompts = []
-                for base_prompt in base_image_prompts:
-                    final_prompt = build_image_prompt(base_prompt, prompt_prefix_to_use)
-                    ctx.image_prompts.append(final_prompt)
+                if is_sora_workflow and scene_mode_key:
+                    # For Sora: Generate scene-based video prompts using title + scene_mode + narrations
+                    logger.info(f"🎬 Using scene-based video prompt generation for Sora (scene_mode: {scene_mode_key})")
+                    
+                    # Get video title
+                    video_title = ctx.title or ctx.params.get("text", "")[:50]  # Use title or first 50 chars of text
+                    
+                    from pixelle_video.utils.content_generators import generate_scene_based_video_prompts
+                    
+                    # Generate scene-based video prompts
+                    scene_based_prompts = await generate_scene_based_video_prompts(
+                        self.llm,
+                        video_title=video_title,
+                        scene_mode_key=scene_mode_key,
+                        narrations=ctx.narrations,
+                        min_words=min_words,
+                        max_words=max_words,
+                        progress_callback=image_prompt_progress
+                    )
+                    
+                    # For Sora, use the scene-based prompts directly (they already contain detailed visual descriptions)
+                    # Optionally apply user's custom prompt_prefix if provided
+                    image_config = self.core.config.get("comfyui", {}).get("image", {})
+                    prompt_prefix_to_use = prompt_prefix if prompt_prefix is not None else image_config.get("prompt_prefix", "")
+                    
+                    ctx.image_prompts = []
+                    for scene_prompt in scene_based_prompts:
+                        # If user provided a custom prefix, prepend it; otherwise use scene-based prompt as-is
+                        if prompt_prefix_to_use:
+                            final_prompt = build_image_prompt(scene_prompt, prompt_prefix_to_use)
+                        else:
+                            final_prompt = scene_prompt  # Use scene-based prompt directly
+                        ctx.image_prompts.append(final_prompt)
+                    
+                    logger.info(f"✅ Generated {len(ctx.image_prompts)} scene-based video prompts for Sora")
+                else:
+                    # For non-Sora workflows: Use standard image prompt generation
+                    # Generate base image prompts
+                    base_image_prompts = await generate_image_prompts(
+                        self.llm,
+                        narrations=ctx.narrations,
+                        min_words=min_words,
+                        max_words=max_words,
+                        progress_callback=image_prompt_progress
+                    )
+                    
+                    # Apply prompt prefix
+                    image_config = self.core.config.get("comfyui", {}).get("image", {})
+                    prompt_prefix_to_use = prompt_prefix if prompt_prefix is not None else image_config.get("prompt_prefix", "")
+                    
+                    ctx.image_prompts = []
+                    for base_prompt in base_image_prompts:
+                        final_prompt = build_image_prompt(base_prompt, prompt_prefix_to_use)
+                        ctx.image_prompts.append(final_prompt)
                 
             finally:
                 # Restore original prompt_prefix
@@ -251,6 +296,13 @@ class StandardPipeline(LinearVideoPipeline):
             final_voice_id = voice_id or tts_voice or "zh-CN-YunjianNeural"
             logger.debug(f"TTS Mode: legacy (voice_id={final_voice_id}, workflow={final_tts_workflow})")
             
+        # Get source_image_url from params
+        source_image_url = ctx.params.get("source_image_url")
+        if source_image_url:
+            logger.info(f"📸 Source image URL configured: {source_image_url}")
+        else:
+            logger.debug(f"📸 No source image URL in params (I2V workflows will require it)")
+        
         # Create config
         ctx.config = StoryboardConfig(
             task_id=ctx.task_id,
@@ -260,7 +312,7 @@ class StandardPipeline(LinearVideoPipeline):
             min_image_prompt_words=ctx.params.get("min_image_prompt_words", 30),
             max_image_prompt_words=ctx.params.get("max_image_prompt_words", 60),
             video_fps=ctx.params.get("video_fps", 30),
-            tts_inference_mode=tts_inference_mode or "local",
+            tts_inference_mode=tts_inference_mode,  # Keep None if not provided (don't default to "local")
             voice_id=final_voice_id,
             tts_workflow=final_tts_workflow,
             tts_speed=ctx.params.get("tts_speed", 1.2),
@@ -268,9 +320,14 @@ class StandardPipeline(LinearVideoPipeline):
             media_width=ctx.params.get("media_width"),
             media_height=ctx.params.get("media_height"),
             media_workflow=ctx.params.get("media_workflow"),
-            frame_template=ctx.params.get("frame_template") or "1080x1920/default.html",
-            template_params=ctx.params.get("template_params")
+            frame_template=ctx.params.get("frame_template"),  # Keep None if not provided (don't default to template)
+            template_params=ctx.params.get("template_params"),
+            source_image_url=source_image_url
         )
+        
+        # Log config for debugging
+        if ctx.config.source_image_url:
+            logger.info(f"✅ StoryboardConfig.source_image_url set: {ctx.config.source_image_url}")
         
         # Create storyboard
         ctx.storyboard = Storyboard(
@@ -411,6 +468,23 @@ class StandardPipeline(LinearVideoPipeline):
         
         storyboard = ctx.storyboard
         segment_paths = [frame.video_segment_path for frame in storyboard.frames]
+        
+        # Validate all segments exist before concatenation
+        missing_segments = []
+        for i, path in enumerate(segment_paths):
+            if not path:
+                missing_segments.append(f"Frame {i}: video_segment_path is None")
+            elif not os.path.exists(path):
+                missing_segments.append(f"Frame {i}: {path} does not exist")
+        
+        if missing_segments:
+            error_msg = f"Missing video segments before concatenation:\n" + "\n".join(missing_segments)
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        logger.info(f"🎞️ Concatenating {len(segment_paths)} video segments:")
+        for i, path in enumerate(segment_paths):
+            logger.info(f"   Segment {i+1}: {path}")
         
         video_service = VideoService()
         

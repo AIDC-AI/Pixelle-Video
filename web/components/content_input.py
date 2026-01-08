@@ -20,7 +20,7 @@ from web.i18n import tr
 from web.utils.async_helpers import get_project_version
 
 
-def render_content_input():
+def render_content_input(key_prefix: str = "", show_scene_mode: bool = True):
     """Render content input section (left column) with batch support"""
     with st.container(border=True):
         st.markdown(f"**{tr('section.content_input')}**")
@@ -31,7 +31,8 @@ def render_content_input():
         batch_mode = st.checkbox(
             tr("batch.mode_label"),
             value=False,
-            help=tr("batch.mode_help")
+            help=tr("batch.mode_help"),
+            key=f"{key_prefix}batch_mode",
         )
         
         if not batch_mode:
@@ -44,8 +45,42 @@ def render_content_input():
                 ["generate", "fixed"],
                 horizontal=True,
                 format_func=lambda x: tr(f"mode.{x}"),
-                label_visibility="collapsed"
+                label_visibility="collapsed",
+                key=f"{key_prefix}processing_mode",
             )
+            
+            # Scene mode selection (only in generate mode, can be hidden)
+            scene_mode = "marketing"  # Default
+            if mode == "generate" and show_scene_mode:
+                from pixelle_video.prompts.scene_modes import list_scene_modes, DEFAULT_SCENE_MODE
+                from web.i18n import get_language
+                
+                scene_modes = list_scene_modes()
+                current_lang = get_language()
+                
+                # Build options
+                scene_mode_options = {
+                    m.key: f"{m.icon} {m.name_zh if current_lang == 'zh_CN' else m.name_en}"
+                    for m in scene_modes
+                }
+                scene_mode_keys = list(scene_mode_options.keys())
+                
+                with st.expander(tr("scene_mode.title"), expanded=False):
+                    st.caption(tr("scene_mode.description"))
+                    scene_mode = st.radio(
+                        tr("scene_mode.select"),
+                        options=scene_mode_keys,
+                        format_func=lambda x: scene_mode_options[x],
+                        index=scene_mode_keys.index(DEFAULT_SCENE_MODE),
+                        label_visibility="collapsed",
+                        key=f"{key_prefix}scene_mode_selector",
+                    )
+                    
+                    # Show description of selected mode
+                    selected_mode = next((m for m in scene_modes if m.key == scene_mode), None)
+                    if selected_mode:
+                        desc = selected_mode.description_zh if current_lang == 'zh_CN' else selected_mode.description_en
+                        st.info(f"💡 {desc}")
             
             # Text input (unified for both modes)
             text_placeholder = tr("input.topic_placeholder") if mode == "generate" else tr("input.content_placeholder")
@@ -56,7 +91,8 @@ def render_content_input():
                 tr("input.text"),
                 placeholder=text_placeholder,
                 height=text_height,
-                help=text_help
+                help=text_help,
+                key=f"{key_prefix}input_text",
             )
             
             # Split mode selector (only show in fixed mode)
@@ -71,7 +107,8 @@ def render_content_input():
                     options=list(split_mode_options.keys()),
                     format_func=lambda x: split_mode_options[x],
                     index=0,  # Default to paragraph mode
-                    help=tr("split.mode_help")
+                    help=tr("split.mode_help"),
+                    key=f"{key_prefix}split_mode",
                 )
             else:
                 split_mode = "paragraph"  # Default for generate mode (not used)
@@ -80,7 +117,8 @@ def render_content_input():
             title = st.text_input(
                 tr("input.title"),
                 placeholder=tr("input.title_placeholder"),
-                help=tr("input.title_help")
+                help=tr("input.title_help"),
+                key=f"{key_prefix}title",
             )
             
             # Number of scenes (only show in generate mode)
@@ -91,7 +129,8 @@ def render_content_input():
                     max_value=30,
                     value=5,
                     help=tr("video.frames_help"),
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
+                    key=f"{key_prefix}n_scenes_generate",
                 )
                 st.caption(tr("video.frames_label", n=n_scenes))
             else:
@@ -102,6 +141,7 @@ def render_content_input():
             return {
                 "batch_mode": False,
                 "mode": mode,
+                "scene_mode": scene_mode,
                 "text": text,
                 "title": title,
                 "n_scenes": n_scenes,
@@ -127,7 +167,8 @@ def render_content_input():
                 tr("batch.topics_label"),
                 height=300,
                 placeholder=tr("batch.topics_placeholder"),
-                help=tr("batch.topics_help")
+                help=tr("batch.topics_help"),
+                key=f"{key_prefix}batch_topics",
             )
             
             # Split topics by newline
@@ -162,7 +203,8 @@ def render_content_input():
             title_prefix = st.text_input(
                 tr("batch.title_prefix_label"),
                 placeholder=tr("batch.title_prefix_placeholder"),
-                help=tr("batch.title_prefix_help")
+                help=tr("batch.title_prefix_help"),
+                key=f"{key_prefix}batch_title_prefix",
             )
             
             # Number of scenes (unified for all videos)
@@ -171,7 +213,8 @@ def render_content_input():
                 min_value=3,
                 max_value=30,
                 value=5,
-                help=tr("batch.n_scenes_help")
+                help=tr("batch.n_scenes_help"),
+                key=f"{key_prefix}batch_n_scenes",
             )
             st.caption(tr("batch.n_scenes_caption", n=n_scenes))
             

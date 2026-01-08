@@ -53,7 +53,8 @@ class StandardPipelineUI(PipelineUI):
         # ====================================================================
         with left_col:
             # Content input (mode, text, title, n_scenes)
-            content_params = render_content_input()
+            # For Quick Create, hide "创作风格" (scene mode) section
+            content_params = render_content_input(show_scene_mode=False)
             
             # BGM selection (bgm_path, bgm_volume)
             bgm_params = render_bgm_section()
@@ -81,7 +82,7 @@ class StandardPipelineUI(PipelineUI):
             }
             
             # Render output preview (generate button, progress, video preview)
-            render_output_preview(pixelle_video, video_params)
+            render_output_preview(pixelle_video, video_params, key_prefix="standard_")
 
 
 # Register self
