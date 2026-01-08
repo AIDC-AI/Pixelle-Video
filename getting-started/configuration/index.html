@@ -718,22 +718,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#image-configuration" class="md-nav__link">
+  <a href="#imagevideo-generation-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Image Configuration
+        Image/Video Generation Configuration
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Image Configuration">
+    <nav class="md-nav" aria-label="Image/Video Generation Configuration">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#local-deployment-recommended" class="md-nav__link">
+  <a href="#local-deployment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Local Deployment (Recommended)
+        Local Deployment
       
     </span>
   </a>
@@ -741,10 +741,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#cloud-deployment" class="md-nav__link">
+  <a href="#cloud-deployment-recommended" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Cloud Deployment
+        Cloud Deployment (Recommended)
       
     </span>
   </a>
@@ -1482,22 +1482,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#image-configuration" class="md-nav__link">
+  <a href="#imagevideo-generation-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Image Configuration
+        Image/Video Generation Configuration
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Image Configuration">
+    <nav class="md-nav" aria-label="Image/Video Generation Configuration">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#local-deployment-recommended" class="md-nav__link">
+  <a href="#local-deployment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Local Deployment (Recommended)
+        Local Deployment
       
     </span>
   </a>
@@ -1505,10 +1505,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#cloud-deployment" class="md-nav__link">
+  <a href="#cloud-deployment-recommended" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Cloud Deployment
+        Cloud Deployment (Recommended)
       
     </span>
   </a>
@@ -1587,21 +1587,25 @@
 </li>
 </ol>
 <hr />
-<h2 id="image-configuration">Image Configuration<a class="headerlink" href="#image-configuration" title="Permanent link">&para;</a></h2>
+<h2 id="imagevideo-generation-configuration">Image/Video Generation Configuration<a class="headerlink" href="#imagevideo-generation-configuration" title="Permanent link">&para;</a></h2>
 <p>Two options available:</p>
-<h3 id="local-deployment-recommended">Local Deployment (Recommended)<a class="headerlink" href="#local-deployment-recommended" title="Permanent link">&para;</a></h3>
+<h3 id="local-deployment">Local Deployment<a class="headerlink" href="#local-deployment" title="Permanent link">&para;</a></h3>
 <p>Using local ComfyUI service:</p>
 <ol>
 <li>Install and start ComfyUI</li>
 <li>Enter ComfyUI URL (default <code>http://127.0.0.1:8188</code>)</li>
 <li>Click "Test Connection" to verify</li>
+<li>(Optional) Enter ComfyUI API Key (get from <a href="https://platform.comfy.org/profile/api-keys">Comfy Platform</a>)</li>
 </ol>
-<h3 id="cloud-deployment">Cloud Deployment<a class="headerlink" href="#cloud-deployment" title="Permanent link">&para;</a></h3>
-<p>Using RunningHub cloud service:</p>
+<h3 id="cloud-deployment-recommended">Cloud Deployment (Recommended)<a class="headerlink" href="#cloud-deployment-recommended" title="Permanent link">&para;</a></h3>
+<p>Using RunningHub cloud service, no local GPU required:</p>
 <ol>
 <li>Register for a RunningHub account</li>
 <li>Obtain API Key</li>
 <li>Enter API Key in configuration</li>
+<li>Configure advanced options (optional):</li>
+<li><strong>Concurrent Limit</strong>: Set number of simultaneous tasks (1-10, default 1 for regular members)</li>
+<li><strong>Instance Type</strong>: Choose 24GB or 48GB VRAM machine (48GB for large video generation)</li>
 </ol>
 <hr />
 <h2 id="save-configuration">Save Configuration<a class="headerlink" href="#save-configuration" title="Permanent link">&para;</a></h2>
@@ -1634,7 +1638,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="November 3, 2025 09:44:33 UTC">November 3, 2025 09:44:33</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="January 8, 2026 08:50:18 UTC">January 8, 2026 08:50:18</span>
   </span>
 
     

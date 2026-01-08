@@ -824,6 +824,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#fixed-script-split-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed Script Split Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#background-music" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -891,10 +902,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#image-generation" class="md-nav__link">
+  <a href="#imagevideo-generation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Image Generation
+        Image/Video Generation
       
     </span>
   </a>
@@ -922,6 +933,17 @@
     <span class="md-ellipsis">
       
         Generate Video
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#faq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FAQ
       
     </span>
   </a>
@@ -1560,6 +1582,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#fixed-script-split-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed Script Split Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#background-music" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1627,10 +1660,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#image-generation" class="md-nav__link">
+  <a href="#imagevideo-generation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Image Generation
+        Image/Video Generation
       
     </span>
   </a>
@@ -1658,6 +1691,17 @@
     <span class="md-ellipsis">
       
         Generate Video
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#faq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FAQ
       
     </span>
   </a>
@@ -1693,6 +1737,7 @@
 <li><strong>Left Panel</strong>: Content input and audio settings</li>
 <li><strong>Middle Panel</strong>: Voice and visual settings  </li>
 <li><strong>Right Panel</strong>: Video generation and preview</li>
+<li><strong>Sidebar</strong>: System configuration and FAQ</li>
 </ul>
 <hr />
 <h2 id="system-configuration">System Configuration<a class="headerlink" href="#system-configuration" title="Permanent link">&para;</a></h2>
@@ -1703,6 +1748,13 @@
 <ul>
 <li><strong>AI Generate Content</strong>: Enter a topic, AI creates script automatically</li>
 <li><strong>Fixed Script Content</strong>: Enter complete script directly</li>
+</ul>
+<h3 id="fixed-script-split-mode">Fixed Script Split Mode<a class="headerlink" href="#fixed-script-split-mode" title="Permanent link">&para;</a></h3>
+<p>When using fixed script mode, you can choose how to split the content:</p>
+<ul>
+<li><strong>By Paragraph</strong>: Split by empty lines, each paragraph becomes a scene</li>
+<li><strong>By Line</strong>: Split by line breaks, each line becomes a scene</li>
+<li><strong>By Sentence</strong>: Smart sentence boundary detection, each sentence becomes a scene</li>
 </ul>
 <h3 id="background-music">Background Music<a class="headerlink" href="#background-music" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1723,28 +1775,38 @@
 </ul>
 <hr />
 <h2 id="visual-settings">Visual Settings<a class="headerlink" href="#visual-settings" title="Permanent link">&para;</a></h2>
-<h3 id="image-generation">Image Generation<a class="headerlink" href="#image-generation" title="Permanent link">&para;</a></h3>
+<h3 id="imagevideo-generation">Image/Video Generation<a class="headerlink" href="#imagevideo-generation" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Select image generation workflow</li>
-<li>Set image dimensions</li>
+<li>Select media generation workflow (image or video)</li>
 <li>Adjust prompt prefix to control style</li>
 </ul>
 <h3 id="video-template">Video Template<a class="headerlink" href="#video-template" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Choose video template</li>
-<li>Supports portrait/landscape/square</li>
-<li>Preview template effects</li>
+<li><strong>Template Preview Gallery</strong>: Visually preview all available templates</li>
+<li>Supports portrait (1080x1920) / landscape (1920x1080) / square (1080x1080)</li>
+<li>Template types:</li>
+<li><code>static_*.html</code>: Static templates (no AI-generated media)</li>
+<li><code>image_*.html</code>: Image templates (requires AI-generated images)</li>
+<li><code>video_*.html</code>: Video templates (requires AI-generated videos)</li>
 </ul>
 <hr />
 <h2 id="generate-video">Generate Video<a class="headerlink" href="#generate-video" title="Permanent link">&para;</a></h2>
 <p>After clicking "Generate Video", the system will:</p>
 <ol>
 <li>Generate video script</li>
-<li>Generate images for each scene</li>
+<li>Generate images/videos for each scene</li>
 <li>Synthesize voice narration</li>
 <li>Compose final video</li>
 </ol>
 <p>Automatically previews when complete.</p>
+<hr />
+<h2 id="faq">FAQ<a class="headerlink" href="#faq" title="Permanent link">&para;</a></h2>
+<p>The sidebar includes built-in FAQ for quick reference:</p>
+<ul>
+<li>Common configuration issues</li>
+<li>Generation failure solutions</li>
+<li>Performance optimization tips</li>
+</ul>
 
 
 
@@ -1767,7 +1829,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="November 3, 2025 09:44:33 UTC">November 3, 2025 09:44:33</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="January 8, 2026 08:50:18 UTC">January 8, 2026 08:50:18</span>
   </span>
 
     

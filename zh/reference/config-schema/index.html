@@ -1197,6 +1197,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#runninghub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RunningHub 云端配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1236,6 +1247,17 @@
       
         <li class="md-nav__item">
   <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        模板配置
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         更多信息
@@ -1504,6 +1526,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#runninghub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RunningHub 云端配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1545,6 +1578,17 @@
   <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
+        模板配置
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         更多信息
       
     </span>
@@ -1577,40 +1621,52 @@
 <hr />
 <h2 id="_2">配置结构<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">llm</span><span class="p">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-api-key&quot;</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://dashscope.aliyuncs.com/compatible-mode/v1&quot;</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;qwen-plus&quot;</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">comfyui</span><span class="p">:</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">comfyui_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://127.0.0.1:8188&quot;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-api-key&quot;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://dashscope.aliyuncs.com/compatible-mode/v1&quot;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;qwen-plus&quot;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">comfyui</span><span class="p">:</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">comfyui_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://127.0.0.1:8188&quot;</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">comfyui_api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">  </span><span class="c1"># ComfyUI API 密钥（可选）</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">runninghub_api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="nt">image</span><span class="p">:</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nt">default_workflow</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;runninghub/image_flux.json&quot;</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nt">prompt_prefix</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Minimalist</span><span class="nv"> </span><span class="s">illustration</span><span class="nv"> </span><span class="s">style&quot;</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span><span class="nt">video</span><span class="p">:</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="nt">default_workflow</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;runninghub/video_wan2.1_fusionx.json&quot;</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="nt">prompt_prefix</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Minimalist</span><span class="nv"> </span><span class="s">illustration</span><span class="nv"> </span><span class="s">style&quot;</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">  </span><span class="nt">tts</span><span class="p">:</span>
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="nt">default_workflow</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;selfhost/tts_edge.json&quot;</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="nt">runninghub_concurrent_limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span><span class="w">  </span><span class="c1"># 并发限制 (1-10)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="nt">runninghub_instance_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">  </span><span class="c1"># 实例类型（可选，设为 &quot;plus&quot; 使用 48GB 显存）</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="nt">image</span><span class="p">:</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="nt">default_workflow</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;runninghub/image_flux.json&quot;</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="nt">prompt_prefix</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Minimalist</span><span class="nv"> </span><span class="s">illustration</span><span class="nv"> </span><span class="s">style&quot;</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">  </span><span class="nt">video</span><span class="p">:</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">    </span><span class="nt">default_workflow</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;runninghub/video_wan2.1_fusionx.json&quot;</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="nt">prompt_prefix</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Minimalist</span><span class="nv"> </span><span class="s">illustration</span><span class="nv"> </span><span class="s">style&quot;</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">  </span><span class="nt">tts</span><span class="p">:</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">    </span><span class="nt">default_workflow</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;selfhost/tts_edge.json&quot;</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="nt">template</span><span class="p">:</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">  </span><span class="nt">default_template</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1080x1920/image_default.html&quot;</span>
 </span></code></pre></div>
 <hr />
 <h2 id="llm">LLM 配置<a class="headerlink" href="#llm" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>provider</code>: 提供商（目前仅支持 openai 兼容接口）</li>
 <li><code>api_key</code>: API 密钥</li>
-<li><code>base_url</code>: API 服务地址</li>
+<li><code>base_url</code>: API 服务地址（支持任何 OpenAI 兼容接口）</li>
 <li><code>model</code>: 模型名称</li>
 </ul>
 <hr />
 <h2 id="comfyui">ComfyUI 配置<a class="headerlink" href="#comfyui" title="Permanent link">&para;</a></h2>
 <h3 id="_3">基础配置<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>comfyui_url</code>: 本地 ComfyUI 地址</li>
-<li><code>runninghub_api_key</code>: RunningHub API 密钥（可选）</li>
+<li><code>comfyui_url</code>: 本地 ComfyUI 地址（默认 <code>http://127.0.0.1:8188</code>）</li>
+<li><code>comfyui_api_key</code>: ComfyUI API 密钥（可选，用于 <a href="https://platform.comfy.org/profile/api-keys">Comfy Platform</a>）</li>
+</ul>
+<h3 id="runninghub">RunningHub 云端配置<a class="headerlink" href="#runninghub" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>runninghub_api_key</code>: RunningHub API 密钥（使用云端工作流时必填）</li>
+<li><code>runninghub_concurrent_limit</code>: 并发执行限制（1-10，普通会员默认为 1）</li>
+<li><code>runninghub_instance_type</code>: 实例类型（可选）</li>
+<li>留空或不设置：使用 24GB 显存机器</li>
+<li><code>"plus"</code>: 使用 48GB 显存机器（适合大尺寸视频生成）</li>
 </ul>
 <h3 id="_4">图像配置<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1629,7 +1685,12 @@
 <li><code>default_workflow</code>: 默认 TTS 工作流</li>
 </ul>
 <hr />
-<h2 id="_6">更多信息<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h2 id="_6">模板配置<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>default_template</code>: 默认帧模板路径（例如 <code>1080x1920/image_default.html</code>）</li>
+</ul>
+<hr />
+<h2 id="_7">更多信息<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
 <p>配置文件会自动在首次运行时创建。</p>
 
 
@@ -1653,7 +1714,7 @@
     <span class="md-icon" title="最后更新">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="2025年11月12日 12:12:28 UTC">2025年11月12日 12:12:28</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="2026年1月8日 08:50:18 UTC">2026年1月8日 08:50:18</span>
   </span>
 
     
