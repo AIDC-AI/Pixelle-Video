@@ -70,8 +70,6 @@ EDGE_TTS_VOICES: List[Dict[str, Any]] = [
         "locale": "zh-CN",
         "gender": "female"
     },
-    
-    # English voices
     {
         "id": "en-US-AriaNeural",
         "label_key": "tts.voice.en_US_AriaNeural",
@@ -107,6 +105,92 @@ EDGE_TTS_VOICES: List[Dict[str, Any]] = [
         "label_key": "tts.voice.en_GB_RyanNeural",
         "locale": "en-GB",
         "gender": "male"
+    },
+    {
+        "id": "ko-KR-InJoonNeural",
+        "label_key": "tts.voice.ko-KR-InJoonNeural",
+        "locale": "ko-KR",
+        "gender": "male"
+    },
+    {
+        "id": "ko-KR-SunHiNeural",
+        "label_key": "tts.voice.ko-KR-SunHiNeural",
+        "locale": "ko-KR",
+        "gender": "female"
+    },
+    {
+        "id": "fr-FR-EloiseNeural",
+        "label_key": "tts.voice.fr-FR-EloiseNeural",
+        "locale": "fr-FR",
+        "gender": "female"
+    },
+    {
+        "id": "fr-FR-HenriNeural",
+        "label_key": "tts.voice.fr-FR-HenriNeural",
+        "locale": "fr-FR",
+        "gender": "male"
+    },
+    {
+        "id": "pt-PT-DuarteNeural",
+        "label_key": "tts.voice.pt-PT-DuarteNeural",
+        "locale": "pt-PT",
+        "gender": "male"
+    },
+    {
+        "id": "pt-PT-RaquelNeural",
+        "label_key": "tts.voice.pt-PT-RaquelNeural",
+        "locale": "pt-PT",
+        "gender": "female"
+    },
+    {
+        "id": "de-DE-AmalaNeural",
+        "label_key": "tts.voice.de-DE-AmalaNeural",
+        "locale": "de-DE",
+        "gender": "female"
+    },
+    {
+        "id": "de-DE-ConradNeural",
+        "label_key": "tts.voice.de-DE-ConradNeural",
+        "locale": "de-DE",
+        "gender": "male"
+    },
+    
+    # English voices
+    {
+        "id": "ru-RU-DmitryNeural",
+        "label_key": "tts.voice.ru-RU-DmitryNeural",
+        "locale": "ru-RU",
+        "gender": "male"
+    },
+    {
+        "id": "ru-RU-SvetlanaNeural",
+        "label_key": "tts.voice.ru-RU-SvetlanaNeural",
+        "locale": "ru-RU",
+        "gender": "female"
+    },
+    {
+        "id": "tr-TR-AhmetNeural",
+        "label_key": "tts.voice.tr-TR-AhmetNeural",
+        "locale": "tr-TR",
+        "gender": "male"
+    },
+    {
+        "id": "tr-TR-EmelNeural",
+        "label_key": "tts.voice.tr-TR-EmelNeural",
+        "locale": "tr-TR",
+        "gender": "female"
+    },
+    {
+        "id": "es-ES-AlvaroNeural",
+        "label_key": "tts.voice.es-ES-AlvaroNeural",
+        "locale": "es-ES",
+        "gender": "male"
+    },
+    {
+        "id": "es-ES-ElviraNeural",
+        "label_key": "tts.voice.es-ES-ElviraNeural",
+        "locale": "es-ES",
+        "gender": "female"
     },
 ]
 
