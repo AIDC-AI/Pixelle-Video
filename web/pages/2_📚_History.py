@@ -72,7 +72,7 @@ def format_datetime(iso_string: str) -> str:
     try:
         dt = datetime.fromisoformat(iso_string)
         return dt.strftime("%m-%d %H:%M")
-    except:
+    except Exception:
         return iso_string
 
 
