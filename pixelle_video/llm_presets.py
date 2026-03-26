@@ -52,6 +52,12 @@ LLM_PRESETS: List[Dict[str, Any]] = [
         "default_api_key": "ollama",  # Required by OpenAI SDK but ignored by Ollama
     },
     {
+        "name": "MiniMax",
+        "base_url": "https://api.minimax.io/v1",
+        "model": "MiniMax-M2.7",
+        "api_key_url": "https://platform.minimaxi.com/user-center/basic-information/interface-key",
+    },
+    {
         "name": "Moonshot",
         "base_url": "https://api.moonshot.cn/v1",
         "model": "moonshot-v1-8k",
