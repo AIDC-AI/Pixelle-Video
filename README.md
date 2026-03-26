@@ -58,7 +58,7 @@ https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 - ✅ **背景音乐** - 支持添加 BGM，让视频更有氛围
 - ✅ **视觉风格** - 多种模板可选，打造独特视频风格
 - ✅ **灵活尺寸** - 支持竖屏、横屏等多种视频尺寸
-- ✅ **多种 AI 模型** - 支持 GPT、通义千问、DeepSeek、Ollama 等
+- ✅ **多种 AI 模型** - 支持 GPT、通义千问、DeepSeek、MiniMax、Ollama 等
 - ✅ **原子能力灵活组合** - 支持 ComfyUI / RunningHub 工作流，也支持直连 API 模型，可按需替换图像、视频、TTS、VLM 等能力
 
 
@@ -420,7 +420,7 @@ A: 可以尝试：
 A: **本项目完全支持免费运行！**
 
 - **完全免费方案**: LLM 使用 Ollama（本地运行）+ ComfyUI 本地部署 = 0 元
-- **推荐方案**: LLM 使用通义千问（成本极低，性价比高）+ ComfyUI 本地部署
+- **推荐方案**: LLM 使用通义千问或 MiniMax（成本极低，性价比高）+ ComfyUI 本地部署
 - **云端方案**: LLM 使用 OpenAI + 图像使用 RunningHub（费用较高但无需本地环境）
 
 **选择建议**：本地有显卡建议完全免费方案，否则推荐使用通义千问（性价比高）
