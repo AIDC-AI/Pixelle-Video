@@ -26,6 +26,7 @@ Linux Environment Requirements:
 from math import log
 import os
 import re
+import sys
 import uuid
 from typing import Dict, Any, Optional
 from pathlib import Path
@@ -329,55 +330,93 @@ class HTMLFrameGenerator:
     
     def _find_chrome_executable(self) -> Optional[str]:
         """
-        Find suitable Chrome/Chromium executable, preferring non-snap versions
-        
+        Find suitable Chrome/Chromium/Edge executable, preferring non-snap versions on Linux
+
         Returns:
-            Path to Chrome executable or None to use default
+            Path to browser executable or None to use default
         """
-        if os.name != 'posix':
+        if os.name == 'posix' and sys.platform != 'darwin':
+            import subprocess
+            candidates = [
+                '/usr/bin/google-chrome',
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/chromium',
+                '/usr/bin/chromium-browser',
+                '/usr/local/bin/chrome',
+                '/usr/local/bin/chromium',
+            ]
+
+            for path in candidates:
+                if os.path.exists(path) and os.access(path, os.X_OK):
+                    try:
+                        result = subprocess.run(
+                            ['readlink', '-f', path],
+                            capture_output=True,
+                            text=True,
+                            timeout=1
+                        )
+                        real_path = result.stdout.strip()
+
+                        if '/snap/' not in real_path:
+                            logger.info(f"✓ Found non-snap browser: {path} -> {real_path}")
+                            return path
+                        else:
+                            logger.debug(f"✗ Skipping snap browser: {path}")
+                    except Exception as e:
+                        logger.debug(f"Error checking {path}: {e}")
+
+            logger.warning(
+                "⚠️  No non-snap Chrome/Chromium found. Snap browsers have AppArmor restrictions.\n"
+                "   Install system Chrome with:\n"
+                "   wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb\n"
+                "   sudo dpkg -i google-chrome-stable_current_amd64.deb\n"
+                "   Or install Chromium: sudo apt-get install -y chromium-browser"
+            )
             return None
-        
-        import subprocess
-        
-        # Preferred browsers (non-snap versions)
-        candidates = [
-            '/usr/bin/google-chrome',
-            '/usr/bin/google-chrome-stable',
-            '/usr/bin/chromium',
-            '/usr/bin/chromium-browser',
-            '/usr/local/bin/chrome',
-            '/usr/local/bin/chromium',
-        ]
-        
-        # Check each candidate
-        for path in candidates:
-            if os.path.exists(path) and os.access(path, os.X_OK):
+
+        if os.name == 'nt':
+            import winreg
+            browser_registry_keys = [
+                ("Chrome", r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe"),
+                ("Edge", r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe"),
+            ]
+            browser_paths = [
+                ("Chrome", r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
+                ("Chrome", r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
+                ("Edge", r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"),
+                ("Edge", r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
+            ]
+
+            for browser_name, reg_key in browser_registry_keys:
                 try:
-                    # Verify it's not a snap by checking the path
-                    result = subprocess.run(
-                        ['readlink', '-f', path],
-                        capture_output=True,
-                        text=True,
-                        timeout=1
-                    )
-                    real_path = result.stdout.strip()
-                    
-                    if '/snap/' not in real_path:
-                        logger.info(f"✓ Found non-snap browser: {path} -> {real_path}")
-                        return path
-                    else:
-                        logger.debug(f"✗ Skipping snap browser: {path}")
+                    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_key) as key:
+                        reg_path = winreg.QueryValue(key, None)
+                        if reg_path and os.path.exists(reg_path) and os.access(reg_path, os.X_OK):
+                            logger.info(f"✓ Found {browser_name} from registry: {reg_path}")
+                            return reg_path
                 except Exception as e:
-                    logger.debug(f"Error checking {path}: {e}")
-        
-        # Warn if no suitable browser found
-        logger.warning(
-            "⚠️  No non-snap Chrome/Chromium found. Snap browsers have AppArmor restrictions.\n"
-            "   Install system Chrome with:\n"
-            "   wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb\n"
-            "   sudo dpkg -i google-chrome-stable_current_amd64.deb\n"
-            "   Or install Chromium: sudo apt-get install -y chromium-browser"
-        )
+                    logger.debug(f"Registry lookup for {browser_name} failed: {e}")
+
+            for browser_name, path in browser_paths:
+                if os.path.exists(path) and os.access(path, os.X_OK):
+                    logger.info(f"✓ Found {browser_name}: {path}")
+                    return path
+
+            logger.warning("⚠️ Chrome/Edge executable not found on Windows")
+            return None
+
+        if os.name == 'posix' and sys.platform == 'darwin':
+            candidates = [
+                '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                '/Applications/Chromium.app/Contents/MacOS/Chromium',
+            ]
+            for path in candidates:
+                if os.path.exists(path) and os.access(path, os.X_OK):
+                    logger.info(f"✓ Found browser: {path}")
+                    return path
+            logger.warning("⚠️ Chrome/Chromium not found on macOS")
+            return None
+
         return None
     
     def _ensure_hti(self, width: int, height: int):
