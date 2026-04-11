@@ -54,6 +54,9 @@ services:
       # data/ contains: users/, bgm/, templates/, workflows/ (custom resources)
       - ./data:/app/data
       - ./output:/app/output
+      - ./workflows:/app/workflows
+      - ./bgm:/app/bgm
+      - ./templates:/app/templates
       # Note: Default resources (bgm/, templates/, workflows/) are baked into the image
       # Custom resources in data/* will override defaults
     environment:
@@ -95,6 +98,9 @@ services:
       # data/ contains: users/, bgm/, templates/, workflows/ (custom resources)
       - ./data:/app/data
       - ./output:/app/output
+      - ./workflows:/app/workflows
+      - ./bgm:/app/bgm
+      - ./templates:/app/templates
       # Note: Default resources (bgm/, templates/, workflows/) are baked into the image
       # Custom resources in data/* will override defaults
     environment:
