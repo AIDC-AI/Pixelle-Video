@@ -52,7 +52,7 @@ RUN export UV_HTTP_TIMEOUT=300 && \
     else \
         uv pip install -e .; \
     fi && \
-    playwright install --with-deps chromium
+    uv run playwright install --with-deps chromium
 
 # Copy rest of application code
 COPY api ./api
