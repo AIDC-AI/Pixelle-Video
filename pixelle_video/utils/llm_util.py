@@ -43,11 +43,7 @@ def fetch_available_models(api_key: str, base_url: str, timeout: float = 10.0) -
     base_url = base_url.rstrip("/")
     
     # Build the models endpoint URL
-    # Handle cases where base_url might or might not include /v1
-    if base_url.endswith("/v1"):
-        models_url = f"{base_url}/models"
-    else:
-        models_url = f"{base_url}/v1/models"
+    models_url = f"{base_url}/models"
     
     headers = {
         "Authorization": f"Bearer {api_key}",
