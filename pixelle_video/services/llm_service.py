@@ -24,6 +24,9 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 from loguru import logger
 
+# Providers that require temperature strictly > 0.0 and <= 1.0
+_STRICT_TEMPERATURE_PROVIDERS = {"api.minimax.io"}
+
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -39,6 +42,7 @@ class LLMService:
     - Alibaba Qwen (qwen-max, qwen-plus, qwen-turbo)
     - Anthropic Claude (claude-sonnet-4-5, claude-opus-4, claude-haiku-4)
     - DeepSeek (deepseek-chat)
+    - MiniMax (MiniMax-M2.7, MiniMax-M2.5) - 1M context window
     - Moonshot Kimi (moonshot-v1-8k, moonshot-v1-32k, moonshot-v1-128k)
     - Ollama (llama3.2, qwen2.5, mistral, codellama) - FREE & LOCAL!
     - Any custom provider with OpenAI-compatible API
@@ -170,6 +174,9 @@ class LLMService:
         )
         
         logger.debug(f"LLM call: model={final_model}, base_url={client.base_url}, response_type={response_type}")
+
+        # Clamp temperature for providers that require strict bounds
+        temperature = self._clamp_temperature(temperature, str(client.base_url))
         
         try:
             if response_type is not None:
@@ -281,14 +288,16 @@ You MUST respond with ONLY a valid JSON object (no markdown, no extra text)."""
     def _parse_response_as_model(self, content: str, response_type: Type[T]) -> T:
         """
         Parse LLM response content as Pydantic model
-        
+
         Args:
             content: Raw LLM response text
             response_type: Target Pydantic model class
-        
+
         Returns:
             Parsed model instance
         """
+        # Strip <think>...</think> blocks (used by some models like MiniMax M2.7)
+        content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
         # Try direct JSON parsing first
         try:
             data = json.loads(content)
@@ -319,6 +328,18 @@ You MUST respond with ONLY a valid JSON object (no markdown, no extra text)."""
         
         raise ValueError(f"Failed to parse LLM response as {response_type.__name__}: {content[:200]}...")
     
+    @staticmethod
+    def _clamp_temperature(temperature: float, base_url: str) -> float:
+        """
+        Clamp temperature for providers with strict bounds.
+
+        Some providers (e.g. MiniMax) require temperature in (0.0, 1.0].
+        """
+        for provider_host in _STRICT_TEMPERATURE_PROVIDERS:
+            if provider_host in base_url:
+                return max(0.01, min(temperature, 1.0))
+        return temperature
+
     @property
     def active(self) -> str:
         """

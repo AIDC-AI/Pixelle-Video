@@ -15,6 +15,7 @@ llm:
 # Qwen Max:        base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"  model: "qwen-max"
 # OpenAI GPT-4o:   base_url: "https://api.openai.com/v1"                          model: "gpt-4o"
 # DeepSeek:        base_url: "https://api.deepseek.com"                           model: "deepseek-chat"
+# MiniMax:         base_url: "https://api.minimax.io/v1"                          model: "MiniMax-M2.7"
 # Ollama (Local):  base_url: "http://localhost:11434/v1"                          model: "llama3.2"
 
 # ==================== ComfyUI Configuration ====================

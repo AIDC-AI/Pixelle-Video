@@ -55,7 +55,7 @@ Just input a **topic**, and Pixelle-Video will automatically:
 - ✅ **Background Music** - Support adding BGM to make videos more atmospheric
 - ✅ **Visual Styles** - Multiple templates to choose from, create unique video styles
 - ✅ **Flexible Dimensions** - Support portrait, landscape and other video dimensions
-- ✅ **Multiple AI Models** - Support GPT, Qwen, DeepSeek, Ollama and more
+- ✅ **Multiple AI Models** - Support GPT, Qwen, DeepSeek, MiniMax, Ollama and more
 - ✅ **Flexible Atomic Capability Combination** - Based on ComfyUI architecture, can use preset workflows or customize any capability (such as replacing image generation model with FLUX, replacing TTS with ChatTTS, etc.)
 
 
@@ -386,7 +386,7 @@ A: You can try:
 A: **This project fully supports free operation!**
 
 - **Completely Free Solution**: LLM using Ollama (local) + ComfyUI local deployment = 0 cost
-- **Recommended Solution**: LLM using Qwen (extremely low cost, highly cost-effective) + ComfyUI local deployment
+- **Recommended Solution**: LLM using Qwen or MiniMax (extremely low cost, highly cost-effective) + ComfyUI local deployment
 - **Cloud Solution**: LLM using OpenAI + Image using RunningHub (higher cost but no need for local environment)
 
 **Selection Suggestion**: If you have a local GPU, recommend completely free solution, otherwise recommend using Qwen (cost-effective)
