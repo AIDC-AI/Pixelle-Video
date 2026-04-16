@@ -193,7 +193,7 @@ class LLMService:
                     **kwargs
                 )
                 
-                result = response.choices[0].message.content
+                result = response.choices[0].message.content or ""
                 logger.debug(f"LLM response length: {len(result)} chars")
                 
                 return result
@@ -242,7 +242,7 @@ class LLMService:
             max_tokens=max_tokens,
             **kwargs
         )
-        content = response.choices[0].message.content
+        content = response.choices[0].message.content or ""
         
         logger.debug(f"Structured output response length: {len(content)} chars")
         

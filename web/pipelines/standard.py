@@ -24,6 +24,7 @@ from web.pipelines.base import PipelineUI, register_pipeline_ui
 
 # Import components
 from web.components.content_input import render_content_input, render_bgm_section, render_version_info
+from web.components.script_extract import render_script_extract
 from web.components.style_config import render_style_config
 from web.components.output_preview import render_output_preview
 
@@ -52,6 +53,9 @@ class StandardPipelineUI(PipelineUI):
         # Left Column: Content Input & BGM
         # ====================================================================
         with left_col:
+            # Script extraction (学习对标)
+            script_extract_params = render_script_extract()
+            
             # Content input (mode, text, title, n_scenes)
             content_params = render_content_input()
             
@@ -75,6 +79,7 @@ class StandardPipelineUI(PipelineUI):
             # Combine all parameters
             video_params = {
                 "pipeline": self.name,
+                **script_extract_params,
                 **content_params,
                 **bgm_params,
                 **style_params

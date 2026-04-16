@@ -15,15 +15,45 @@ Async helper functions for web UI
 """
 
 import asyncio
+import sys
+import threading
 import tomllib
 from pathlib import Path
 
 from loguru import logger
 
+_loop: asyncio.AbstractEventLoop | None = None
+_lock = threading.Lock()
+
+
+def _get_event_loop() -> asyncio.AbstractEventLoop:
+    """Return a persistent event loop (never closed between calls).
+
+    Unlike ``asyncio.run()`` which creates **and closes** a loop each time,
+    this keeps the loop alive so that long-lived objects bound to it (e.g.
+    Playwright browser instances) remain valid across consecutive calls.
+
+    On Windows we use ProactorEventLoop because SelectorEventLoop (the
+    default in Python 3.14) does not support subprocesses.
+    """
+    global _loop
+    if _loop is not None and not _loop.is_closed():
+        return _loop
+    with _lock:
+        if _loop is not None and not _loop.is_closed():
+            return _loop
+        if sys.platform == "win32":
+            _loop = asyncio.ProactorEventLoop()
+        else:
+            _loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_loop)
+    return _loop
+
 
 def run_async(coro):
-    """Run async coroutine in sync context"""
-    return asyncio.run(coro)
+    """Run async coroutine in sync context (same thread, preserves Streamlit session)"""
+    loop = _get_event_loop()
+    return loop.run_until_complete(coro)
 
 
 def get_project_version():
