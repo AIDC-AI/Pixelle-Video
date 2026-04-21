@@ -4,22 +4,26 @@
 
 ---
 
-## 启动 Web 界面
+## 启动工作台
 
 ### Windows 一键整合包用户
 
 如果你使用的是 Windows 一键整合包，只需：
 1. 双击运行 `start.bat`
-2. 浏览器会自动打开 `http://localhost:8501`
+2. 浏览器会自动打开主界面
 
 ### 从源码安装用户
 
 ```bash
-# 使用 uv 运行
-uv run streamlit run web/app.py
+# 终端 1：启动 API
+uv run python api/app.py --host 0.0.0.0 --port 8000
+
+# 终端 2：启动 Next.js 工作台
+pnpm install
+pnpm -C frontend dev
 ```
 
-浏览器会自动打开 `http://localhost:8501`
+浏览器打开 `http://localhost:3000`
 
 ---
 
@@ -112,4 +116,3 @@ uv run streamlit run web/app.py
 - **克隆声音** - 查看 [使用参考音频克隆声音](../tutorials/voice-cloning.md) 教程
 - **使用 API** - 查看 [API 使用指南](../user-guide/api.md)
 - **开发模板** - 查看 [模板开发指南](../user-guide/templates.md)
-

@@ -4,22 +4,26 @@ Already installed and configured? Let's create your first video!
 
 ---
 
-## Start the Web Interface
+## Start the Workbench
 
 ### Windows All-in-One Package Users
 
 If you're using the Windows All-in-One Package, simply:
 1. Double-click `start.bat`
-2. Your browser will automatically open `http://localhost:8501`
+2. Your browser will automatically open the main app
 
 ### Install from Source Users
 
 ```bash
-# Using uv
-uv run streamlit run web/app.py
+# Terminal 1: start the API
+uv run python api/app.py --host 0.0.0.0 --port 8000
+
+# Terminal 2: start the Next.js workbench
+pnpm install
+pnpm -C frontend dev
 ```
 
-Your browser will automatically open `http://localhost:8501`
+Open `http://localhost:3000` in your browser.
 
 ---
 
@@ -112,4 +116,3 @@ Next, you can:
 - **Clone Voices** - See the [Voice Cloning with Reference Audio](../tutorials/voice-cloning.md) tutorial
 - **Use API** - See the [API Usage Guide](../user-guide/api.md)
 - **Develop Templates** - See the [Template Development Guide](../user-guide/templates.md)
-

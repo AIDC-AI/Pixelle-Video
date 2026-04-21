@@ -1,6 +1,6 @@
 [project]
 name = "pixelle-video"
-version = "0.1.15"
+version = "1.0.0rc1"
 description = "AI-powered video creation platform - Part of Pixelle ecosystem"
 authors = [
     {name = "Pixelle.AI"}
@@ -18,7 +18,6 @@ dependencies = [
     "ffmpeg-python>=0.2.0",
     "httpx>=0.28.1",
     "pillow>=10.0.0,<12",
-    "streamlit>=1.40.0",
     "openai>=2.6.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
@@ -56,5 +55,5 @@ ignore = ["E501"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = [
-    "parity: streamlit-vs-api pipeline parity checks",
+    "parity: pipeline-vs-api parity checks",
 ]

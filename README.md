@@ -51,9 +51,9 @@ pnpm -C frontend dev
 
 ### 数据兼容说明
 
-- 新版 Next.js 工作台与旧版 Streamlit 共用同一个后端与数据目录
-- `Project`、任务、历史视频、批量任务不会因为切到新版而丢失
-- 旧版界面现在作为 **Legacy UI（只读模式可用）** 保留，适合查看历史与预览
+- Next.js 工作台与 FastAPI API 共享同一个后端与数据目录
+- `Project`、任务、历史视频、批量任务不会因为升级到新版而丢失
+- 旧版 Streamlit 已在 `v1.0.0-rc.1` 移除，回滚请切到 tag `pre-streamlit-removal`
 
 详情见：[docs/migration-guide.md](docs/migration-guide.md)
 
@@ -68,15 +68,7 @@ docker compose up -d
 - `frontend`：Next.js 工作台
 - `backend`：FastAPI API
 
-如需旧版 Streamlit，只在显式开启 legacy profile 时启动：
-
-```bash
-docker compose --profile legacy up -d
-```
-
-## 🖥️ Legacy UI 预览
-
-![Web UI界面](resources/webui.png)
+旧版 Streamlit 已移除；如需查看移除前最后可回滚状态，请切换到 tag `pre-streamlit-removal`。
 
 
 ## 📋 最近更新
@@ -235,7 +227,7 @@ Pixelle-Video 采用模块化设计，整个视频生成流程清晰简洁：
 
 1. 下载最新的 Windows 一键整合包并解压
 2. 双击运行 `start.bat` 启动 Web 界面
-3. 浏览器会自动打开 http://localhost:8501
+3. 浏览器会自动打开主界面
 4. 在「⚙️ 系统配置」中配置 LLM API 和图像生成服务
 5. 开始生成视频！
 
@@ -290,7 +282,7 @@ Playwright 会启动真实的 Next.js + FastAPI，并自动注入：
 - `TTS_MOCK=1`
 - `LLM_MOCK=1`
 
-Parity Gate 会对同一输入分别走旧 pipeline `.run(...)` 路径和 `/api/video/*` 路径，比较 mock 输出的一致性。
+Parity Gate 会对同一输入分别走 pipeline `.run(...)` 路径和 `/api/video/*` 路径，比较 mock 输出的一致性。
 
 **Windows**
 - 下载地址：https://ffmpeg.org/download.html
@@ -330,18 +322,15 @@ pnpm -C frontend dev
 
 配置好后点击「保存配置」，就可以开始生成视频了！
 
-### Legacy UI（只读模式可用）
+### 旧版 Streamlit 已移除
 
-如果你需要继续使用旧版 Streamlit 界面查看历史或做兼容验证，可以单独启动：
+自 `v1.0.0-rc.1` 起，仓库不再包含 `web/` 代码。
+
+如果你需要回到移除前的最后安全状态，请使用：
 
 ```bash
-uv run streamlit run web/app.py
-
-# 或只读模式
-PIXELLE_STREAMLIT_READ_ONLY=1 uv run streamlit run web/app.py
+git checkout pre-streamlit-removal
 ```
-
-访问地址：`http://localhost:8501`
 
 <div id="tutorial-end" />
 

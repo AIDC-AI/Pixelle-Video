@@ -25,7 +25,33 @@ Just input a **topic**, and Pixelle-Video will automatically:
 **Zero threshold, zero editing experience** - Make video creation as simple as typing a sentence!
 
 
-## 🖥️ Web Interface Preview
+## 🚀 Main Entrypoint: Next.js Workbench
+
+Pixelle-Video now uses the **Next.js workbench** as the default UI.
+
+### Local startup
+
+Start the backend API:
+
+```bash
+uv run python api/app.py --host 0.0.0.0 --port 8000
+```
+
+Start the frontend workbench:
+
+```bash
+pnpm install
+pnpm -C frontend dev
+```
+
+Open:
+
+- `http://localhost:3000` for the workbench
+- `http://localhost:8000` for the API
+
+The legacy Streamlit UI was removed in `v1.0.0-rc.1`. To roll back, checkout tag `pre-streamlit-removal`.
+
+## 🖥️ Interface Preview
 
 ![Web UI Interface](resources/webui_en.png)
 
@@ -183,7 +209,7 @@ Here are actual cases generated using Pixelle-Video, showcasing video effects wi
 
 1. Download the latest Windows All-in-One Package and extract it
 2. Double-click `start.bat` to launch the Web interface
-3. Browser will automatically open http://localhost:8501
+3. Browser will automatically open the main app
 4. Configure LLM API and image generation service in "⚙️ System Configuration"
 5. Start generating videos!
 
@@ -230,22 +256,26 @@ git clone https://github.com/AIDC-AI/Pixelle-Video.git
 cd Pixelle-Video
 ```
 
-#### Step 2: Launch Web Interface
+#### Step 2: Launch API and Workbench
 
 ```bash
-# Run with uv (recommended, will automatically install dependencies)
-uv run streamlit run web/app.py
+# Terminal 1: start the API
+uv run python api/app.py --host 0.0.0.0 --port 8000
+
+# Terminal 2: start the Next.js workbench
+pnpm install
+pnpm -C frontend dev
 ```
 
-Browser will automatically open http://localhost:8501
+Open `http://localhost:3000` in your browser.
 
-#### Step 3: Configure in Web Interface
+#### Step 3: Configure in Workbench
 
 On first use, expand the "⚙️ System Configuration" panel and fill in:
 - **LLM Configuration**: Select AI model (such as Qwen, GPT, etc.) and enter API Key
 - **Image Configuration**: If you need to generate images, configure ComfyUI address or RunningHub API Key
 
-After configuration, click "Save Configuration", and you can start generating videos!
+After configuration, click "Save Configuration", and you can start generating videos.
 
 <div id="tutorial-end" />
 
@@ -429,4 +459,3 @@ This project is released under the Apache License 2.0. For details, please see t
 ## ⭐ Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.com/#AIDC-AI/Pixelle-Video&Date)
-

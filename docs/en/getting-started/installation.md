@@ -28,7 +28,7 @@ This page will guide you through installing Pixelle-Video.
 1. Visit [GitHub Releases](https://github.com/AIDC-AI/Pixelle-Video/releases/latest) to download the latest version
 2. Download the latest Windows All-in-One Package and extract it to any directory
 3. Double-click `start.bat` to launch the Web interface
-4. Your browser will automatically open `http://localhost:8501`
+4. Your browser will automatically open the main app
 
 !!! success "Installation Complete!"
     The package includes all dependencies, no need to manually install any environment. On first use, you only need to configure API keys in "⚙️ System Configuration" to get started.
@@ -85,14 +85,15 @@ pip install -e .
 Run the following command to verify the installation:
 
 ```bash
-# Using uv
-uv run streamlit run web/app.py
+# Terminal 1: start the API
+uv run python api/app.py --host 0.0.0.0 --port 8000
 
-# Or using pip (activate virtual environment first)
-streamlit run web/app.py
+# Terminal 2: start the Next.js workbench
+pnpm install
+pnpm -C frontend dev
 ```
 
-Your browser should automatically open `http://localhost:8501` and display the Pixelle-Video web interface.
+Your browser should open `http://localhost:3000` and display the Pixelle-Video Next.js workbench.
 
 !!! success "Installation Successful!"
     If you can see the web interface, the installation was successful! Next, check out the [Configuration Guide](configuration.md) to set up your services.
@@ -131,4 +132,3 @@ ComfyUI runs on `http://127.0.0.1:8188` by default.
 
 - [Configuration](configuration.md) - Configure LLM and image generation services
 - [Quick Start](quick-start.md) - Create your first video
-

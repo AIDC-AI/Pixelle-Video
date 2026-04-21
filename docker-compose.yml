@@ -102,54 +102,6 @@ services:
     networks:
       - pixelle-network
 
-  # Legacy Streamlit UI - opt-in only
-  streamlit:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        USE_CN_MIRROR: ${USE_CN_MIRROR:-false}
-    container_name: pixelle-video-streamlit
-    command: .venv/bin/streamlit run web/app.py --server.port 8501 --server.address 0.0.0.0
-    depends_on:
-      init:
-        condition: service_completed_successfully
-      backend:
-        condition: service_healthy
-    ports:
-      - "8501:8501"
-    volumes:
-      # Mount config file (read-write to allow saving from Web UI)
-      # Note: init service auto-creates config.yaml from config.example.yaml if not exists
-      - ./config.yaml:/app/config.yaml
-      # Mount data directories for persistence
-      # data/ contains: users/, bgm/, templates/, workflows/ (custom resources)
-      - ./data:/app/data
-      - ./output:/app/output
-      # Note: Default resources (bgm/, templates/, workflows/) are baked into the image
-      # Custom resources in data/* will override defaults
-    environment:
-      - TZ=Asia/Shanghai
-      - PIXELLE_STREAMLIT_READ_ONLY=1
-      - STREAMLIT_SERVER_PORT=8501
-      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
-      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
-    profiles: ["legacy"]
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    networks:
-      - pixelle-network
-
 networks:
   pixelle-network:
     driver: bridge

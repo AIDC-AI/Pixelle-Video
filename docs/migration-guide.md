@@ -2,13 +2,13 @@
 
 ## 1. Entry Points / 主入口
 
-- New default UI / 新默认界面: `Next.js Workbench` on `http://localhost:3000`
+- Default UI / 默认界面: `Next.js Workbench` on `http://localhost:3000`
 - Shared backend / 共享后端: `FastAPI` on `http://localhost:8000`
-- Legacy UI / 旧版界面: `Streamlit` on `http://localhost:8501`
+- Legacy Streamlit / 旧版 Streamlit: removed in `v1.0.0-rc.1`
 
-新版与旧版共享同一个后端、同一个输出目录和同一套任务数据。
+当前仓库默认只保留 Next.js 工作台与 FastAPI API。
 
-The new workbench and the legacy UI share the same backend, output directory, and task data.
+This repository now ships only the Next.js workbench and the FastAPI API by default.
 
 ## 2. Feature Mapping / 功能映射
 
@@ -31,19 +31,15 @@ The new workbench and the legacy UI share the same backend, output directory, an
 
 不会。
 
-新版 Next.js 与旧版 Streamlit 共用同一个 FastAPI 后端，以及同一个任务、项目、历史索引与输出目录。
+新版 Next.js 与旧版 Streamlit 在移除前一直共用同一个 FastAPI 后端、同一个任务/项目元数据索引，以及同一个输出目录。升级到 `v1.0.0-rc.1` 不会清空这些数据。
 
-No. The Next.js workbench and the Streamlit legacy UI share the same FastAPI backend, task/project metadata, history index, and output directories.
+No. Before Streamlit removal, both UIs shared the same FastAPI backend, task/project metadata index, and output directories. Upgrading to `v1.0.0-rc.1` does not delete your data.
 
-### 为什么旧版还在？
+### 旧版 Streamlit 去哪了？
 
-旧版现在定位为 `Legacy UI`，主要用于：
+旧版已在 `v1.0.0-rc.1` 从主分支移除。最后一个安全回滚点已经打成 annotated tag：`pre-streamlit-removal`。
 
-- 查看旧历史
-- 兼容性验证
-- 切换期间的只读回看
-
-The Streamlit app remains as a legacy fallback for history viewing, compatibility checks, and read-only access during rollout.
+The Streamlit UI was removed from the main branch in `v1.0.0-rc.1`. The final safe rollback point is available as the annotated tag `pre-streamlit-removal`.
 
 ### 我应该从哪个入口开始？
 
@@ -55,17 +51,13 @@ Use the Next.js workbench at `http://localhost:3000` as the primary entrypoint.
 
 ### 回滚到移除 Streamlit 之前
 
-仓库在正式删除 `web/` 之前会打一个安全 tag：
-
 ```bash
 git checkout pre-streamlit-removal
 ```
 
-这会回到删除 Streamlit 前的最后安全状态。
+这会回到删除 `web/` 之前的最后安全状态。
 
 ### 回滚到任意 Phase 4 之前的 commit
-
-你也可以直接切回任意一个切换前 commit：
 
 ```bash
 git log --oneline
@@ -74,16 +66,18 @@ git checkout <commit-sha>
 
 Any commit before the final Streamlit removal remains a valid rollback point.
 
-## 5. Legacy UI / 旧版界面
-
-如需继续启动旧版：
+## 5. Current Runtime / 当前运行方式
 
 ```bash
-uv run streamlit run web/app.py
+# Terminal 1
+uv run python api/app.py --host 0.0.0.0 --port 8000
+
+# Terminal 2
+pnpm install
+pnpm -C frontend dev
 ```
 
-只读模式：
+访问：
 
-```bash
-PIXELLE_STREAMLIT_READ_ONLY=1 uv run streamlit run web/app.py
-```
+- `http://localhost:3000` - Next.js 工作台
+- `http://localhost:8000/docs` - FastAPI OpenAPI 文档

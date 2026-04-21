@@ -1,2 +1,0 @@
-"""Pages for web interface"""
-
