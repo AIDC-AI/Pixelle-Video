@@ -16,22 +16,27 @@ Resource discovery endpoints
 Provides endpoints to discover available workflows, templates, and BGM.
 """
 
+import json
 from pathlib import Path
+
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 
 from api.dependencies import PixelleVideoDep
+from api.routers._helpers import api_error
 from api.schemas.resources import (
-    WorkflowInfo,
-    WorkflowListResponse,
-    TemplateInfo,
-    TemplateListResponse,
     BGMInfo,
     BGMListResponse,
+    PresetItem,
     PresetListResponse,
+    TemplateInfo,
+    TemplateListResponse,
+    WorkflowDetailResponse,
+    WorkflowInfo,
+    WorkflowListResponse,
 )
-from api.routers._helpers import not_implemented
-from pixelle_video.utils.os_util import list_resource_files, get_root_path, get_data_path
+from pixelle_video.llm_presets import LLM_PRESETS
+from pixelle_video.utils.os_util import get_data_path, get_root_path
 from pixelle_video.utils.template_util import get_all_templates_with_info
 
 router = APIRouter(prefix="/resources", tags=["Resources"])
@@ -62,6 +67,8 @@ async def list_tts_workflows(pixelle_video: PixelleVideoDep):
     """
     try:
         # Get all workflows from TTS service
+        if pixelle_video.tts is None:
+            raise RuntimeError("TTS service is not initialized")
         all_workflows = pixelle_video.tts.list_workflows()
         
         # Filter to TTS workflows only (filename starts with "tts_")
@@ -111,6 +118,8 @@ async def list_media_workflows(pixelle_video: PixelleVideoDep):
     """
     try:
         # Get all workflows from media service (includes both image and video)
+        if pixelle_video.media is None:
+            raise RuntimeError("Media service is not initialized")
         all_workflows = pixelle_video.media.list_workflows()
         
         media_workflows = [WorkflowInfo(**wf) for wf in all_workflows]
@@ -131,6 +140,8 @@ async def list_image_workflows(pixelle_video: PixelleVideoDep):
     This endpoint is kept for backward compatibility but will filter to image_ workflows only.
     """
     try:
+        if pixelle_video.media is None:
+            raise RuntimeError("Media service is not initialized")
         all_workflows = pixelle_video.media.list_workflows()
         
         # Filter to image workflows only (filename starts with "image_")
@@ -270,11 +281,89 @@ async def list_bgm():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/workflows/{workflow_id}", response_model=WorkflowInfo)
-async def get_workflow_detail(workflow_id: str):
-    raise not_implemented(f"Workflow detail for {workflow_id} is not implemented yet")
+def _list_all_workflows(pixelle_video) -> list[dict]:
+    if pixelle_video.tts is None or pixelle_video.media is None:
+        raise RuntimeError("Workflow services are not initialized")
+    all_workflows = pixelle_video.tts.list_workflows() + pixelle_video.media.list_workflows()
+    deduped: dict[str, dict] = {}
+    for workflow in all_workflows:
+        deduped[workflow["key"]] = workflow
+    return list(deduped.values())
+
+
+@router.get("/workflows/{workflow_id:path}", response_model=WorkflowDetailResponse)
+async def get_workflow_detail(workflow_id: str, pixelle_video: PixelleVideoDep):
+    try:
+        workflow = next(
+            (
+                item
+                for item in _list_all_workflows(pixelle_video)
+                if workflow_id in {item.get("key"), item.get("workflow_id"), item.get("name"), item.get("path")}
+            ),
+            None,
+        )
+        if workflow is None:
+            raise HTTPException(status_code=404, detail=f"Workflow {workflow_id} not found")
+
+        workflow_path = Path(get_root_path(workflow["path"]))
+        if not workflow_path.exists():
+            raise HTTPException(status_code=404, detail=f"Workflow file missing: {workflow['path']}")
+
+        workflow_json = json.loads(workflow_path.read_text(encoding="utf-8"))
+        raw_nodes = list(workflow_json.keys()) if isinstance(workflow_json, dict) else []
+        return WorkflowDetailResponse(
+            **WorkflowInfo(**workflow).model_dump(),
+            editable=workflow.get("source") == "selfhost",
+            metadata={
+                "node_count": len(raw_nodes),
+                "path_exists": workflow_path.exists(),
+                "source_path": workflow["path"],
+            },
+            key_parameters=raw_nodes[:20],
+            raw_nodes=raw_nodes,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Workflow detail error: {exc}")
+        raise api_error(
+            status_code=500,
+            code="WORKFLOW_FETCH_FAILED",
+            message="Failed to fetch workflow detail.",
+        ) from exc
 
 
 @router.get("/presets", response_model=PresetListResponse)
-async def list_presets():
-    raise not_implemented("Preset listing is not implemented yet")
+async def list_presets(pixelle_video: PixelleVideoDep):
+    try:
+        builtin_presets = [
+            PresetItem(
+                name=preset["name"],
+                description=f"Built-in LLM preset for {preset['name']}",
+                pipeline="llm",
+                payload_template={
+                    "llm": {
+                        "base_url": preset.get("base_url"),
+                        "model": preset.get("model"),
+                        "api_key": preset.get("default_api_key", ""),
+                    }
+                },
+                created_at=None,
+                source="builtin",
+            )
+            for preset in LLM_PRESETS
+        ]
+        user_presets = []
+        if pixelle_video.persistence is not None:
+            user_presets = [
+                PresetItem(**preset)
+                for preset in await pixelle_video.persistence.list_presets()
+            ]
+        return PresetListResponse(presets=[*builtin_presets, *user_presets])
+    except Exception as exc:
+        logger.error(f"Preset listing error: {exc}")
+        raise api_error(
+            status_code=500,
+            code="PRESET_LIST_FAILED",
+            message="Failed to list presets.",
+        ) from exc

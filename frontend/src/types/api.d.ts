@@ -1066,12 +1066,9 @@ export interface components {
         /** ApiErrorResponse */
         ApiErrorResponse: {
             /** Detail */
-            detail: string | components["schemas"]["ApiErrorDetail"];
+            detail: components["schemas"]["ApiErrorDetail"] | string;
         };
-        /**
-         * BGMInfo
-         * @description BGM information
-         */
+        /** BGMInfo */
         BGMInfo: {
             /**
              * Name
@@ -1089,10 +1086,7 @@ export interface components {
              */
             source: string;
         };
-        /**
-         * BGMListResponse
-         * @description BGM list response
-         */
+        /** BGMListResponse */
         BGMListResponse: {
             /**
              * Success
@@ -1118,48 +1112,181 @@ export interface components {
              */
             id: string;
             /**
-             * Pipeline
-             * @description Pipeline name
+             * Name
+             * @description Batch name
              */
-            pipeline: string;
-            /**
-             * Rows
-             * @description Batch rows
-             */
-            rows?: components["schemas"]["BatchRow"][];
-            /**
-             * Created At
-             * @description Creation time
-             */
-            created_at?: string | null;
-            /**
-             * Updated At
-             * @description Update time
-             */
-            updated_at?: string | null;
+            name?: string | null;
+            /** @description Pipeline name */
+            pipeline: components["schemas"]["BatchPipeline"];
             /**
              * Project Id
              * @description Linked project ID
              */
             project_id?: string | null;
+            /** @description Batch status */
+            status: components["schemas"]["BatchStatus"];
+            /**
+             * Total
+             * @description Total number of child tasks
+             * @default 0
+             */
+            total: number;
+            /**
+             * Succeeded
+             * @description Completed child tasks
+             * @default 0
+             */
+            succeeded: number;
+            /**
+             * Failed
+             * @description Failed child tasks
+             * @default 0
+             */
+            failed: number;
+            /**
+             * Cancelled
+             * @description Cancelled child tasks
+             * @default 0
+             */
+            cancelled: number;
+            /**
+             * Created At
+             * Format: date-time
+             * @description Creation time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description Last update time
+             */
+            updated_at: string;
+            /**
+             * Cover Url
+             * @description Representative cover URL
+             */
+            cover_url?: string | null;
+            /**
+             * Deleted At
+             * @description Soft delete timestamp
+             */
+            deleted_at?: string | null;
+            /**
+             * Task Ids
+             * @description Child task IDs
+             */
+            task_ids?: string[];
         };
         /** BatchCreateRequest */
         BatchCreateRequest: {
-            /**
-             * Pipeline
-             * @description Pipeline name
-             */
-            pipeline: string;
+            /** @description Pipeline to fan out over all rows */
+            pipeline: components["schemas"]["BatchPipeline"];
             /**
              * Rows
-             * @description Rows
+             * @description Pipeline-specific request rows
              */
-            rows?: components["schemas"]["BatchRow"][];
+            rows: (components["schemas"]["VideoGenerateRequest"] | components["schemas"]["DigitalHumanAsyncRequest"] | components["schemas"]["I2VAsyncRequest"] | components["schemas"]["ActionTransferAsyncRequest"] | components["schemas"]["CustomAsyncRequest"])[];
             /**
              * Project Id
-             * @description Project ID
+             * @description Shared project ID applied to rows
              */
             project_id?: string | null;
+            /**
+             * Name
+             * @description Batch display name
+             */
+            name?: string | null;
+        };
+        /** BatchCreateResponse */
+        BatchCreateResponse: {
+            /**
+             * Batch Id
+             * @description Created batch ID
+             */
+            batch_id: string;
+            /**
+             * Task Ids
+             * @description Created child task IDs
+             */
+            task_ids?: string[];
+        };
+        /** BatchDetailResponse */
+        BatchDetailResponse: {
+            /**
+             * Id
+             * @description Batch ID
+             */
+            id: string;
+            /**
+             * Name
+             * @description Batch name
+             */
+            name?: string | null;
+            /** @description Pipeline name */
+            pipeline: components["schemas"]["BatchPipeline"];
+            /**
+             * Project Id
+             * @description Linked project ID
+             */
+            project_id?: string | null;
+            /** @description Batch status */
+            status: components["schemas"]["BatchStatus"];
+            /**
+             * Total
+             * @description Total number of child tasks
+             * @default 0
+             */
+            total: number;
+            /**
+             * Succeeded
+             * @description Completed child tasks
+             * @default 0
+             */
+            succeeded: number;
+            /**
+             * Failed
+             * @description Failed child tasks
+             * @default 0
+             */
+            failed: number;
+            /**
+             * Cancelled
+             * @description Cancelled child tasks
+             * @default 0
+             */
+            cancelled: number;
+            /**
+             * Created At
+             * Format: date-time
+             * @description Creation time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description Last update time
+             */
+            updated_at: string;
+            /**
+             * Cover Url
+             * @description Representative cover URL
+             */
+            cover_url?: string | null;
+            /**
+             * Deleted At
+             * @description Soft delete timestamp
+             */
+            deleted_at?: string | null;
+            /**
+             * Task Ids
+             * @description Child task IDs
+             */
+            task_ids?: string[];
+            /**
+             * Children
+             * @description Child tasks
+             */
+            children?: components["schemas"]["Task"][];
         };
         /** BatchListResponse */
         BatchListResponse: {
@@ -1168,15 +1295,22 @@ export interface components {
              * @description Batches
              */
             items?: components["schemas"]["Batch"][];
-        };
-        /** BatchRow */
-        BatchRow: {
             /**
-             * Value
-             * @description Row content
+             * Next Cursor
+             * @description Pagination cursor
              */
-            value: string;
+            next_cursor?: string | null;
         };
+        /**
+         * BatchPipeline
+         * @enum {string}
+         */
+        BatchPipeline: "standard" | "digital_human" | "i2v" | "action_transfer" | "asset_based";
+        /**
+         * BatchStatus
+         * @enum {string}
+         */
+        BatchStatus: "pending" | "running" | "completed" | "failed" | "cancelled" | "partial";
         /** Body_upload_file_api_uploads_post */
         Body_upload_file_api_uploads_post: {
             /**
@@ -1184,6 +1318,73 @@ export interface components {
              * Format: binary
              */
             file: string;
+        };
+        /** ComfyUISettingsPayload */
+        ComfyUISettingsPayload: {
+            /**
+             * Comfyui Url
+             * @description ComfyUI endpoint
+             * @default http://127.0.0.1:8188
+             */
+            comfyui_url: string;
+            /**
+             * Comfyui Api Key
+             * @description ComfyUI API key (masked on read)
+             */
+            comfyui_api_key?: string | null;
+            /**
+             * Runninghub Api Key
+             * @description RunningHub API key (masked on read)
+             */
+            runninghub_api_key?: string | null;
+            /**
+             * Runninghub Concurrent Limit
+             * @description RunningHub concurrent limit
+             * @default 1
+             */
+            runninghub_concurrent_limit: number;
+            /**
+             * Runninghub Instance Type
+             * @description RunningHub instance type
+             */
+            runninghub_instance_type?: string | null;
+            tts?: components["schemas"]["TTSSettingsPayload"];
+            image?: components["schemas"]["ImageSettingsPayload"];
+            video?: components["schemas"]["VideoSettingsPayload"];
+        };
+        /** ComfyUISettingsUpdatePayload */
+        ComfyUISettingsUpdatePayload: {
+            /**
+             * Comfyui Url
+             * @description ComfyUI endpoint
+             */
+            comfyui_url?: string | null;
+            /**
+             * Comfyui Api Key
+             * @description ComfyUI API key
+             */
+            comfyui_api_key?: string | null;
+            /**
+             * Runninghub Api Key
+             * @description RunningHub API key
+             */
+            runninghub_api_key?: string | null;
+            /**
+             * Runninghub Concurrent Limit
+             * @description RunningHub concurrent limit
+             */
+            runninghub_concurrent_limit?: number | null;
+            /**
+             * Runninghub Instance Type
+             * @description RunningHub instance type
+             */
+            runninghub_instance_type?: string | null;
+            /** @description TTS settings */
+            tts?: components["schemas"]["TTSSettingsUpdatePayload"] | null;
+            /** @description Image settings */
+            image?: components["schemas"]["ImageSettingsUpdatePayload"] | null;
+            /** @description Video settings */
+            video?: components["schemas"]["VideoSettingsUpdatePayload"] | null;
         };
         /** CustomAsyncRequest */
         CustomAsyncRequest: {
@@ -1405,6 +1606,73 @@ export interface components {
              */
             image_path: string;
         };
+        /** ImageItem */
+        ImageItem: {
+            /**
+             * Id
+             * @description Image record ID
+             */
+            id: string;
+            /**
+             * Task Id
+             * @description Related task ID
+             */
+            task_id?: string | null;
+            /**
+             * Image Path
+             * @description Stored image path
+             */
+            image_path: string;
+            /**
+             * Image Url
+             * @description Accessible image URL
+             */
+            image_url?: string | null;
+            /**
+             * Thumbnail Url
+             * @description Thumbnail URL
+             */
+            thumbnail_url?: string | null;
+            /**
+             * Created At
+             * @description Creation time
+             */
+            created_at?: string | null;
+            /**
+             * File Size
+             * @description File size in bytes
+             * @default 0
+             */
+            file_size: number;
+            /**
+             * Prompt Used
+             * @description Image prompt
+             */
+            prompt_used?: string | null;
+            /**
+             * Project Id
+             * @description Linked project ID
+             */
+            project_id?: string | null;
+            /**
+             * Batch Id
+             * @description Linked batch ID
+             */
+            batch_id?: string | null;
+        };
+        /** ImageListResponse */
+        ImageListResponse: {
+            /**
+             * Items
+             * @description Images
+             */
+            items?: components["schemas"]["ImageItem"][];
+            /**
+             * Next Cursor
+             * @description Pagination cursor
+             */
+            next_cursor?: string | null;
+        };
         /**
          * ImagePromptGenerateRequest
          * @description Image prompt generation request
@@ -1456,6 +1724,33 @@ export interface components {
              * @description Generated image prompts
              */
             image_prompts: string[];
+        };
+        /** ImageSettingsPayload */
+        ImageSettingsPayload: {
+            /**
+             * Default Workflow
+             * @description Default image workflow
+             */
+            default_workflow?: string | null;
+            /**
+             * Prompt Prefix
+             * @description Image prompt prefix
+             * @default
+             */
+            prompt_prefix: string;
+        };
+        /** ImageSettingsUpdatePayload */
+        ImageSettingsUpdatePayload: {
+            /**
+             * Default Workflow
+             * @description Default image workflow
+             */
+            default_workflow?: string | null;
+            /**
+             * Prompt Prefix
+             * @description Image prompt prefix
+             */
+            prompt_prefix?: string | null;
         };
         /**
          * LLMChatRequest
@@ -1510,6 +1805,112 @@ export interface components {
              * @description Tokens used (if available)
              */
             tokens_used?: number | null;
+        };
+        /** LLMSettingsPayload */
+        LLMSettingsPayload: {
+            /**
+             * Api Key
+             * @description LLM API key (masked on read)
+             * @default
+             */
+            api_key: string;
+            /**
+             * Base Url
+             * @description LLM API base URL
+             * @default
+             */
+            base_url: string;
+            /**
+             * Model
+             * @description LLM model name
+             * @default
+             */
+            model: string;
+        };
+        /** LLMSettingsUpdatePayload */
+        LLMSettingsUpdatePayload: {
+            /**
+             * Api Key
+             * @description LLM API key
+             */
+            api_key?: string | null;
+            /**
+             * Base Url
+             * @description LLM API base URL
+             */
+            base_url?: string | null;
+            /**
+             * Model
+             * @description LLM model name
+             */
+            model?: string | null;
+        };
+        /** LibraryBGMItem */
+        LibraryBGMItem: {
+            /**
+             * Id
+             * @description BGM record ID
+             */
+            id: string;
+            /**
+             * Name
+             * @description BGM display name
+             */
+            name: string;
+            /**
+             * Audio Path
+             * @description BGM path
+             */
+            audio_path: string;
+            /**
+             * Audio Url
+             * @description Accessible BGM URL
+             */
+            audio_url?: string | null;
+            /**
+             * Created At
+             * @description Creation time
+             */
+            created_at?: string | null;
+            /**
+             * Duration
+             * @description Audio duration
+             */
+            duration?: number | null;
+            /**
+             * File Size
+             * @description File size in bytes
+             * @default 0
+             */
+            file_size: number;
+            /**
+             * Source
+             * @description builtin or history
+             */
+            source: string;
+            /**
+             * Project Id
+             * @description Linked project ID
+             */
+            project_id?: string | null;
+            /**
+             * Batch Id
+             * @description Linked batch ID
+             */
+            batch_id?: string | null;
+        };
+        /** LibraryBGMListResponse */
+        LibraryBGMListResponse: {
+            /**
+             * Items
+             * @description BGM assets
+             */
+            items?: components["schemas"]["LibraryBGMItem"][];
+            /**
+             * Next Cursor
+             * @description Pagination cursor
+             */
+            next_cursor?: string | null;
         };
         /**
          * NarrationGenerateRequest
@@ -1567,46 +1968,42 @@ export interface components {
              */
             narrations: string[];
         };
-        /** PlaceholderListResponse */
-        PlaceholderListResponse: {
-            /**
-             * Items
-             * @description Placeholder items
-             */
-            items?: {
-                [key: string]: unknown;
-            }[];
-            /**
-             * Next Cursor
-             * @description Pagination cursor
-             */
-            next_cursor?: string | null;
-        };
-        /**
-         * PresetInfo
-         * @description LLM preset information
-         */
-        PresetInfo: {
+        /** PresetItem */
+        PresetItem: {
             /**
              * Name
              * @description Preset name
              */
             name: string;
             /**
-             * Model
-             * @description Model name
+             * Description
+             * @description Preset description
              */
-            model?: string | null;
+            description?: string | null;
             /**
-             * Base Url
-             * @description Preset base URL
+             * Pipeline
+             * @description Preset scope or pipeline
              */
-            base_url?: string | null;
+            pipeline: string;
+            /**
+             * Payload Template
+             * @description Preset payload template
+             */
+            payload_template?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * @description Creation time
+             */
+            created_at?: string | null;
+            /**
+             * Source
+             * @description builtin or user
+             */
+            source: string;
         };
-        /**
-         * PresetListResponse
-         * @description Preset list response
-         */
+        /** PresetListResponse */
         PresetListResponse: {
             /**
              * Success
@@ -1622,7 +2019,7 @@ export interface components {
              * Presets
              * @description List of presets
              */
-            presets?: components["schemas"]["PresetInfo"][];
+            presets?: components["schemas"]["PresetItem"][];
         };
         /** Project */
         Project: {
@@ -1719,36 +2116,157 @@ export interface components {
              */
             pipeline_hint?: string | null;
         };
+        /** ScriptItem */
+        ScriptItem: {
+            /**
+             * Id
+             * @description Script record ID
+             */
+            id: string;
+            /**
+             * Task Id
+             * @description Related task ID
+             */
+            task_id?: string | null;
+            /**
+             * Created At
+             * @description Creation time
+             */
+            created_at?: string | null;
+            /**
+             * Project Id
+             * @description Linked project ID
+             */
+            project_id?: string | null;
+            /**
+             * Batch Id
+             * @description Linked batch ID
+             */
+            batch_id?: string | null;
+            /**
+             * Text
+             * @description Script or narration text
+             */
+            text: string;
+            /**
+             * Script Type
+             * @description script, narration, or prompt
+             */
+            script_type: string;
+            /**
+             * Prompt Used
+             * @description Associated prompt
+             */
+            prompt_used?: string | null;
+        };
+        /** ScriptListResponse */
+        ScriptListResponse: {
+            /**
+             * Items
+             * @description Script records
+             */
+            items?: components["schemas"]["ScriptItem"][];
+            /**
+             * Next Cursor
+             * @description Pagination cursor
+             */
+            next_cursor?: string | null;
+        };
         /** SettingsPayload */
         SettingsPayload: {
             /**
-             * Llm
-             * @description LLM settings
+             * Project Name
+             * @description Project name
+             * @default Pixelle-Video
              */
-            llm?: {
-                [key: string]: unknown;
-            } | null;
+            project_name: string;
+            /** @description LLM settings */
+            llm?: components["schemas"]["LLMSettingsPayload"];
+            /** @description ComfyUI settings */
+            comfyui?: components["schemas"]["ComfyUISettingsPayload"];
+            /** @description Template settings */
+            template?: components["schemas"]["TemplateSettingsPayload"];
+        };
+        /** SettingsUpdatePayload */
+        SettingsUpdatePayload: {
             /**
-             * Comfyui
-             * @description ComfyUI settings
+             * Project Name
+             * @description Project name
              */
-            comfyui?: {
-                [key: string]: unknown;
-            } | null;
+            project_name?: string | null;
+            /** @description LLM settings */
+            llm?: components["schemas"]["LLMSettingsUpdatePayload"] | null;
+            /** @description ComfyUI settings */
+            comfyui?: components["schemas"]["ComfyUISettingsUpdatePayload"] | null;
+            /** @description Template settings */
+            template?: components["schemas"]["TemplateSettingsUpdatePayload"] | null;
+        };
+        /** TTSComfySettingsPayload */
+        TTSComfySettingsPayload: {
             /**
-             * Appearance
-             * @description Appearance settings
+             * Default Workflow
+             * @description Default TTS workflow
              */
-            appearance?: {
-                [key: string]: unknown;
-            } | null;
+            default_workflow?: string | null;
+        };
+        /** TTSComfySettingsUpdatePayload */
+        TTSComfySettingsUpdatePayload: {
             /**
-             * Storage
-             * @description Storage settings
+             * Default Workflow
+             * @description Default TTS workflow
              */
-            storage?: {
-                [key: string]: unknown;
-            } | null;
+            default_workflow?: string | null;
+        };
+        /** TTSLocalSettingsPayload */
+        TTSLocalSettingsPayload: {
+            /**
+             * Voice
+             * @description Local TTS voice
+             * @default zh-CN-YunjianNeural
+             */
+            voice: string;
+            /**
+             * Speed
+             * @description Speech speed
+             * @default 1.2
+             */
+            speed: number;
+        };
+        /** TTSLocalSettingsUpdatePayload */
+        TTSLocalSettingsUpdatePayload: {
+            /**
+             * Voice
+             * @description Local TTS voice
+             */
+            voice?: string | null;
+            /**
+             * Speed
+             * @description Speech speed
+             */
+            speed?: number | null;
+        };
+        /** TTSSettingsPayload */
+        TTSSettingsPayload: {
+            /**
+             * Inference Mode
+             * @description TTS mode
+             * @default local
+             */
+            inference_mode: string;
+            local?: components["schemas"]["TTSLocalSettingsPayload"];
+            comfyui?: components["schemas"]["TTSComfySettingsPayload"];
+        };
+        /** TTSSettingsUpdatePayload */
+        TTSSettingsUpdatePayload: {
+            /**
+             * Inference Mode
+             * @description TTS mode
+             */
+            inference_mode?: string | null;
+            /** @description Local TTS settings */
+            local?: components["schemas"]["TTSLocalSettingsUpdatePayload"] | null;
+            /** @description ComfyUI TTS settings */
+            comfyui?: components["schemas"]["TTSComfySettingsUpdatePayload"] | null;
         };
         /**
          * TTSSynthesizeRequest
@@ -1816,6 +2334,8 @@ export interface components {
             task_type: components["schemas"]["TaskType"];
             /** Project Id */
             project_id?: string | null;
+            /** Batch Id */
+            batch_id?: string | null;
             /** @default pending */
             status: components["schemas"]["TaskStatus"];
             progress?: components["schemas"]["TaskProgress"] | null;
@@ -1875,10 +2395,7 @@ export interface components {
          * @enum {string}
          */
         TaskType: "video_generation";
-        /**
-         * TemplateInfo
-         * @description Template information
-         */
+        /** TemplateInfo */
         TemplateInfo: {
             /**
              * Name
@@ -1921,10 +2438,7 @@ export interface components {
              */
             key: string;
         };
-        /**
-         * TemplateListResponse
-         * @description Template list response
-         */
+        /** TemplateListResponse */
         TemplateListResponse: {
             /**
              * Success
@@ -2001,6 +2515,23 @@ export interface components {
                 [key: string]: components["schemas"]["TemplateParamConfig"];
             };
         };
+        /** TemplateSettingsPayload */
+        TemplateSettingsPayload: {
+            /**
+             * Default Template
+             * @description Default template path
+             * @default 1080x1920/default.html
+             */
+            default_template: string;
+        };
+        /** TemplateSettingsUpdatePayload */
+        TemplateSettingsUpdatePayload: {
+            /**
+             * Default Template
+             * @description Default template path
+             */
+            default_template?: string | null;
+        };
         /**
          * TitleGenerateRequest
          * @description Title generation request
@@ -2068,6 +2599,103 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VideoDetailResponse */
+        VideoDetailResponse: {
+            /**
+             * Task Id
+             * @description Task ID
+             */
+            task_id: string;
+            /**
+             * Title
+             * @description Video title
+             */
+            title: string;
+            /**
+             * Created At
+             * @description Creation time
+             */
+            created_at?: string | null;
+            /**
+             * Completed At
+             * @description Completion time
+             */
+            completed_at?: string | null;
+            /**
+             * Duration
+             * @description Video duration
+             * @default 0
+             */
+            duration: number;
+            /**
+             * File Size
+             * @description File size in bytes
+             * @default 0
+             */
+            file_size: number;
+            /**
+             * N Frames
+             * @description Number of frames/scenes
+             * @default 0
+             */
+            n_frames: number;
+            /**
+             * Video Path
+             * @description Stored video path
+             */
+            video_path?: string | null;
+            /**
+             * Video Url
+             * @description Accessible video URL
+             */
+            video_url?: string | null;
+            /**
+             * Thumbnail Url
+             * @description Thumbnail URL
+             */
+            thumbnail_url?: string | null;
+            /**
+             * Project Id
+             * @description Linked project ID
+             */
+            project_id?: string | null;
+            /**
+             * Batch Id
+             * @description Linked batch ID
+             */
+            batch_id?: string | null;
+            /**
+             * Pipeline
+             * @description Pipeline identifier
+             */
+            pipeline?: string | null;
+            /**
+             * Audio Duration
+             * @description Total narration audio duration
+             */
+            audio_duration?: number | null;
+            /**
+             * Metadata
+             * @description Raw metadata snapshot
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Snapshot
+             * @description Compatibility alias for metadata
+             */
+            snapshot?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Storyboard
+             * @description Storyboard snapshot
+             */
+            storyboard?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * VideoGenerateAsyncResponse
@@ -2304,6 +2932,16 @@ export interface components {
              * @description Linked project ID
              */
             project_id?: string | null;
+            /**
+             * Batch Id
+             * @description Linked batch ID
+             */
+            batch_id?: string | null;
+            /**
+             * Pipeline
+             * @description Pipeline identifier
+             */
+            pipeline?: string | null;
         };
         /** VideoListResponse */
         VideoListResponse: {
@@ -2318,10 +2956,162 @@ export interface components {
              */
             next_cursor?: string | null;
         };
-        /**
-         * WorkflowInfo
-         * @description Workflow information
-         */
+        /** VideoSettingsPayload */
+        VideoSettingsPayload: {
+            /**
+             * Default Workflow
+             * @description Default video workflow
+             */
+            default_workflow?: string | null;
+            /**
+             * Prompt Prefix
+             * @description Video prompt prefix
+             * @default
+             */
+            prompt_prefix: string;
+        };
+        /** VideoSettingsUpdatePayload */
+        VideoSettingsUpdatePayload: {
+            /**
+             * Default Workflow
+             * @description Default video workflow
+             */
+            default_workflow?: string | null;
+            /**
+             * Prompt Prefix
+             * @description Video prompt prefix
+             */
+            prompt_prefix?: string | null;
+        };
+        /** VoiceItem */
+        VoiceItem: {
+            /**
+             * Id
+             * @description Voice record ID
+             */
+            id: string;
+            /**
+             * Task Id
+             * @description Related task ID
+             */
+            task_id?: string | null;
+            /**
+             * Audio Path
+             * @description Stored audio path
+             */
+            audio_path: string;
+            /**
+             * Audio Url
+             * @description Accessible audio URL
+             */
+            audio_url?: string | null;
+            /**
+             * Created At
+             * @description Creation time
+             */
+            created_at?: string | null;
+            /**
+             * Duration
+             * @description Audio duration
+             * @default 0
+             */
+            duration: number;
+            /**
+             * Tts Voice
+             * @description Voice identifier or workflow
+             */
+            tts_voice?: string | null;
+            /**
+             * Text
+             * @description Synthesized text
+             */
+            text?: string | null;
+            /**
+             * File Size
+             * @description File size in bytes
+             * @default 0
+             */
+            file_size: number;
+            /**
+             * Project Id
+             * @description Linked project ID
+             */
+            project_id?: string | null;
+            /**
+             * Batch Id
+             * @description Linked batch ID
+             */
+            batch_id?: string | null;
+        };
+        /** VoiceListResponse */
+        VoiceListResponse: {
+            /**
+             * Items
+             * @description Voice assets
+             */
+            items?: components["schemas"]["VoiceItem"][];
+            /**
+             * Next Cursor
+             * @description Pagination cursor
+             */
+            next_cursor?: string | null;
+        };
+        /** WorkflowDetailResponse */
+        WorkflowDetailResponse: {
+            /**
+             * Name
+             * @description Workflow filename
+             */
+            name: string;
+            /**
+             * Display Name
+             * @description Display name with source info
+             */
+            display_name: string;
+            /**
+             * Source
+             * @description Source (runninghub or selfhost)
+             */
+            source: string;
+            /**
+             * Path
+             * @description Full path to workflow file
+             */
+            path: string;
+            /**
+             * Key
+             * @description Workflow key (source/name)
+             */
+            key: string;
+            /**
+             * Workflow Id
+             * @description RunningHub workflow ID (if applicable)
+             */
+            workflow_id?: string | null;
+            /**
+             * Editable
+             * @description Whether the workflow file is editable
+             */
+            editable: boolean;
+            /**
+             * Metadata
+             * @description Workflow metadata summary
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Key Parameters
+             * @description Important node parameter identifiers
+             */
+            key_parameters?: string[];
+            /**
+             * Raw Nodes
+             * @description Top-level workflow node IDs
+             */
+            raw_nodes?: string[];
+        };
+        /** WorkflowInfo */
         WorkflowInfo: {
             /**
              * Name
@@ -2354,10 +3144,7 @@ export interface components {
              */
             workflow_id?: string | null;
         };
-        /**
-         * WorkflowListResponse
-         * @description Workflow list response
-         */
+        /** WorkflowListResponse */
         WorkflowListResponse: {
             /**
              * Success
@@ -3066,7 +3853,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WorkflowInfo"];
+                    "application/json": components["schemas"]["WorkflowDetailResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3382,7 +4169,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["VideoDetailResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3392,15 +4179,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -3427,7 +4205,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlaceholderListResponse"];
+                    "application/json": components["schemas"]["ImageListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3437,15 +4215,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -3472,7 +4241,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlaceholderListResponse"];
+                    "application/json": components["schemas"]["VoiceListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3482,15 +4251,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -3517,7 +4277,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlaceholderListResponse"];
+                    "application/json": components["schemas"]["LibraryBGMListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3527,15 +4287,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -3562,7 +4313,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlaceholderListResponse"];
+                    "application/json": components["schemas"]["ScriptListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3574,15 +4325,6 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
         };
     };
     list_batches_api_batch_get: {
@@ -3590,6 +4332,12 @@ export interface operations {
             query?: {
                 /** @description Filter by project ID */
                 project_id?: string | null;
+                /** @description Filter by batch status */
+                status?: string | null;
+                /** @description Pagination cursor */
+                cursor?: string | null;
+                /** @description Page size */
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -3615,15 +4363,6 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
         };
     };
     create_batch_api_batch_post: {
@@ -3640,12 +4379,12 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Batch"];
+                    "application/json": components["schemas"]["BatchCreateResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3655,15 +4394,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -3685,7 +4415,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Batch"];
+                    "application/json": components["schemas"]["BatchDetailResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3697,20 +4427,14 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
         };
     };
     delete_batch_api_batch__batch_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Cancel unfinished child tasks and delete their outputs */
+                cascade?: boolean;
+            };
             header?: never;
             path: {
                 batch_id: string;
@@ -3725,7 +4449,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["Batch"];
                 };
             };
             /** @description Validation Error */
@@ -3735,15 +4459,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -3766,15 +4481,6 @@ export interface operations {
                     "application/json": components["schemas"]["SettingsPayload"];
                 };
             };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
         };
     };
     update_settings_api_settings_put: {
@@ -3786,7 +4492,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SettingsPayload"];
+                "application/json": components["schemas"]["SettingsUpdatePayload"];
             };
         };
         responses: {
@@ -3806,15 +4512,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -3841,6 +4538,24 @@ export interface operations {
                     "application/json": components["schemas"]["UploadResponse"];
                 };
             };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -3848,6 +4563,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };

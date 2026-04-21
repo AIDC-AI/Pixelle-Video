@@ -105,20 +105,141 @@ async def _schedule_pipeline_task(
     request: Request,
     request_params: dict[str, Any],
     project_id: str | None,
+    batch_id: str | None,
+    pixelle_video: PixelleVideoDep,
     runner: PipelineRunner,
 ) -> VideoGenerateAsyncResponse:
+    persisted_request_params = dict(request_params)
+    if batch_id is not None:
+        persisted_request_params["batch_id"] = batch_id
     task = task_manager.create_task(
         task_type=TaskType.VIDEO_GENERATION,
-        request_params=request_params,
+        request_params=persisted_request_params,
         project_id=project_id,
+        batch_id=batch_id,
     )
 
     async def execute_pipeline() -> dict[str, Any]:
         result = await runner(task.task_id)
+        if pixelle_video.persistence is not None:
+            metadata = await pixelle_video.persistence.load_task_metadata(task.task_id)
+            if metadata is not None:
+                input_payload = metadata.setdefault("input", {})
+                if project_id is not None and input_payload.get("project_id") is None:
+                    input_payload["project_id"] = project_id
+                if batch_id is not None:
+                    input_payload["batch_id"] = batch_id
+                await pixelle_video.persistence.save_task_metadata(task.task_id, metadata)
         return _build_task_result(request, result)
 
     await task_manager.execute_task(task_id=task.task_id, coro_func=execute_pipeline)
     return VideoGenerateAsyncResponse(task_id=task.task_id)
+
+
+async def submit_standard_async_request(
+    *,
+    request_body: VideoGenerateRequest,
+    pixelle_video: PixelleVideoDep,
+    request: Request,
+    batch_id: str | None = None,
+) -> VideoGenerateAsyncResponse:
+    video_params = _build_standard_video_params(request_body)
+    return await _schedule_pipeline_task(
+        request=request,
+        request_params=request_body.model_dump(),
+        project_id=request_body.project_id,
+        batch_id=batch_id,
+        pixelle_video=pixelle_video,
+        runner=lambda task_id: standard.run(
+            pixelle_video,
+            task_id_override=task_id,
+            **video_params,
+        ),
+    )
+
+
+async def submit_digital_human_async_request(
+    *,
+    request_body: DigitalHumanAsyncRequest,
+    pixelle_video: PixelleVideoDep,
+    request: Request,
+    batch_id: str | None = None,
+) -> VideoGenerateAsyncResponse:
+    return await _schedule_pipeline_task(
+        request=request,
+        request_params=request_body.model_dump(),
+        project_id=request_body.project_id,
+        batch_id=batch_id,
+        pixelle_video=pixelle_video,
+        runner=lambda task_id: digital_human.run(
+            pixelle_video,
+            task_id_override=task_id,
+            **request_body.model_dump(),
+        ),
+    )
+
+
+async def submit_i2v_async_request(
+    *,
+    request_body: I2VAsyncRequest,
+    pixelle_video: PixelleVideoDep,
+    request: Request,
+    batch_id: str | None = None,
+) -> VideoGenerateAsyncResponse:
+    return await _schedule_pipeline_task(
+        request=request,
+        request_params=request_body.model_dump(),
+        project_id=request_body.project_id,
+        batch_id=batch_id,
+        pixelle_video=pixelle_video,
+        runner=lambda task_id: i2v.run(
+            pixelle_video,
+            task_id_override=task_id,
+            **request_body.model_dump(),
+        ),
+    )
+
+
+async def submit_action_transfer_async_request(
+    *,
+    request_body: ActionTransferAsyncRequest,
+    pixelle_video: PixelleVideoDep,
+    request: Request,
+    batch_id: str | None = None,
+) -> VideoGenerateAsyncResponse:
+    return await _schedule_pipeline_task(
+        request=request,
+        request_params=request_body.model_dump(),
+        project_id=request_body.project_id,
+        batch_id=batch_id,
+        pixelle_video=pixelle_video,
+        runner=lambda task_id: action_transfer.run(
+            pixelle_video,
+            task_id_override=task_id,
+            **request_body.model_dump(),
+        ),
+    )
+
+
+async def submit_custom_async_request(
+    *,
+    request_body: CustomAsyncRequest,
+    pixelle_video: PixelleVideoDep,
+    request: Request,
+    batch_id: str | None = None,
+) -> VideoGenerateAsyncResponse:
+    return await _schedule_pipeline_task(
+        request=request,
+        request_params=request_body.model_dump(),
+        project_id=request_body.project_id,
+        batch_id=batch_id,
+        pixelle_video=pixelle_video,
+        runner=lambda task_id: asset_based.run(
+            pixelle_video,
+            task_id_override=task_id,
+            **request_body.model_dump(),
+        ),
+    )
 
 
 @router.post("/generate/sync", response_model=VideoGenerateResponse)
@@ -182,12 +303,10 @@ async def generate_video_async(
     """
     try:
         logger.info(f"Async video generation: {request_body.text[:50]}...")
-        video_params = _build_standard_video_params(request_body)
-        return await _schedule_pipeline_task(
+        return await submit_standard_async_request(
+            request_body=request_body,
+            pixelle_video=pixelle_video,
             request=request,
-            request_params=request_body.model_dump(),
-            project_id=request_body.project_id,
-            runner=lambda task_id: standard.run(pixelle_video, task_id_override=task_id, **video_params),
         )
     except Exception as e:
         logger.error(f"Async video generation error: {e}")
@@ -202,15 +321,10 @@ async def generate_digital_human_async(
 ):
     try:
         logger.info("Async digital human generation request received")
-        return await _schedule_pipeline_task(
+        return await submit_digital_human_async_request(
+            request_body=request_body,
+            pixelle_video=pixelle_video,
             request=request,
-            request_params=request_body.model_dump(),
-            project_id=request_body.project_id,
-            runner=lambda task_id: digital_human.run(
-                pixelle_video,
-                task_id_override=task_id,
-                **request_body.model_dump(),
-            ),
         )
     except Exception as exc:
         logger.error(f"Async digital human generation error: {exc}")
@@ -225,11 +339,10 @@ async def generate_i2v_async(
 ):
     try:
         logger.info("Async i2v generation request received")
-        return await _schedule_pipeline_task(
+        return await submit_i2v_async_request(
+            request_body=request_body,
+            pixelle_video=pixelle_video,
             request=request,
-            request_params=request_body.model_dump(),
-            project_id=request_body.project_id,
-            runner=lambda task_id: i2v.run(pixelle_video, task_id_override=task_id, **request_body.model_dump()),
         )
     except Exception as exc:
         logger.error(f"Async i2v generation error: {exc}")
@@ -244,15 +357,10 @@ async def generate_action_transfer_async(
 ):
     try:
         logger.info("Async action transfer generation request received")
-        return await _schedule_pipeline_task(
+        return await submit_action_transfer_async_request(
+            request_body=request_body,
+            pixelle_video=pixelle_video,
             request=request,
-            request_params=request_body.model_dump(),
-            project_id=request_body.project_id,
-            runner=lambda task_id: action_transfer.run(
-                pixelle_video,
-                task_id_override=task_id,
-                **request_body.model_dump(),
-            ),
         )
     except Exception as exc:
         logger.error(f"Async action transfer generation error: {exc}")
@@ -267,15 +375,10 @@ async def generate_custom_async(
 ):
     try:
         logger.info("Async custom asset pipeline generation request received")
-        return await _schedule_pipeline_task(
+        return await submit_custom_async_request(
+            request_body=request_body,
+            pixelle_video=pixelle_video,
             request=request,
-            request_params=request_body.model_dump(),
-            project_id=request_body.project_id,
-            runner=lambda task_id: asset_based.run(
-                pixelle_video,
-                task_id_override=task_id,
-                **request_body.model_dump(),
-            ),
         )
     except Exception as exc:
         logger.error(f"Async custom generation error: {exc}")

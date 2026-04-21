@@ -14,63 +14,76 @@
 API Schemas (Pydantic models)
 """
 
-from api.schemas.base import BaseResponse, ErrorResponse
-from api.schemas.llm import LLMChatRequest, LLMChatResponse
-from api.schemas.tts import TTSSynthesizeRequest, TTSSynthesizeResponse
-from api.schemas.image import ImageGenerateRequest, ImageGenerateResponse
+from api.schemas.base import ApiErrorDetail, ApiErrorResponse, BaseResponse, ErrorResponse
+from api.schemas.batch import (
+    Batch,
+    BatchCreateRequest,
+    BatchCreateResponse,
+    BatchDetailResponse,
+    BatchListResponse,
+)
 from api.schemas.content import (
-    NarrationGenerateRequest,
-    NarrationGenerateResponse,
     ImagePromptGenerateRequest,
     ImagePromptGenerateResponse,
+    NarrationGenerateRequest,
+    NarrationGenerateResponse,
     TitleGenerateRequest,
     TitleGenerateResponse,
 )
-from api.schemas.video import (
-    VideoGenerateRequest,
-    VideoGenerateResponse,
-    VideoGenerateAsyncResponse,
+from api.schemas.image import ImageGenerateRequest, ImageGenerateResponse
+from api.schemas.library import (
+    ImageItem,
+    ImageListResponse,
+    LibraryBGMItem,
+    LibraryBGMListResponse,
+    ScriptItem,
+    ScriptListResponse,
+    VideoDetailResponse,
+    VideoItem,
+    VideoListResponse,
+    VoiceItem,
+    VoiceListResponse,
+)
+from api.schemas.llm import LLMChatRequest, LLMChatResponse
+from api.schemas.pipeline_payloads import (
+    ActionTransferAsyncRequest,
+    CustomAsyncRequest,
+    CustomScene,
+    DigitalHumanAsyncRequest,
+    I2VAsyncRequest,
 )
 from api.schemas.projects import (
     Project,
     ProjectCreateRequest,
-    ProjectUpdateRequest,
     ProjectListResponse,
-)
-from api.schemas.library import (
-    VideoItem,
-    VideoListResponse,
-    PlaceholderListResponse,
-)
-from api.schemas.batch import (
-    Batch,
-    BatchCreateRequest,
-    BatchListResponse,
-)
-from api.schemas.settings import SettingsPayload
-from api.schemas.uploads import UploadResponse
-from api.schemas.pipeline_payloads import (
-    DigitalHumanAsyncRequest,
-    I2VAsyncRequest,
-    ActionTransferAsyncRequest,
-    CustomScene,
-    CustomAsyncRequest,
+    ProjectUpdateRequest,
 )
 from api.schemas.resources import (
-    WorkflowInfo,
-    WorkflowListResponse,
-    TemplateInfo,
-    TemplateListResponse,
     BGMInfo,
     BGMListResponse,
-    PresetInfo,
+    PresetItem,
     PresetListResponse,
+    TemplateInfo,
+    TemplateListResponse,
+    WorkflowDetailResponse,
+    WorkflowInfo,
+    WorkflowListResponse,
+)
+from api.schemas.settings import SettingsPayload, SettingsUpdatePayload
+from api.schemas.tts import TTSSynthesizeRequest, TTSSynthesizeResponse
+from api.schemas.uploads import UploadResponse
+from api.schemas.video import (
+    VideoGenerateAsyncResponse,
+    VideoGenerateRequest,
+    VideoGenerateResponse,
 )
 
 __all__ = [
     # Base
     "BaseResponse",
     "ErrorResponse",
+    "ApiErrorDetail",
+    "ApiErrorResponse",
     # LLM
     "LLMChatRequest",
     "LLMChatResponse",
@@ -98,14 +111,25 @@ __all__ = [
     "ProjectListResponse",
     # Library
     "VideoItem",
+    "VideoDetailResponse",
     "VideoListResponse",
-    "PlaceholderListResponse",
+    "ImageItem",
+    "ImageListResponse",
+    "VoiceItem",
+    "VoiceListResponse",
+    "LibraryBGMItem",
+    "LibraryBGMListResponse",
+    "ScriptItem",
+    "ScriptListResponse",
     # Batch
     "Batch",
     "BatchCreateRequest",
+    "BatchCreateResponse",
+    "BatchDetailResponse",
     "BatchListResponse",
     # Settings
     "SettingsPayload",
+    "SettingsUpdatePayload",
     # Uploads
     "UploadResponse",
     # Pipeline payloads
@@ -116,11 +140,12 @@ __all__ = [
     "CustomAsyncRequest",
     # Resources
     "WorkflowInfo",
+    "WorkflowDetailResponse",
     "WorkflowListResponse",
     "TemplateInfo",
     "TemplateListResponse",
     "BGMInfo",
     "BGMListResponse",
-    "PresetInfo",
+    "PresetItem",
     "PresetListResponse",
 ]

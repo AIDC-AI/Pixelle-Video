@@ -1,25 +1,12 @@
-# Copyright (C) 2025 AIDC-AI
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+from __future__ import annotations
 
-"""
-Resource discovery API schemas
-"""
+from datetime import datetime
+from typing import Any, List, Optional
 
-from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
 class WorkflowInfo(BaseModel):
-    """Workflow information"""
     name: str = Field(..., description="Workflow filename")
     display_name: str = Field(..., description="Display name with source info")
     source: str = Field(..., description="Source (runninghub or selfhost)")
@@ -28,15 +15,20 @@ class WorkflowInfo(BaseModel):
     workflow_id: Optional[str] = Field(None, description="RunningHub workflow ID (if applicable)")
 
 
+class WorkflowDetailResponse(WorkflowInfo):
+    editable: bool = Field(..., description="Whether the workflow file is editable")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Workflow metadata summary")
+    key_parameters: List[str] = Field(default_factory=list, description="Important node parameter identifiers")
+    raw_nodes: List[str] = Field(default_factory=list, description="Top-level workflow node IDs")
+
+
 class WorkflowListResponse(BaseModel):
-    """Workflow list response"""
     success: bool = True
     message: str = "Success"
     workflows: List[WorkflowInfo] = Field(..., description="List of available workflows")
 
 
 class TemplateInfo(BaseModel):
-    """Template information"""
     name: str = Field(..., description="Template filename")
     display_name: str = Field(..., description="Display name")
     size: str = Field(..., description="Size (e.g., 1080x1920)")
@@ -48,35 +40,33 @@ class TemplateInfo(BaseModel):
 
 
 class TemplateListResponse(BaseModel):
-    """Template list response"""
     success: bool = True
     message: str = "Success"
     templates: List[TemplateInfo] = Field(..., description="List of available templates")
 
 
 class BGMInfo(BaseModel):
-    """BGM information"""
     name: str = Field(..., description="BGM filename")
     path: str = Field(..., description="Full path to BGM file")
     source: str = Field(..., description="Source (default or custom)")
 
 
 class BGMListResponse(BaseModel):
-    """BGM list response"""
     success: bool = True
     message: str = "Success"
     bgm_files: List[BGMInfo] = Field(..., description="List of available BGM files")
 
 
-class PresetInfo(BaseModel):
-    """LLM preset information"""
+class PresetItem(BaseModel):
     name: str = Field(..., description="Preset name")
-    model: Optional[str] = Field(None, description="Model name")
-    base_url: Optional[str] = Field(None, description="Preset base URL")
+    description: Optional[str] = Field(None, description="Preset description")
+    pipeline: str = Field(..., description="Preset scope or pipeline")
+    payload_template: dict[str, Any] = Field(default_factory=dict, description="Preset payload template")
+    created_at: Optional[datetime] = Field(None, description="Creation time")
+    source: str = Field(..., description="builtin or user")
 
 
 class PresetListResponse(BaseModel):
-    """Preset list response"""
     success: bool = True
     message: str = "Success"
-    presets: List[PresetInfo] = Field(default_factory=list, description="List of presets")
+    presets: List[PresetItem] = Field(default_factory=list, description="List of presets")

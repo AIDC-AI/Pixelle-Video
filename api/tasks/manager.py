@@ -81,6 +81,7 @@ class TaskManager:
         task_type: TaskType,
         request_params: Optional[dict] = None,
         project_id: Optional[str] = None,
+        batch_id: Optional[str] = None,
     ) -> Task:
         """
         Create a new task
@@ -97,6 +98,7 @@ class TaskManager:
             task_id=task_id,
             task_type=task_type,
             project_id=project_id,
+            batch_id=batch_id,
             status=TaskStatus.PENDING,
             request_params=request_params,
         )
@@ -160,6 +162,7 @@ class TaskManager:
         self,
         status: Optional[TaskStatus] = None,
         project_id: Optional[str] = None,
+        batch_id: Optional[str] = None,
         unassigned_only: bool = False,
         limit: int = 100
     ) -> List[Task]:
@@ -181,6 +184,8 @@ class TaskManager:
             tasks = [t for t in tasks if t.project_id is None]
         elif project_id is not None:
             tasks = [t for t in tasks if t.project_id == project_id]
+        if batch_id is not None:
+            tasks = [t for t in tasks if t.batch_id == batch_id]
         
         # Sort by created_at descending
         tasks.sort(key=lambda t: t.created_at, reverse=True)

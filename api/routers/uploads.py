@@ -10,6 +10,7 @@ from loguru import logger
 
 from api.dependencies import PixelleVideoDep
 from api.routers._helpers import api_error, path_to_url
+from api.schemas.base import ApiErrorResponse
 from api.schemas.uploads import UploadResponse
 
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
@@ -51,7 +52,16 @@ def _validate_upload(file: UploadFile) -> None:
         )
 
 
-@router.post("", response_model=UploadResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=UploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        413: {"model": ApiErrorResponse},
+        415: {"model": ApiErrorResponse},
+        500: {"model": ApiErrorResponse},
+    },
+)
 async def upload_file(
     request: Request,
     *,

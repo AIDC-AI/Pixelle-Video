@@ -17,7 +17,8 @@ Task data models
 from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TaskStatus(str, Enum):
@@ -47,6 +48,7 @@ class Task(BaseModel):
     task_id: str
     task_type: TaskType
     project_id: Optional[str] = None
+    batch_id: Optional[str] = None
     status: TaskStatus = TaskStatus.PENDING
     
     # Progress tracking
@@ -64,7 +66,6 @@ class Task(BaseModel):
     # Request parameters (for reference)
     request_params: Optional[dict] = None
     
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda value: value.isoformat()}
+    )

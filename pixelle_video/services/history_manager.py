@@ -184,6 +184,26 @@ class HistoryManager:
             cursor=cursor,
             limit=limit,
         )
+
+    async def get_video_item(self, task_id: str) -> Optional[Dict[str, Any]]:
+        return await self.persistence.get_video_item(task_id)
+
+    async def list_library_items(
+        self,
+        *,
+        kind: str,
+        project_id: Optional[str] = None,
+        unassigned_only: bool = False,
+        cursor: Optional[str] = None,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        return await self.persistence.list_library_items(
+            kind=kind,
+            project_id=project_id,
+            unassigned_only=unassigned_only,
+            cursor=cursor,
+            limit=limit,
+        )
     
     # ========================================================================
     # Future Extensions (Phase 3)

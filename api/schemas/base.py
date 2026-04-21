@@ -15,6 +15,7 @@ Base schemas
 """
 
 from typing import Any, Optional
+
 from pydantic import BaseModel
 
 
@@ -31,3 +32,11 @@ class ErrorResponse(BaseModel):
     message: str
     error: Optional[str] = None
 
+
+class ApiErrorDetail(BaseModel):
+    code: str
+    message: str
+
+
+class ApiErrorResponse(BaseModel):
+    detail: ApiErrorDetail | str
