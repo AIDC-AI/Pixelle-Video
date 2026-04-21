@@ -13,6 +13,11 @@ type SubmitScenario = 'success' | 'http-502' | 'network-error';
 type Task = paths['/api/tasks/{task_id}']['get']['responses'][200]['content']['application/json'];
 type TaskStatus = components['schemas']['TaskStatus'];
 type Project = components['schemas']['Project'];
+type BatchDetailResponse = paths['/api/batch/{batch_id}']['get']['responses'][200]['content']['application/json'];
+type BatchListResponse = paths['/api/batch']['get']['responses'][200]['content']['application/json'];
+type BatchCreateRequest = paths['/api/batch']['post']['requestBody']['content']['application/json'];
+type BatchCreateResponse = paths['/api/batch']['post']['responses'][201]['content']['application/json'];
+type BatchDeleteResponse = paths['/api/batch/{batch_id}']['delete']['responses'][200]['content']['application/json'];
 type ProjectListResponse = paths['/api/projects']['get']['responses'][200]['content']['application/json'];
 type VideoItem = components['schemas']['VideoItem'];
 type VideoListResponse = paths['/api/library/videos']['get']['responses'][200]['content']['application/json'];
@@ -22,6 +27,8 @@ type BgmListResponse =
   paths['/api/resources/bgm']['get']['responses'][200]['content']['application/json'];
 type UploadResponse = paths['/api/uploads']['post']['responses'][201]['content']['application/json'];
 type ApiErrorResponse = components['schemas']['ApiErrorResponse'];
+type BatchPipeline = components['schemas']['BatchPipeline'];
+type BatchStatus = components['schemas']['BatchStatus'];
 
 type SubmitRequestByEndpoint = {
   '/api/video/generate/async': paths['/api/video/generate/async']['post']['requestBody']['content']['application/json'];
@@ -43,6 +50,18 @@ interface TaskScenario {
   cancelledState?: Task;
   index: number;
   states: Task[];
+}
+
+interface StoredBatch {
+  cover_url?: string | null;
+  created_at: string;
+  deleted_at?: string | null;
+  id: string;
+  name?: string | null;
+  pipeline: BatchPipeline;
+  project_id?: string | null;
+  task_ids: string[];
+  updated_at: string;
 }
 
 const DEFAULT_TIME = '2026-04-22T00:00:00Z';
@@ -87,6 +106,7 @@ const taskScenarios = new Map<string, TaskScenario>();
 const pollCounts = new Map<string, number>();
 let projects: Project[] = [];
 let libraryVideos: VideoItem[] = [];
+let batches: StoredBatch[] = [];
 const libraryVideoDetails = new Map<string, LibraryVideoDetailMode>();
 
 const ttsWorkflowResponse: WorkflowListResponse = {
@@ -199,6 +219,91 @@ function buildTask(taskId: string, status: TaskStatus, overrides: Partial<Task> 
   };
 }
 
+function getCurrentTaskState(taskId: string): Task | null {
+  const scenario = taskScenarios.get(taskId);
+  if (!scenario) {
+    return null;
+  }
+
+  const stateIndex = Math.min(scenario.index, scenario.states.length - 1);
+  return cloneTask(scenario.states[stateIndex]);
+}
+
+function deriveBatchStatus(children: Task[]): BatchStatus {
+  if (children.length === 0) {
+    return 'pending';
+  }
+
+  const counts = {
+    cancelled: children.filter((task) => task.status === 'cancelled').length,
+    completed: children.filter((task) => task.status === 'completed').length,
+    failed: children.filter((task) => task.status === 'failed').length,
+    pending: children.filter((task) => task.status === 'pending').length,
+    running: children.filter((task) => task.status === 'running').length,
+  };
+  const terminalCount = counts.completed + counts.failed + counts.cancelled;
+
+  if (counts.cancelled === children.length) {
+    return 'cancelled';
+  }
+  if (counts.completed === children.length) {
+    return 'completed';
+  }
+  if (counts.failed === children.length) {
+    return 'failed';
+  }
+  if (terminalCount === children.length) {
+    return 'partial';
+  }
+  if (counts.running > 0) {
+    return 'running';
+  }
+  if (counts.pending > 0) {
+    return 'pending';
+  }
+  return 'partial';
+}
+
+function hydrateBatch(batch: StoredBatch): BatchDetailResponse {
+  const children = batch.task_ids.flatMap((taskId) => {
+    const task = getCurrentTaskState(taskId);
+    return task ? [task] : [];
+  });
+
+  return {
+    id: batch.id,
+    name: batch.name ?? null,
+    pipeline: batch.pipeline,
+    project_id: batch.project_id ?? null,
+    status: deriveBatchStatus(children),
+    total: batch.task_ids.length,
+    succeeded: children.filter((task) => task.status === 'completed').length,
+    failed: children.filter((task) => task.status === 'failed').length,
+    cancelled: children.filter((task) => task.status === 'cancelled').length,
+    created_at: batch.created_at,
+    updated_at: batch.updated_at,
+    cover_url: batch.cover_url ?? null,
+    deleted_at: batch.deleted_at ?? null,
+    task_ids: [...batch.task_ids],
+    children,
+  };
+}
+
+function buildStoredBatch(batchId: string, overrides: Partial<StoredBatch> = {}): StoredBatch {
+  return {
+    id: batchId,
+    name: `Batch ${batchId}`,
+    pipeline: 'standard',
+    project_id: 'project-1',
+    created_at: DEFAULT_TIME,
+    updated_at: DEFAULT_TIME,
+    cover_url: null,
+    deleted_at: null,
+    task_ids: [DEFAULT_LIBRARY_VIDEO_ID],
+    ...overrides,
+  };
+}
+
 function defaultSuccessScenario(taskId: string): TaskScenario {
   return {
     states: [
@@ -300,12 +405,53 @@ function setDefaultTaskScenarios(): void {
       cancelledState: buildTask(DEFAULT_LIBRARY_VIDEO_ID, 'cancelled'),
     }
   );
+  taskScenarios.set(
+    'task-batch-running',
+    {
+      states: [
+        buildTask('task-batch-running', 'running', {
+          project_id: 'project-2',
+          batch_id: 'batch-running',
+          request_params: {
+            source_image: 'https://example.com/source.png',
+            motion_prompt: 'Subtle motion',
+            media_workflow: 'selfhost/media_default.json',
+            project_id: 'project-2',
+          },
+        }),
+      ],
+      index: 0,
+      cancelledState: buildTask('task-batch-running', 'cancelled', {
+        project_id: 'project-2',
+        batch_id: 'batch-running',
+      }),
+    }
+  );
 }
 
 function setDefaultProjects(): void {
   projects = [
     buildProject('project-1', 'Launch Campaign', { pipeline_hint: 'quick', last_task_id: DEFAULT_LIBRARY_VIDEO_ID }),
     buildProject('project-2', 'Unreleased Experiments', { pipeline_hint: 'action-transfer', task_count: 0 }),
+  ];
+}
+
+function setDefaultBatches(): void {
+  batches = [
+    buildStoredBatch('batch-launch-complete', {
+      name: 'Launch Batch',
+      pipeline: 'standard',
+      project_id: 'project-1',
+      task_ids: [DEFAULT_LIBRARY_VIDEO_ID],
+    }),
+    buildStoredBatch('batch-running', {
+      name: 'Motion Batch',
+      pipeline: 'i2v',
+      project_id: 'project-2',
+      task_ids: ['task-batch-running'],
+      created_at: '2026-04-22T02:00:00Z',
+      updated_at: '2026-04-22T02:05:00Z',
+    }),
   ];
 }
 
@@ -394,6 +540,7 @@ function resetMockApiState(): void {
   setDefaultProjects();
   setDefaultLibraryVideos();
   setDefaultTaskScenarios();
+  setDefaultBatches();
 }
 
 function setSubmitScenario(scenario: SubmitScenario, taskId = DEFAULT_SUCCESS_TASK_ID): void {
@@ -413,6 +560,18 @@ function setTaskScenario(taskId: string, states: Task[], cancelledState?: Task):
     states: states.map(cloneTask),
     index: 0,
     cancelledState: cancelledState ? cloneTask(cancelledState) : undefined,
+  });
+}
+
+function setBatches(nextBatches: StoredBatch[]): void {
+  batches = structuredClone(nextBatches);
+}
+
+function buildBatch(taskIds: string[], overrides: Partial<StoredBatch> = {}): StoredBatch {
+  const batchId = overrides.id ?? `batch-${crypto.randomUUID()}`;
+  return buildStoredBatch(batchId, {
+    task_ids: taskIds,
+    ...overrides,
   });
 }
 
@@ -465,6 +624,187 @@ const handlers = [
     const response: ProjectListResponse = {
       items: structuredClone(projects),
     };
+    return HttpResponse.json(response);
+  }),
+
+  http.get(`${baseURL}/api/batch`, ({ request }) => {
+    const url = new URL(request.url);
+    const projectId = url.searchParams.get('project_id');
+    const status = url.searchParams.get('status');
+    const cursor = Number.parseInt(url.searchParams.get('cursor') ?? '0', 10);
+    const limit = Number.parseInt(url.searchParams.get('limit') ?? '20', 10);
+
+    let items = batches
+      .filter((batch) => !batch.deleted_at)
+      .map((batch) => hydrateBatch(batch));
+
+    if (projectId === '__unassigned__' || projectId === 'null') {
+      items = items.filter((batch) => batch.project_id === null);
+    } else if (projectId && projectId !== 'all') {
+      items = items.filter((batch) => batch.project_id === projectId);
+    }
+
+    if (status && status !== 'all') {
+      items = items.filter((batch) => batch.status === status);
+    }
+
+    items.sort((left, right) => right.created_at.localeCompare(left.created_at));
+
+    const pageItems = items.slice(cursor, cursor + limit);
+    const response: BatchListResponse = {
+      items: pageItems.map((batch) => ({
+        id: batch.id,
+        name: batch.name,
+        pipeline: batch.pipeline,
+        project_id: batch.project_id,
+        status: batch.status,
+        total: batch.total,
+        succeeded: batch.succeeded,
+        failed: batch.failed,
+        cancelled: batch.cancelled,
+        created_at: batch.created_at,
+        updated_at: batch.updated_at,
+        cover_url: batch.cover_url,
+        deleted_at: batch.deleted_at,
+        task_ids: batch.task_ids,
+      })),
+      next_cursor: cursor + limit < items.length ? String(cursor + limit) : null,
+    };
+
+    return HttpResponse.json(response);
+  }),
+
+  http.post(`${baseURL}/api/batch`, async ({ request }) => {
+    const body = (await request.json()) as BatchCreateRequest;
+
+    if (!body.rows || body.rows.length === 0) {
+      return HttpResponse.json(
+        { detail: [{ loc: ['body', 'rows'], msg: 'Rows are required', type: 'value_error' }] },
+        { status: 422 }
+      );
+    }
+
+    const batchId = `batch-${crypto.randomUUID()}`;
+    const taskIds = body.rows.map((_, index) => `${batchId}-task-${index + 1}`);
+    const createdAt = new Date().toISOString();
+
+    taskIds.forEach((taskId, index) => {
+      const row = body.rows[index];
+      const requestParams = {
+        ...row,
+        project_id: body.project_id ?? null,
+      };
+
+      taskScenarios.set(taskId, {
+        states: [
+          buildTask(taskId, 'pending', {
+            batch_id: batchId,
+            project_id: body.project_id ?? null,
+            request_params: requestParams,
+          }),
+          buildTask(taskId, 'running', {
+            batch_id: batchId,
+            project_id: body.project_id ?? null,
+            request_params: requestParams,
+          }),
+          buildTask(taskId, 'completed', {
+            batch_id: batchId,
+            project_id: body.project_id ?? null,
+            request_params: requestParams,
+            result: {
+              video_url: `${baseURL}/api/files/output/${taskId}/final.mp4`,
+              video_path: `/output/${taskId}/final.mp4`,
+              duration: 12,
+              file_size: 4 * 1024 * 1024,
+            },
+          }),
+        ],
+        index: 0,
+        cancelledState: buildTask(taskId, 'cancelled', {
+          batch_id: batchId,
+          project_id: body.project_id ?? null,
+          request_params: requestParams,
+        }),
+      });
+    });
+
+    batches.unshift(
+      buildStoredBatch(batchId, {
+        name: body.name ?? null,
+        pipeline: body.pipeline,
+        project_id: body.project_id ?? null,
+        task_ids: taskIds,
+        created_at: createdAt,
+        updated_at: createdAt,
+      })
+    );
+
+    const response: BatchCreateResponse = {
+      batch_id: batchId,
+      task_ids: taskIds,
+    };
+
+    return HttpResponse.json(response, { status: 201 });
+  }),
+
+  http.get(`${baseURL}/api/batch/:batchId`, ({ params }) => {
+    const batchId = String(params.batchId);
+    const batch = batches.find((entry) => entry.id === batchId && !entry.deleted_at);
+
+    if (!batch) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    return HttpResponse.json(hydrateBatch(batch));
+  }),
+
+  http.delete(`${baseURL}/api/batch/:batchId`, ({ params, request }) => {
+    const batchId = String(params.batchId);
+    const batchIndex = batches.findIndex((entry) => entry.id === batchId && !entry.deleted_at);
+
+    if (batchIndex < 0) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    const url = new URL(request.url);
+    const cascade = url.searchParams.get('cascade') === 'true';
+    const batch = batches[batchIndex];
+
+    if (cascade) {
+      batch.task_ids.forEach((taskId) => {
+        const scenario = taskScenarios.get(taskId);
+        if (scenario?.cancelledState) {
+          scenario.states = [cloneTask(scenario.cancelledState)];
+          scenario.index = 0;
+        }
+      });
+    }
+
+    const deletedAt = new Date().toISOString();
+    batches[batchIndex] = {
+      ...batch,
+      deleted_at: deletedAt,
+      updated_at: deletedAt,
+    };
+
+    const hydrated = hydrateBatch(batches[batchIndex]);
+    const response: BatchDeleteResponse = {
+      id: hydrated.id,
+      name: hydrated.name,
+      pipeline: hydrated.pipeline,
+      project_id: hydrated.project_id,
+      status: hydrated.status,
+      total: hydrated.total,
+      succeeded: hydrated.succeeded,
+      failed: hydrated.failed,
+      cancelled: hydrated.cancelled,
+      created_at: hydrated.created_at,
+      updated_at: hydrated.updated_at,
+      cover_url: hydrated.cover_url,
+      deleted_at: hydrated.deleted_at,
+      task_ids: hydrated.task_ids,
+    };
+
     return HttpResponse.json(response);
   }),
 
@@ -589,6 +929,7 @@ const handlers = [
 
 export {
   ASYNC_VIDEO_ENDPOINTS,
+  buildBatch,
   buildProject,
   buildTask,
   buildVideoItem,
@@ -603,6 +944,7 @@ export {
   getTaskPollCount,
   handlers,
   resetMockApiState,
+  setBatches,
   setLibraryVideoDetail,
   setLibraryVideos,
   setProjects,

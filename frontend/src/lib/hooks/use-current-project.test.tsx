@@ -38,5 +38,45 @@ describe('useCurrentProjectHydration', () => {
     hasHydratedSpy.mockRestore();
     rehydrateSpy.mockRestore();
   });
-});
 
+  it('handles a missing persist api gracefully', () => {
+    const originalPersist = useCurrentProjectStore.persist;
+    Object.defineProperty(useCurrentProjectStore, 'persist', {
+      value: undefined,
+      configurable: true,
+    });
+
+    try {
+      const { result } = renderHook(() => useCurrentProjectHydration());
+      expect(result.current.isHydrated).toBe(true);
+    } finally {
+      Object.defineProperty(useCurrentProjectStore, 'persist', {
+        value: originalPersist,
+        configurable: true,
+      });
+    }
+  });
+
+  it('marks the hook as hydrated after the persist callback fires', async () => {
+    const hasHydratedSpy = vi.spyOn(useCurrentProjectStore.persist, 'hasHydrated').mockReturnValue(false);
+    const rehydrateSpy = vi.spyOn(useCurrentProjectStore.persist, 'rehydrate').mockResolvedValue(undefined);
+    const onFinishHydrationSpy = vi
+      .spyOn(useCurrentProjectStore.persist, 'onFinishHydration')
+      .mockImplementation((callback) => {
+        callback(useCurrentProjectStore.getState());
+        return () => undefined;
+      });
+
+    const { result } = renderHook(() => useCurrentProjectHydration());
+
+    await waitFor(() => {
+      expect(result.current.isHydrated).toBe(true);
+    });
+
+    expect(rehydrateSpy).toHaveBeenCalled();
+
+    onFinishHydrationSpy.mockRestore();
+    hasHydratedSpy.mockRestore();
+    rehydrateSpy.mockRestore();
+  });
+});
