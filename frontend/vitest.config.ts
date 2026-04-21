@@ -17,11 +17,12 @@ export default defineConfig({
         "src/tests/**",
         "src/types/api.d.ts",
         "src/app/**/layout.tsx",
+        "src/components/ui/**",
       ],
       thresholds: {
         lines: 80,
         functions: 80,
-        branches: 75,
+        branches: 80,
         statements: 80,
       },
     },

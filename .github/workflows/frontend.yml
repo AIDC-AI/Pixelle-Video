@@ -2,7 +2,6 @@ name: frontend
 
 on:
   push:
-    branches: [main, feat/next-frontend-redesign]
     paths:
       - "frontend/**"
       - ".github/workflows/frontend.yml"
