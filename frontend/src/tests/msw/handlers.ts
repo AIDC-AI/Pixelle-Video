@@ -21,8 +21,26 @@ type BatchDeleteResponse = paths['/api/batch/{batch_id}']['delete']['responses']
 type ProjectListResponse = paths['/api/projects']['get']['responses'][200]['content']['application/json'];
 type VideoItem = components['schemas']['VideoItem'];
 type VideoListResponse = paths['/api/library/videos']['get']['responses'][200]['content']['application/json'];
+type ImageItem = components['schemas']['ImageItem'];
+type ImageListResponse = paths['/api/library/images']['get']['responses'][200]['content']['application/json'];
+type VoiceItem = components['schemas']['VoiceItem'];
+type VoiceListResponse = paths['/api/library/voices']['get']['responses'][200]['content']['application/json'];
+type LibraryBGMItem = components['schemas']['LibraryBGMItem'];
+type LibraryBGMListResponse =
+  paths['/api/library/bgm']['get']['responses'][200]['content']['application/json'];
+type ScriptItem = components['schemas']['ScriptItem'];
+type ScriptListResponse = paths['/api/library/scripts']['get']['responses'][200]['content']['application/json'];
 type WorkflowListResponse =
   paths['/api/resources/workflows/tts']['get']['responses'][200]['content']['application/json'];
+type WorkflowDetailResponse =
+  paths['/api/resources/workflows/{workflow_id}']['get']['responses'][200]['content']['application/json'];
+type TemplateInfo = components['schemas']['TemplateInfo'];
+type TemplateListResponse =
+  paths['/api/resources/templates']['get']['responses'][200]['content']['application/json'];
+type PresetItem = components['schemas']['PresetItem'];
+type PresetListResponse =
+  paths['/api/resources/presets']['get']['responses'][200]['content']['application/json'];
+type WorkflowInfo = components['schemas']['WorkflowInfo'];
 type BgmListResponse =
   paths['/api/resources/bgm']['get']['responses'][200]['content']['application/json'];
 type UploadResponse = paths['/api/uploads']['post']['responses'][201]['content']['application/json'];
@@ -106,8 +124,15 @@ const taskScenarios = new Map<string, TaskScenario>();
 const pollCounts = new Map<string, number>();
 let projects: Project[] = [];
 let libraryVideos: VideoItem[] = [];
+let libraryImages: ImageItem[] = [];
+let libraryVoices: VoiceItem[] = [];
+let libraryBgmItems: LibraryBGMItem[] = [];
+let libraryScripts: ScriptItem[] = [];
 let batches: StoredBatch[] = [];
+let templates: TemplateInfo[] = [];
+let presets: PresetItem[] = [];
 const libraryVideoDetails = new Map<string, LibraryVideoDetailMode>();
+const workflowDetails = new Map<string, WorkflowDetailResponse>();
 
 const ttsWorkflowResponse: WorkflowListResponse = {
   success: true,
@@ -120,6 +145,14 @@ const ttsWorkflowResponse: WorkflowListResponse = {
       path: '/workflows/tts/tts_edge.json',
       key: 'selfhost/tts_edge.json',
       workflow_id: null,
+    },
+    {
+      name: 'tts_cloud.json',
+      display_name: 'TTS Cloud',
+      source: 'runninghub',
+      path: '/workflows/runninghub/tts_cloud.json',
+      key: 'runninghub/tts_cloud.json',
+      workflow_id: 'rh-tts-cloud',
     },
   ],
 };
@@ -144,6 +177,14 @@ const mediaWorkflowResponse: WorkflowListResponse = {
       key: 'selfhost/pose_default.json',
       workflow_id: null,
     },
+    {
+      name: 'video_cloud.json',
+      display_name: 'RunningHub Motion',
+      source: 'runninghub',
+      path: '/workflows/runninghub/video_cloud.json',
+      key: 'runninghub/video_cloud.json',
+      workflow_id: 'rh-video-cloud',
+    },
   ],
 };
 
@@ -158,6 +199,14 @@ const imageWorkflowResponse: WorkflowListResponse = {
       path: '/workflows/image/image_default.json',
       key: 'selfhost/image_default.json',
       workflow_id: null,
+    },
+    {
+      name: 'image_flux.json',
+      display_name: 'Image Flux',
+      source: 'runninghub',
+      path: '/workflows/runninghub/image_flux.json',
+      key: 'runninghub/image_flux.json',
+      workflow_id: 'rh-image-flux',
     },
   ],
 };
@@ -351,6 +400,134 @@ function buildVideoItem(taskId: string, overrides: Partial<VideoItem> = {}): Vid
   };
 }
 
+function buildImageItem(id: string, overrides: Partial<ImageItem> = {}): ImageItem {
+  return {
+    id,
+    task_id: DEFAULT_LIBRARY_VIDEO_ID,
+    image_path: `/output/${id}/image.png`,
+    image_url: `${baseURL}/api/files/output/${id}/image.png`,
+    thumbnail_url: `${baseURL}/api/files/output/${id}/thumb.png`,
+    created_at: DEFAULT_TIME,
+    file_size: 512 * 1024,
+    prompt_used: 'Sunlit portrait with soft cinematic lighting',
+    project_id: 'project-1',
+    batch_id: null,
+    ...overrides,
+  };
+}
+
+function buildVoiceItem(id: string, overrides: Partial<VoiceItem> = {}): VoiceItem {
+  return {
+    id,
+    task_id: DEFAULT_LIBRARY_VIDEO_ID,
+    audio_path: `/output/${id}/voice.mp3`,
+    audio_url: `${baseURL}/api/files/output/${id}/voice.mp3`,
+    created_at: DEFAULT_TIME,
+    duration: 12,
+    tts_voice: 'selfhost/tts_edge.json',
+    text: 'Launch week narration ready for review.',
+    file_size: 256 * 1024,
+    project_id: 'project-1',
+    batch_id: null,
+    ...overrides,
+  };
+}
+
+function buildLibraryBgmItem(id: string, overrides: Partial<LibraryBGMItem> = {}): LibraryBGMItem {
+  return {
+    id,
+    name: `BGM ${id}`,
+    audio_path: `/bgm/${id}.mp3`,
+    audio_url: `${baseURL}/api/files/bgm/${id}.mp3`,
+    created_at: DEFAULT_TIME,
+    duration: 42,
+    file_size: 1.2 * 1024 * 1024,
+    source: 'builtin',
+    project_id: null,
+    batch_id: null,
+    ...overrides,
+  };
+}
+
+function buildScriptItem(id: string, overrides: Partial<ScriptItem> = {}): ScriptItem {
+  return {
+    id,
+    task_id: DEFAULT_LIBRARY_VIDEO_ID,
+    created_at: DEFAULT_TIME,
+    project_id: 'project-1',
+    batch_id: null,
+    text: 'Small habits compound into major creative momentum over time.',
+    script_type: 'narration',
+    prompt_used: 'Narration generated from the launch concept.',
+    ...overrides,
+  };
+}
+
+function buildTemplateInfo(key: string, overrides: Partial<TemplateInfo> = {}): TemplateInfo {
+  return {
+    name: key.split('/').pop() ?? key,
+    display_name: key.split('/').pop() ?? key,
+    size: '1080x1920',
+    width: 1080,
+    height: 1920,
+    orientation: 'portrait',
+    path: `/templates/${key}`,
+    key,
+    ...overrides,
+  };
+}
+
+function buildPresetItem(name: string, overrides: Partial<PresetItem> = {}): PresetItem {
+  return {
+    name,
+    description: 'Reusable Quick pipeline preset.',
+    pipeline: 'standard',
+    payload_template: {
+      title: `${name} Title`,
+      text: 'Preset-based narration',
+      mode: 'generate',
+      n_scenes: 5,
+      min_narration_words: 5,
+      max_narration_words: 20,
+      min_image_prompt_words: 30,
+      max_image_prompt_words: 60,
+      media_workflow: 'selfhost/media_default.json',
+      video_fps: 30,
+      frame_template: '1080x1920/image_default.html',
+      bgm_volume: 0.3,
+    },
+    created_at: DEFAULT_TIME,
+    source: 'user',
+    ...overrides,
+  };
+}
+
+function buildWorkflowInfo(key: string, overrides: Partial<WorkflowInfo> = {}): WorkflowInfo {
+  return {
+    name: key.split('/').pop() ?? key,
+    display_name: key,
+    source: key.startsWith('runninghub/') ? 'runninghub' : 'selfhost',
+    path: `/workflows/${key}`,
+    key,
+    workflow_id: null,
+    ...overrides,
+  };
+}
+
+function buildWorkflowDetail(workflow: WorkflowInfo, overrides: Partial<WorkflowDetailResponse> = {}): WorkflowDetailResponse {
+  return {
+    ...workflow,
+    editable: workflow.source === 'selfhost',
+    metadata: {
+      node_count: 5,
+      source_path: workflow.path,
+    },
+    key_parameters: ['loader', 'sampler', 'save'],
+    raw_nodes: ['1', '2', '3'],
+    ...overrides,
+  };
+}
+
 function buildLibraryVideoDetail(videoId: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     task_id: videoId,
@@ -475,6 +652,79 @@ function setDefaultLibraryVideos(): void {
   });
 }
 
+function setDefaultLibraryAssets(): void {
+  libraryImages = [
+    buildImageItem('image-project-1'),
+    buildImageItem('image-unassigned', {
+      project_id: null,
+      created_at: '2026-04-21T10:00:00Z',
+      prompt_used: 'Unassigned portrait frame',
+    }),
+  ];
+  libraryVoices = [
+    buildVoiceItem('voice-project-1'),
+    buildVoiceItem('voice-project-2', {
+      id: 'voice-project-2',
+      project_id: 'project-2',
+      tts_voice: 'selfhost/tts_cloud.json',
+      text: 'Alternate campaign narration',
+      created_at: '2026-04-21T08:00:00Z',
+    }),
+  ];
+  libraryBgmItems = [
+    buildLibraryBgmItem('bgm-built-in-1', { source: 'builtin', project_id: null }),
+    buildLibraryBgmItem('bgm-history-1', { source: 'history', project_id: 'project-1' }),
+  ];
+  libraryScripts = [
+    buildScriptItem('script-project-1'),
+    buildScriptItem('script-project-2', {
+      id: 'script-project-2',
+      task_id: 'task-batch-running',
+      project_id: 'project-2',
+      script_type: 'prompt',
+      text: 'Animate the portrait with a slow cinematic push-in.',
+      prompt_used: 'Image animation prompt',
+      created_at: '2026-04-21T06:00:00Z',
+    }),
+  ];
+}
+
+function setDefaultAdvancedResources(): void {
+  templates = [
+    buildTemplateInfo('1080x1920/image_default.html'),
+    buildTemplateInfo('1920x1080/landscape_default.html', {
+      size: '1920x1080',
+      width: 1920,
+      height: 1080,
+      orientation: 'landscape',
+    }),
+  ];
+  presets = [
+    buildPresetItem('Launch Quick Preset'),
+    buildPresetItem('Creative LLM Preset', {
+      source: 'builtin',
+      pipeline: 'llm',
+      payload_template: {
+        llm: {
+          base_url: 'https://api.example.com',
+          model: 'gpt-4.1-mini',
+        },
+      },
+    }),
+  ];
+
+  workflowDetails.clear();
+  [...ttsWorkflowResponse.workflows, ...mediaWorkflowResponse.workflows, ...imageWorkflowResponse.workflows].forEach(
+    (workflow) => {
+      const detail = buildWorkflowDetail(workflow);
+      workflowDetails.set(workflow.key, detail);
+      if (workflow.workflow_id) {
+        workflowDetails.set(workflow.workflow_id, detail);
+      }
+    }
+  );
+}
+
 function getScenario(taskId: string): TaskScenario | undefined {
   return taskScenarios.get(taskId);
 }
@@ -539,6 +789,8 @@ function resetMockApiState(): void {
   pollCounts.clear();
   setDefaultProjects();
   setDefaultLibraryVideos();
+  setDefaultLibraryAssets();
+  setDefaultAdvancedResources();
   setDefaultTaskScenarios();
   setDefaultBatches();
 }
@@ -607,8 +859,55 @@ function setLibraryVideos(items: VideoItem[]): void {
   libraryVideos = structuredClone(items);
 }
 
+function setLibraryImages(items: ImageItem[]): void {
+  libraryImages = structuredClone(items);
+}
+
+function setLibraryVoices(items: VoiceItem[]): void {
+  libraryVoices = structuredClone(items);
+}
+
+function setLibraryBgm(items: LibraryBGMItem[]): void {
+  libraryBgmItems = structuredClone(items);
+}
+
+function setLibraryScripts(items: ScriptItem[]): void {
+  libraryScripts = structuredClone(items);
+}
+
+function setTemplates(items: TemplateInfo[]): void {
+  templates = structuredClone(items);
+}
+
+function setPresets(items: PresetItem[]): void {
+  presets = structuredClone(items);
+}
+
 function setLibraryVideoDetail(videoId: string, detailMode: LibraryVideoDetailMode): void {
   libraryVideoDetails.set(videoId, structuredClone(detailMode));
+}
+
+function applyProjectFilter<T extends { project_id?: string | null }>(items: T[], projectId: string | null): T[] {
+  if (projectId === '__unassigned__' || projectId === 'null') {
+    return items.filter((item) => item.project_id === null);
+  }
+
+  if (projectId && projectId !== 'all') {
+    return items.filter((item) => item.project_id === projectId);
+  }
+
+  return items;
+}
+
+function paginateItems<T>(items: T[], cursorParam: string | null, limitParam: string | null): { pageItems: T[]; nextCursor: string | null } {
+  const cursor = Number.parseInt(cursorParam ?? '0', 10);
+  const limit = Number.parseInt(limitParam ?? '20', 10);
+  const pageItems = items.slice(cursor, cursor + limit);
+
+  return {
+    pageItems,
+    nextCursor: cursor + limit < items.length ? String(cursor + limit) : null,
+  };
 }
 
 resetMockApiState();
@@ -811,25 +1110,89 @@ const handlers = [
   http.get(`${baseURL}/api/library/videos`, ({ request }) => {
     const url = new URL(request.url);
     const projectId = url.searchParams.get('project_id');
-    const cursor = Number.parseInt(url.searchParams.get('cursor') ?? '0', 10);
-    const limit = Number.parseInt(url.searchParams.get('limit') ?? '20', 10);
 
-    let items = [...libraryVideos];
-
-    if (projectId === '__unassigned__' || projectId === 'null') {
-      items = items.filter((item) => item.project_id === null);
-    } else if (projectId && projectId !== 'all') {
-      items = items.filter((item) => item.project_id === projectId);
-    }
+    const items = applyProjectFilter([...libraryVideos], projectId);
 
     items.sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
 
-    const pageItems = items.slice(cursor, cursor + limit);
+    const { pageItems, nextCursor } = paginateItems(
+      items,
+      url.searchParams.get('cursor'),
+      url.searchParams.get('limit')
+    );
     const response: VideoListResponse = {
       items: structuredClone(pageItems),
-      next_cursor: cursor + limit < items.length ? String(cursor + limit) : null,
+      next_cursor: nextCursor,
     };
 
+    return HttpResponse.json(response);
+  }),
+
+  http.get(`${baseURL}/api/library/images`, ({ request }) => {
+    const url = new URL(request.url);
+    const items = applyProjectFilter([...libraryImages], url.searchParams.get('project_id')).sort((left, right) =>
+      (right.created_at ?? '').localeCompare(left.created_at ?? '')
+    );
+    const { pageItems, nextCursor } = paginateItems(
+      items,
+      url.searchParams.get('cursor'),
+      url.searchParams.get('limit')
+    );
+    const response: ImageListResponse = {
+      items: structuredClone(pageItems),
+      next_cursor: nextCursor,
+    };
+    return HttpResponse.json(response);
+  }),
+
+  http.get(`${baseURL}/api/library/voices`, ({ request }) => {
+    const url = new URL(request.url);
+    const items = applyProjectFilter([...libraryVoices], url.searchParams.get('project_id')).sort((left, right) =>
+      (right.created_at ?? '').localeCompare(left.created_at ?? '')
+    );
+    const { pageItems, nextCursor } = paginateItems(
+      items,
+      url.searchParams.get('cursor'),
+      url.searchParams.get('limit')
+    );
+    const response: VoiceListResponse = {
+      items: structuredClone(pageItems),
+      next_cursor: nextCursor,
+    };
+    return HttpResponse.json(response);
+  }),
+
+  http.get(`${baseURL}/api/library/bgm`, ({ request }) => {
+    const url = new URL(request.url);
+    const items = applyProjectFilter([...libraryBgmItems], url.searchParams.get('project_id')).sort((left, right) =>
+      (right.created_at ?? '').localeCompare(left.created_at ?? '')
+    );
+    const { pageItems, nextCursor } = paginateItems(
+      items,
+      url.searchParams.get('cursor'),
+      url.searchParams.get('limit')
+    );
+    const response: LibraryBGMListResponse = {
+      items: structuredClone(pageItems),
+      next_cursor: nextCursor,
+    };
+    return HttpResponse.json(response);
+  }),
+
+  http.get(`${baseURL}/api/library/scripts`, ({ request }) => {
+    const url = new URL(request.url);
+    const items = applyProjectFilter([...libraryScripts], url.searchParams.get('project_id')).sort((left, right) =>
+      (right.created_at ?? '').localeCompare(left.created_at ?? '')
+    );
+    const { pageItems, nextCursor } = paginateItems(
+      items,
+      url.searchParams.get('cursor'),
+      url.searchParams.get('limit')
+    );
+    const response: ScriptListResponse = {
+      items: structuredClone(pageItems),
+      next_cursor: nextCursor,
+    };
     return HttpResponse.json(response);
   }),
 
@@ -924,15 +1287,49 @@ const handlers = [
   http.get(`${baseURL}/api/resources/workflows/tts`, () => HttpResponse.json(ttsWorkflowResponse)),
   http.get(`${baseURL}/api/resources/workflows/media`, () => HttpResponse.json(mediaWorkflowResponse)),
   http.get(`${baseURL}/api/resources/workflows/image`, () => HttpResponse.json(imageWorkflowResponse)),
+  http.get(`${baseURL}/api/resources/workflows/:workflowId`, ({ params }) => {
+    const workflowId = decodeURIComponent(String(params.workflowId));
+    const workflow = workflowDetails.get(workflowId);
+
+    if (!workflow) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    return HttpResponse.json(workflow);
+  }),
+  http.get(`${baseURL}/api/resources/templates`, () => {
+    const response: TemplateListResponse = {
+      success: true,
+      message: 'Success',
+      templates: structuredClone(templates),
+    };
+    return HttpResponse.json(response);
+  }),
+  http.get(`${baseURL}/api/resources/presets`, () => {
+    const response: PresetListResponse = {
+      success: true,
+      message: 'Success',
+      presets: structuredClone(presets),
+    };
+    return HttpResponse.json(response);
+  }),
   http.get(`${baseURL}/api/resources/bgm`, () => HttpResponse.json(bgmListResponse)),
 ];
 
 export {
   ASYNC_VIDEO_ENDPOINTS,
   buildBatch,
+  buildImageItem,
+  buildLibraryBgmItem,
   buildProject,
+  buildPresetItem,
+  buildScriptItem,
   buildTask,
+  buildTemplateInfo,
   buildVideoItem,
+  buildVoiceItem,
+  buildWorkflowDetail,
+  buildWorkflowInfo,
   DEFAULT_CANCELLED_TASK_ID,
   DEFAULT_FAILURE_TASK_ID,
   DEFAULT_SUCCESS_TASK_ID,
@@ -945,10 +1342,16 @@ export {
   handlers,
   resetMockApiState,
   setBatches,
+  setLibraryBgm,
+  setLibraryImages,
+  setLibraryScripts,
   setLibraryVideoDetail,
   setLibraryVideos,
+  setLibraryVoices,
+  setPresets,
   setProjects,
   setAsyncSubmitScenario,
   setSubmitScenario,
+  setTemplates,
   setTaskScenario,
 };

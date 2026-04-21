@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,6 +34,21 @@ type VideoTaskResult = {
   duration?: number;
   file_size?: number;
 };
+
+type QuickCreateHiddenDefaults = Pick<
+  QuickSubmitRequest,
+  | 'bgm_volume'
+  | 'frame_template'
+  | 'max_image_prompt_words'
+  | 'max_narration_words'
+  | 'min_image_prompt_words'
+  | 'min_narration_words'
+  | 'n_scenes'
+  | 'ref_audio'
+  | 'template_params'
+  | 'video_fps'
+  | 'voice_id'
+>;
 
 type QuickCreateViewState = 'idle' | TaskStatus;
 
@@ -127,11 +142,38 @@ function isVideoTaskResult(result: Task['result']): result is VideoTaskResult {
   return typeof candidate.video_url === 'string';
 }
 
-function buildQuickSubmitPayload(values: QuickFormValues): QuickSubmitRequest {
+function toOptionalNumber(value: string | null, fallback: number): number {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsedValue = Number.parseFloat(value);
+  return Number.isFinite(parsedValue) ? parsedValue : fallback;
+}
+
+function parseTemplateParams(value: string | null): QuickSubmitRequest['template_params'] {
+  if (!value) {
+    return QUICK_CREATE_DEFAULTS.template_params;
+  }
+
+  try {
+    const parsedValue = JSON.parse(value);
+    return parsedValue && typeof parsedValue === 'object'
+      ? (parsedValue as Record<string, unknown>)
+      : QUICK_CREATE_DEFAULTS.template_params;
+  } catch {
+    return QUICK_CREATE_DEFAULTS.template_params;
+  }
+}
+
+function buildQuickSubmitPayload(
+  values: QuickFormValues,
+  hiddenDefaults: QuickCreateHiddenDefaults
+): QuickSubmitRequest {
   const narration = toOptionalString(values.narration);
 
   return {
-    ...QUICK_CREATE_DEFAULTS,
+    ...hiddenDefaults,
     title: values.title.trim(),
     text: narration ?? values.topic.trim(),
     mode: narration ? 'fixed' : 'generate',
@@ -152,6 +194,34 @@ function QuickCreateContent() {
   const initialMediaWorkflow = searchParams.get('media_workflow') ?? '';
   const initialBgmPath = searchParams.get('bgm_path') ?? '';
   const initialTaskId = searchParams.get('task_id');
+  const hiddenDefaults = useMemo<QuickCreateHiddenDefaults>(
+    () => ({
+      n_scenes: toOptionalNumber(searchParams.get('n_scenes'), QUICK_CREATE_DEFAULTS.n_scenes),
+      ref_audio: searchParams.get('ref_audio') ?? QUICK_CREATE_DEFAULTS.ref_audio,
+      voice_id: searchParams.get('voice_id') ?? QUICK_CREATE_DEFAULTS.voice_id,
+      min_narration_words: toOptionalNumber(
+        searchParams.get('min_narration_words'),
+        QUICK_CREATE_DEFAULTS.min_narration_words
+      ),
+      max_narration_words: toOptionalNumber(
+        searchParams.get('max_narration_words'),
+        QUICK_CREATE_DEFAULTS.max_narration_words
+      ),
+      min_image_prompt_words: toOptionalNumber(
+        searchParams.get('min_image_prompt_words'),
+        QUICK_CREATE_DEFAULTS.min_image_prompt_words
+      ),
+      max_image_prompt_words: toOptionalNumber(
+        searchParams.get('max_image_prompt_words'),
+        QUICK_CREATE_DEFAULTS.max_image_prompt_words
+      ),
+      video_fps: toOptionalNumber(searchParams.get('video_fps'), QUICK_CREATE_DEFAULTS.video_fps),
+      frame_template: searchParams.get('frame_template') ?? QUICK_CREATE_DEFAULTS.frame_template,
+      template_params: parseTemplateParams(searchParams.get('template_params')),
+      bgm_volume: toOptionalNumber(searchParams.get('bgm_volume'), QUICK_CREATE_DEFAULTS.bgm_volume),
+    }),
+    [searchParams]
+  );
 
   const [taskId, setTaskId] = useState<string>();
   const [localState, setLocalState] = useState<'idle' | 'failed' | 'cancelled'>('idle');
@@ -259,7 +329,7 @@ function QuickCreateContent() {
     setIsPollingEnabled(true);
 
     try {
-      const response = await submitQuick.mutateAsync(buildQuickSubmitPayload(values));
+      const response = await submitQuick.mutateAsync(buildQuickSubmitPayload(values, hiddenDefaults));
       setTaskId(response.task_id);
     } catch (error: unknown) {
       setLocalState('failed');
