@@ -98,7 +98,9 @@ function buildCustomPayload(values: CustomFormValues): CustomRequest {
 function CustomPageContent() {
   const searchParams = useSearchParams();
   const submitCustom = useSubmitCustom();
-  const pipelineTask = usePipelineTask(submitCustom);
+  const pipelineTask = usePipelineTask(submitCustom, {
+    initialTaskId: searchParams.get('task_id'),
+  });
 
   const form = useForm<CustomFormValues>({
     resolver: zodResolver(formSchema),

@@ -30,6 +30,7 @@ from web.state.session import init_session_state, init_i18n, get_pixelle_video
 
 # Import components
 from web.components.header import render_header
+from web.components.migration_banner import render_migration_banner
 from web.components.settings import render_advanced_settings
 from web.components.faq import render_faq_sidebar
 
@@ -48,6 +49,8 @@ def main():
     init_session_state()
     init_i18n()
     
+    render_migration_banner()
+
     # Render header (title + language selector)
     render_header()
     
@@ -86,4 +89,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

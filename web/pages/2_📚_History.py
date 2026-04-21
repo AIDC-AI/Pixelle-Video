@@ -30,6 +30,7 @@ from loguru import logger
 
 from web.state.session import init_session_state, init_i18n, get_pixelle_video
 from web.components.header import render_header
+from web.components.migration_banner import render_migration_banner
 from web.i18n import tr
 from web.utils.async_helpers import run_async
 
@@ -378,6 +379,8 @@ def main():
     init_session_state()
     init_i18n()
     
+    render_migration_banner()
+
     # Render header
     render_header()
     

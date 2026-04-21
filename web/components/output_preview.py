@@ -125,6 +125,7 @@ def render_single_output(pixelle_video, video_params):
                 
                 # Generate video (directly pass parameters)
                 # Note: media_width and media_height are auto-determined from template
+                current_project_id = st.session_state.get("current_project_id")
                 video_params = {
                     "text": text,
                     "mode": mode,
@@ -139,6 +140,7 @@ def render_single_output(pixelle_video, video_params):
                     "progress_callback": update_progress,
                     "media_width": st.session_state.get('template_media_width'),
                     "media_height": st.session_state.get('template_media_height'),
+                    "project_id": current_project_id,
                 }
                 
                 # Add TTS parameters based on mode
@@ -257,6 +259,7 @@ def render_batch_output(pixelle_video, video_params):
                 "tts_inference_mode": video_params.get("tts_inference_mode") or "local",
                 "media_width": video_params.get("media_width"),
                 "media_height": video_params.get("media_height"),
+                "project_id": st.session_state.get("current_project_id"),
             }
             
             # Add TTS parameters based on mode (only add non-None values)

@@ -372,6 +372,7 @@ class DigitalHumanPipelineUI(PipelineUI):
                             pixelle_video,
                             portrait_url=character_assets[0],
                             narration=goods_text,
+                            project_id=st.session_state.get("current_project_id"),
                             voice_workflow=video_params.get("tts_workflow"),
                             workflow_path=video_params["workflow_path"],
                             mode=mode,

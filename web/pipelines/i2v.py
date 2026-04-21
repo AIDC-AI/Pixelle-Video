@@ -206,6 +206,7 @@ class ImageToVideoPipelineUI(PipelineUI):
                             source_image=audio_assets[0],
                             motion_prompt=prompt_text,
                             media_workflow=workflow_key,
+                            project_id=st.session_state.get("current_project_id"),
                             progress_callback=lambda key, progress: (
                                 status_text.text(tr(key)),
                                 progress_bar.progress(progress),

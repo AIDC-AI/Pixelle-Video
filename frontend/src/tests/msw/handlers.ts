@@ -12,6 +12,10 @@ type AsyncVideoEndpoint =
 type SubmitScenario = 'success' | 'http-502' | 'network-error';
 type Task = paths['/api/tasks/{task_id}']['get']['responses'][200]['content']['application/json'];
 type TaskStatus = components['schemas']['TaskStatus'];
+type Project = components['schemas']['Project'];
+type ProjectListResponse = paths['/api/projects']['get']['responses'][200]['content']['application/json'];
+type VideoItem = components['schemas']['VideoItem'];
+type VideoListResponse = paths['/api/library/videos']['get']['responses'][200]['content']['application/json'];
 type WorkflowListResponse =
   paths['/api/resources/workflows/tts']['get']['responses'][200]['content']['application/json'];
 type BgmListResponse =
@@ -45,6 +49,12 @@ const DEFAULT_TIME = '2026-04-22T00:00:00Z';
 const DEFAULT_SUCCESS_TASK_ID = 'task-success';
 const DEFAULT_CANCELLED_TASK_ID = 'task-cancelled';
 const DEFAULT_FAILURE_TASK_ID = 'task-failed';
+const DEFAULT_LIBRARY_VIDEO_ID = 'task-library-video-1';
+
+type LibraryVideoDetailMode =
+  | { kind: 'success'; payload: unknown }
+  | { kind: 'not-implemented' }
+  | { kind: 'not-found' };
 
 const ASYNC_VIDEO_ENDPOINTS: readonly AsyncVideoEndpoint[] = [
   '/api/video/generate/async',
@@ -75,6 +85,9 @@ let nextTaskIds: Record<AsyncVideoEndpoint, string> = { ...DEFAULT_NEXT_TASK_IDS
 const lastSubmitPayloads = new Map<AsyncVideoEndpoint, SubmitRequestByEndpoint[AsyncVideoEndpoint]>();
 const taskScenarios = new Map<string, TaskScenario>();
 const pollCounts = new Map<string, number>();
+let projects: Project[] = [];
+let libraryVideos: VideoItem[] = [];
+const libraryVideoDetails = new Map<string, LibraryVideoDetailMode>();
 
 const ttsWorkflowResponse: WorkflowListResponse = {
   success: true,
@@ -201,10 +214,118 @@ function defaultSuccessScenario(taskId: string): TaskScenario {
   };
 }
 
+function buildProject(id: string, name: string, overrides: Partial<Project> = {}): Project {
+  return {
+    id,
+    name,
+    created_at: DEFAULT_TIME,
+    updated_at: DEFAULT_TIME,
+    cover_url: null,
+    pipeline_hint: null,
+    task_count: 1,
+    last_task_id: null,
+    deleted_at: null,
+    ...overrides,
+  };
+}
+
+function buildVideoItem(taskId: string, overrides: Partial<VideoItem> = {}): VideoItem {
+  return {
+    task_id: taskId,
+    title: `Video ${taskId}`,
+    created_at: DEFAULT_TIME,
+    completed_at: DEFAULT_TIME,
+    duration: 15,
+    file_size: 5 * 1024 * 1024,
+    n_frames: 8,
+    video_path: `/output/${taskId}/final.mp4`,
+    video_url: `${baseURL}/api/files/output/${taskId}/final.mp4`,
+    thumbnail_url: `${baseURL}/api/files/output/${taskId}/thumb.jpg`,
+    project_id: 'project-1',
+    ...overrides,
+  };
+}
+
+function buildLibraryVideoDetail(videoId: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    task_id: videoId,
+    project_id: 'project-1',
+    title: 'Library Video',
+    duration: 15,
+    file_size: 5 * 1024 * 1024,
+    n_frames: 8,
+    created_at: DEFAULT_TIME,
+    completed_at: DEFAULT_TIME,
+    pipeline: 'quick',
+    video_url: `${baseURL}/api/files/output/${videoId}/final.mp4`,
+    video_path: `/output/${videoId}/final.mp4`,
+    snapshot: {
+      title: 'Library Video',
+      text: 'A generated library video',
+      media_workflow: 'selfhost/media_default.json',
+      tts_workflow: 'selfhost/tts_edge.json',
+    },
+    ...overrides,
+  };
+}
+
 function setDefaultTaskScenarios(): void {
   taskScenarios.clear();
   Object.values(DEFAULT_NEXT_TASK_IDS).forEach((taskId) => {
     taskScenarios.set(taskId, defaultSuccessScenario(taskId));
+  });
+  taskScenarios.set(
+    DEFAULT_LIBRARY_VIDEO_ID,
+    {
+      states: [
+        buildTask(DEFAULT_LIBRARY_VIDEO_ID, 'completed', {
+          project_id: 'project-1',
+          request_params: {
+            title: 'Library Video',
+            text: 'A generated library video',
+            mode: 'generate',
+            media_workflow: 'selfhost/media_default.json',
+            tts_workflow: 'selfhost/tts_edge.json',
+            project_id: 'project-1',
+          },
+          result: {
+            video_url: `${baseURL}/api/files/output/${DEFAULT_LIBRARY_VIDEO_ID}/final.mp4`,
+            video_path: `/output/${DEFAULT_LIBRARY_VIDEO_ID}/final.mp4`,
+            duration: 15,
+            file_size: 5 * 1024 * 1024,
+          },
+        }),
+      ],
+      index: 0,
+      cancelledState: buildTask(DEFAULT_LIBRARY_VIDEO_ID, 'cancelled'),
+    }
+  );
+}
+
+function setDefaultProjects(): void {
+  projects = [
+    buildProject('project-1', 'Launch Campaign', { pipeline_hint: 'quick', last_task_id: DEFAULT_LIBRARY_VIDEO_ID }),
+    buildProject('project-2', 'Unreleased Experiments', { pipeline_hint: 'action-transfer', task_count: 0 }),
+  ];
+}
+
+function setDefaultLibraryVideos(): void {
+  libraryVideos = [
+    buildVideoItem(DEFAULT_LIBRARY_VIDEO_ID, { title: 'Library Video', project_id: 'project-1' }),
+    buildVideoItem('task-library-unassigned', {
+      title: 'Unassigned Clip',
+      project_id: null,
+      created_at: '2026-04-21T12:00:00Z',
+      completed_at: '2026-04-21T12:02:00Z',
+    }),
+  ];
+  libraryVideoDetails.clear();
+  libraryVideoDetails.set(DEFAULT_LIBRARY_VIDEO_ID, {
+    kind: 'success',
+    payload: buildLibraryVideoDetail(DEFAULT_LIBRARY_VIDEO_ID),
+  });
+  libraryVideoDetails.set('task-library-unassigned', {
+    kind: 'not-implemented',
   });
 }
 
@@ -270,6 +391,8 @@ function resetMockApiState(): void {
   nextTaskIds = { ...DEFAULT_NEXT_TASK_IDS };
   lastSubmitPayloads.clear();
   pollCounts.clear();
+  setDefaultProjects();
+  setDefaultLibraryVideos();
   setDefaultTaskScenarios();
 }
 
@@ -317,6 +440,18 @@ function getLastCustomPayload() {
   return getLastPayload('/api/video/custom/async');
 }
 
+function setProjects(nextProjects: Project[]): void {
+  projects = structuredClone(nextProjects);
+}
+
+function setLibraryVideos(items: VideoItem[]): void {
+  libraryVideos = structuredClone(items);
+}
+
+function setLibraryVideoDetail(videoId: string, detailMode: LibraryVideoDetailMode): void {
+  libraryVideoDetails.set(videoId, structuredClone(detailMode));
+}
+
 resetMockApiState();
 
 const handlers = [
@@ -325,6 +460,56 @@ const handlers = [
   createSubmitHandler('/api/video/i2v/async'),
   createSubmitHandler('/api/video/action-transfer/async'),
   createSubmitHandler('/api/video/custom/async'),
+
+  http.get(`${baseURL}/api/projects`, () => {
+    const response: ProjectListResponse = {
+      items: structuredClone(projects),
+    };
+    return HttpResponse.json(response);
+  }),
+
+  http.get(`${baseURL}/api/library/videos`, ({ request }) => {
+    const url = new URL(request.url);
+    const projectId = url.searchParams.get('project_id');
+    const cursor = Number.parseInt(url.searchParams.get('cursor') ?? '0', 10);
+    const limit = Number.parseInt(url.searchParams.get('limit') ?? '20', 10);
+
+    let items = [...libraryVideos];
+
+    if (projectId === '__unassigned__' || projectId === 'null') {
+      items = items.filter((item) => item.project_id === null);
+    } else if (projectId && projectId !== 'all') {
+      items = items.filter((item) => item.project_id === projectId);
+    }
+
+    items.sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
+
+    const pageItems = items.slice(cursor, cursor + limit);
+    const response: VideoListResponse = {
+      items: structuredClone(pageItems),
+      next_cursor: cursor + limit < items.length ? String(cursor + limit) : null,
+    };
+
+    return HttpResponse.json(response);
+  }),
+
+  http.get(`${baseURL}/api/library/videos/:videoId`, ({ params }) => {
+    const videoId = String(params.videoId);
+    const detailMode = libraryVideoDetails.get(videoId) ?? { kind: 'not-implemented' as const };
+
+    if (detailMode.kind === 'not-found') {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    if (detailMode.kind === 'not-implemented') {
+      return HttpResponse.json<ApiErrorResponse>(
+        { detail: { code: 'NOT_IMPLEMENTED', message: 'Library detail is not implemented yet.' } },
+        { status: 501 }
+      );
+    }
+
+    return HttpResponse.json(detailMode.payload as Record<string, unknown>);
+  }),
 
   http.get(`${baseURL}/api/tasks/:taskId`, ({ params }) => {
     const taskId = String(params.taskId);
@@ -344,6 +529,31 @@ const handlers = [
     }
 
     return HttpResponse.json(task);
+  }),
+
+  http.get(`${baseURL}/api/tasks`, ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+    const projectId = url.searchParams.get('project_id');
+    const limit = Number.parseInt(url.searchParams.get('limit') ?? '100', 10);
+
+    let items = Array.from(taskScenarios.values()).map((scenario) => {
+      const index = Math.min(scenario.index, scenario.states.length - 1);
+      return cloneTask(scenario.states[index]);
+    });
+
+    if (status && status !== 'all') {
+      items = items.filter((task) => task.status === status);
+    }
+
+    if (projectId === '__unassigned__' || projectId === 'null') {
+      items = items.filter((task) => task.project_id === null);
+    } else if (projectId && projectId !== 'all') {
+      items = items.filter((task) => task.project_id === projectId);
+    }
+
+    items.sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
+    return HttpResponse.json(items.slice(0, limit));
   }),
 
   http.delete(`${baseURL}/api/tasks/:taskId`, ({ params }) => {
@@ -379,7 +589,9 @@ const handlers = [
 
 export {
   ASYNC_VIDEO_ENDPOINTS,
+  buildProject,
   buildTask,
+  buildVideoItem,
   DEFAULT_CANCELLED_TASK_ID,
   DEFAULT_FAILURE_TASK_ID,
   DEFAULT_SUCCESS_TASK_ID,
@@ -391,6 +603,9 @@ export {
   getTaskPollCount,
   handlers,
   resetMockApiState,
+  setLibraryVideoDetail,
+  setLibraryVideos,
+  setProjects,
   setAsyncSubmitScenario,
   setSubmitScenario,
   setTaskScenario,

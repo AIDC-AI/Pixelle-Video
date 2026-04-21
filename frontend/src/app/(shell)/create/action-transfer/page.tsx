@@ -49,7 +49,9 @@ function buildActionTransferPayload(values: ActionTransferFormValues): ActionTra
 function ActionTransferPageContent() {
   const searchParams = useSearchParams();
   const submitActionTransfer = useSubmitActionTransfer();
-  const pipelineTask = usePipelineTask(submitActionTransfer);
+  const pipelineTask = usePipelineTask(submitActionTransfer, {
+    initialTaskId: searchParams.get('task_id'),
+  });
   const { data: mediaData } = useMediaWorkflows();
 
   const form = useForm<ActionTransferFormValues>({

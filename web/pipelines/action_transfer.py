@@ -291,6 +291,7 @@ class ActionTransferPipelineUI(PipelineUI):
                             pose_workflow=workflow_key,
                             motion_prompt=prompt_text,
                             duration=duration,
+                            project_id=st.session_state.get("current_project_id"),
                             progress_callback=lambda key, progress: (
                                 status_text.text(tr(key)),
                                 progress_bar.progress(progress),

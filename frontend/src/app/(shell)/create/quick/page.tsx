@@ -145,6 +145,13 @@ function buildQuickSubmitPayload(values: QuickFormValues): QuickSubmitRequest {
 function QuickCreateContent() {
   const searchParams = useSearchParams();
   const initialTopic = searchParams.get('topic') ?? '';
+  const initialTitle = searchParams.get('title') ?? '';
+  const initialNarration = searchParams.get('narration') ?? '';
+  const initialPromptPrefix = searchParams.get('prompt_prefix') ?? '';
+  const initialTtsWorkflow = searchParams.get('tts_workflow') ?? '';
+  const initialMediaWorkflow = searchParams.get('media_workflow') ?? '';
+  const initialBgmPath = searchParams.get('bgm_path') ?? '';
+  const initialTaskId = searchParams.get('task_id');
 
   const [taskId, setTaskId] = useState<string>();
   const [localState, setLocalState] = useState<'idle' | 'failed' | 'cancelled'>('idle');
@@ -152,6 +159,7 @@ function QuickCreateContent() {
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [isHydrated, setIsHydrated] = useState(useCurrentProjectStore.persist.hasHydrated());
   const [isPollingEnabled, setIsPollingEnabled] = useState(false);
+  const [consumedInitialTaskId, setConsumedInitialTaskId] = useState<string | null>(null);
 
   const currentProject = useCurrentProjectStore((state) => state.currentProject);
 
@@ -165,13 +173,13 @@ function QuickCreateContent() {
   const form = useForm<QuickFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: '',
+      title: initialTitle,
       topic: initialTopic,
-      tts_workflow: '',
-      media_workflow: '',
-      bgm_path: '',
-      narration: '',
-      prompt_prefix: '',
+      tts_workflow: initialTtsWorkflow,
+      media_workflow: initialMediaWorkflow,
+      bgm_path: initialBgmPath,
+      narration: initialNarration,
+      prompt_prefix: initialPromptPrefix,
     },
   });
 
@@ -218,6 +226,26 @@ function QuickCreateContent() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!initialTaskId) {
+      return;
+    }
+
+    if (consumedInitialTaskId === initialTaskId || taskId === initialTaskId) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setTaskId(initialTaskId);
+      setLocalState('idle');
+      setLocalMessage('');
+      setIsPollingEnabled(true);
+      setConsumedInitialTaskId(initialTaskId);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [consumedInitialTaskId, initialTaskId, taskId]);
 
   const onSubmit = async (values: QuickFormValues) => {
     if (!currentProject) {

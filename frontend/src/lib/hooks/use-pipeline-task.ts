@@ -27,6 +27,10 @@ interface PipelineSubmitMutation<TRequest, TResponse extends SubmitResponse> {
   mutateAsync: (request: TRequest) => Promise<TResponse>;
 }
 
+interface UsePipelineTaskOptions {
+  initialTaskId?: string | null;
+}
+
 interface PipelineTaskResult<TRequest> {
   activeTaskStatus: Extract<TaskStatus, 'pending' | 'running' | 'completed' | 'failed'>;
   cancel: () => Promise<void>;
@@ -71,7 +75,8 @@ function isVideoTaskResult(result: Task['result']): result is VideoTaskResult {
 }
 
 export function usePipelineTask<TRequest, TResponse extends SubmitResponse>(
-  submitMutation: PipelineSubmitMutation<TRequest, TResponse>
+  submitMutation: PipelineSubmitMutation<TRequest, TResponse>,
+  options: UsePipelineTaskOptions = {}
 ): PipelineTaskResult<TRequest> {
   const [taskId, setTaskId] = useState<string>();
   const [localState, setLocalState] = useState<'idle' | 'failed' | 'cancelled'>('idle');
@@ -79,6 +84,7 @@ export function usePipelineTask<TRequest, TResponse extends SubmitResponse>(
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [isHydrated, setIsHydrated] = useState(useCurrentProjectStore.persist.hasHydrated());
   const [isPollingEnabled, setIsPollingEnabled] = useState(false);
+  const [consumedInitialTaskId, setConsumedInitialTaskId] = useState<string | null>(null);
 
   const currentProject = useCurrentProjectStore((state) => state.currentProject);
   const cancelTask = useCancelTask();
@@ -126,6 +132,26 @@ export function usePipelineTask<TRequest, TResponse extends SubmitResponse>(
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!options.initialTaskId) {
+      return;
+    }
+
+    if (consumedInitialTaskId === options.initialTaskId || taskId === options.initialTaskId) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setTaskId(options.initialTaskId ?? undefined);
+      setLocalState('idle');
+      setLocalMessage('');
+      setIsPollingEnabled(true);
+      setConsumedInitialTaskId(options.initialTaskId ?? null);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [consumedInitialTaskId, options.initialTaskId, taskId]);
 
   const submit = async (request: TRequest): Promise<boolean> => {
     if (!currentProject) {

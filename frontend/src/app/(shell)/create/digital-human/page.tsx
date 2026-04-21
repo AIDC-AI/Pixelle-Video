@@ -50,7 +50,9 @@ function buildDigitalHumanPayload(values: DigitalHumanFormValues): DigitalHumanR
 function DigitalHumanPageContent() {
   const searchParams = useSearchParams();
   const submitDigitalHuman = useSubmitDigitalHuman();
-  const pipelineTask = usePipelineTask(submitDigitalHuman);
+  const pipelineTask = usePipelineTask(submitDigitalHuman, {
+    initialTaskId: searchParams.get('task_id'),
+  });
   const { data: ttsData } = useTtsWorkflows();
 
   const form = useForm<DigitalHumanFormValues>({

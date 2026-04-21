@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { usePipelineTask } from './use-pipeline-task';
 import { seedCurrentProject } from '@/tests/pipeline-page-test-utils';
@@ -44,6 +44,10 @@ describe('usePipelineTask', () => {
     mockUseTaskPolling.mockReturnValue({ data: undefined });
     mockCancelMutateAsync.mockReset();
     await seedCurrentProject({ id: 'project-1', name: 'Test Project' });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('blocks submit and opens the project dialog when no project is selected', async () => {
@@ -209,5 +213,51 @@ describe('usePipelineTask', () => {
     expect(result.current.viewState).toBe('idle');
     expect(result.current.taskId).toBeUndefined();
     expect(result.current.statusMessage).toBe('');
+  });
+
+  it('resumes polling from an initial task id', async () => {
+    vi.useFakeTimers();
+    mockUseTaskPolling.mockReturnValue({ data: buildTask('running') });
+
+    const { result } = renderHook(() =>
+      usePipelineTask(
+        {
+          isPending: false,
+          mutateAsync: vi.fn(async () => ({ task_id: 'task-ignored' })),
+        },
+        { initialTaskId: 'task-resume' }
+      )
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+
+    expect(result.current.taskId).toBe('task-resume');
+    expect(result.current.viewState).toBe('running');
+  });
+
+  it('keeps the local cancelled state even when the remote task data is still running', async () => {
+    const runningTask = buildTask('running');
+    mockUseTaskPolling.mockReturnValue({ data: runningTask });
+    const mutateAsync = vi.fn(async () => ({ task_id: 'task-running' }));
+
+    const { result } = renderHook(() =>
+      usePipelineTask({
+        isPending: false,
+        mutateAsync,
+      })
+    );
+
+    await act(async () => {
+      await result.current.submit({ prompt: 'Cancelable task' });
+    });
+
+    await act(async () => {
+      await result.current.cancel();
+    });
+
+    expect(result.current.viewState).toBe('cancelled');
+    expect(result.current.statusMessage).toBe('Task cancelled');
   });
 });

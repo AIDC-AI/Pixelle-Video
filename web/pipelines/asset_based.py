@@ -389,6 +389,7 @@ class AssetBasedPipelineUI(PipelineUI):
                         bgm_mode=video_params.get("bgm_mode", "loop"),
                         voice_id=video_params.get("voice_id", "zh-CN-YunjianNeural"),
                         tts_speed=video_params.get("tts_speed", 1.2),
+                        project_id=st.session_state.get("current_project_id"),
                         progress_callback=update_progress
                     ))
                     
@@ -443,4 +444,3 @@ class AssetBasedPipelineUI(PipelineUI):
 
 # Register self
 register_pipeline_ui(AssetBasedPipelineUI)
-

@@ -50,7 +50,9 @@ function buildI2VPayload(values: I2VFormValues): I2VRequest {
 function I2VPageContent() {
   const searchParams = useSearchParams();
   const submitI2V = useSubmitI2V();
-  const pipelineTask = usePipelineTask(submitI2V);
+  const pipelineTask = usePipelineTask(submitI2V, {
+    initialTaskId: searchParams.get('task_id'),
+  });
   const { data: mediaData } = useMediaWorkflows();
 
   const form = useForm<I2VFormValues>({
