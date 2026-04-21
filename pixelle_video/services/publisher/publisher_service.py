@@ -93,6 +93,13 @@ class PublisherService:
         / "Google" / "Chrome" / "Application" / "chrome.exe",
         Path(os.environ.get("LOCALAPPDATA", ""))
         / "Google" / "Chrome" / "Application" / "chrome.exe",
+        # Microsoft Edge as fallback
+        Path(os.environ.get("PROGRAMFILES", r"C:\Program Files"))
+        / "Microsoft" / "Edge" / "Application" / "msedge.exe",
+        Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)"))
+        / "Microsoft" / "Edge" / "Application" / "msedge.exe",
+        Path(os.environ.get("LOCALAPPDATA", ""))
+        / "Microsoft" / "Edge" / "Application" / "msedge.exe",
     ]
 
     def __init__(
@@ -145,22 +152,56 @@ class PublisherService:
         return host, port
 
     @classmethod
+    def _make_manual_cmd(cls, exe: str, port: int) -> str:
+        user_data_dir = str(Path(os.environ.get("TEMP", os.getcwd())) / "pixelle_chrome_debug")
+        return (
+            f'"{exe}" --remote-debugging-port={port} '
+            f'--user-data-dir="{user_data_dir}" '
+            f'--no-first-run --no-default-browser-check'
+        )
+
+    @classmethod
     def launch_chrome_debug(cls, port: int = 9222, chrome_path: str = "") -> str:
         exe = chrome_path or cls.find_chrome()
         if not exe or not os.path.exists(exe):
-            raise FileNotFoundError(exe or "chrome")
-        cmd = [exe, f"--remote-debugging-port={port}"]
-        subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=subprocess.DETACHED_PROCESS if sys.platform == "win32" else 0,
-        )
-        for _ in range(10):
-            time.sleep(0.5)
-            if cls.is_debug_port_open("127.0.0.1", port):
-                return exe
-        raise TimeoutError(f"Chrome started but port {port} not reachable")
+            raise FileNotFoundError(
+                "未找到 Chrome/Edge 浏览器。请在「浏览器路径」中填写 chrome.exe 或 msedge.exe 的完整路径。"
+            )
+
+        # If port is already open, nothing to do
+        if cls.is_debug_port_open("127.0.0.1", port):
+            return exe
+
+        user_data_dir = str(Path(os.environ.get("TEMP", os.getcwd())) / "pixelle_chrome_debug")
+        cmd = [
+            exe,
+            f"--remote-debugging-port={port}",
+            f"--user-data-dir={user_data_dir}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-popup-blocking",
+        ]
+        if sys.platform == "win32":
+            # Use PowerShell Start-Process so Chrome is fully detached from the
+            # Python/Streamlit process tree and can bind the debug port properly.
+            args_str = " ".join(f'"{a}"' if " " in a else a for a in cmd[1:])
+            subprocess.Popen(
+                ["powershell", "-NoProfile", "-Command",
+                 f'Start-Process -FilePath "{exe}" -ArgumentList {args_str}'],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+        else:
+            subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        # Give Chrome a moment to bind the port, then return.
+        # Caller is responsible for polling / showing a "check" button.
+        time.sleep(3)
+        return exe
 
     def init_driver(self):
         if self._driver:

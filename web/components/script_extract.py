@@ -91,7 +91,7 @@ def render_script_extract(key_prefix: str = "") -> dict:
                 seconds = duration % 60
                 info_text = f"📹 {video_info['title']}"
                 if duration:
-                    info_text += f"  |  ⏱️ {minutes}:{seconds:02d}"
+                    info_text += f"  |  ⏱️ {int(minutes)}:{int(seconds):02d}"
                 st.caption(info_text)
             
             edited_script = st.text_area(

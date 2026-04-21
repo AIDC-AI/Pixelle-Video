@@ -23,37 +23,53 @@ from pathlib import Path
 from loguru import logger
 
 _loop: asyncio.AbstractEventLoop | None = None
+_loop_thread: threading.Thread | None = None
 _lock = threading.Lock()
 
 
 def _get_event_loop() -> asyncio.AbstractEventLoop:
-    """Return a persistent event loop (never closed between calls).
+    """Return a persistent event loop running in a background daemon thread.
 
     Unlike ``asyncio.run()`` which creates **and closes** a loop each time,
     this keeps the loop alive so that long-lived objects bound to it (e.g.
     Playwright browser instances) remain valid across consecutive calls.
 
+    Running in a background thread avoids ``RuntimeError: This event loop is
+    already running`` when called from Streamlit's async execution context.
+
     On Windows we use ProactorEventLoop because SelectorEventLoop (the
     default in Python 3.14) does not support subprocesses.
     """
-    global _loop
-    if _loop is not None and not _loop.is_closed():
+    global _loop, _loop_thread
+    if _loop is not None and not _loop.is_closed() and _loop.is_running():
         return _loop
     with _lock:
-        if _loop is not None and not _loop.is_closed():
+        if _loop is not None and not _loop.is_closed() and _loop.is_running():
             return _loop
         if sys.platform == "win32":
-            _loop = asyncio.ProactorEventLoop()
+            loop = asyncio.ProactorEventLoop()
         else:
-            _loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(_loop)
+            loop = asyncio.new_event_loop()
+
+        def _run_forever():
+            asyncio.set_event_loop(loop)
+            loop.run_forever()
+
+        t = threading.Thread(target=_run_forever, daemon=True, name="pixelle-async-loop")
+        t.start()
+        # Wait until the loop is actually running before returning
+        while not loop.is_running():
+            pass
+        _loop = loop
+        _loop_thread = t
     return _loop
 
 
 def run_async(coro):
-    """Run async coroutine in sync context (same thread, preserves Streamlit session)"""
+    """Run async coroutine from any context, including Streamlit's async pages."""
     loop = _get_event_loop()
-    return loop.run_until_complete(coro)
+    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    return future.result()
 
 
 def get_project_version():

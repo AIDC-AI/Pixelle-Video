@@ -17,8 +17,10 @@ Full workflow: Reference Study → Rewrite Script → Voice Generation →
 Video Generation → One-click Assembly.
 """
 
+import asyncio
 import json
 import os
+import re as _re
 import time
 from pathlib import Path
 from typing import Any
@@ -34,6 +36,87 @@ from web.components.script_extract import render_script_extract
 from web.utils.async_helpers import run_async
 from pixelle_video.config import config_manager
 from pixelle_video.utils.os_util import create_task_output_dir
+
+
+# ── SRT helper ───────────────────────────────────────────────────────
+
+
+def _get_audio_duration(audio_path: str) -> float | None:
+    """Return duration in seconds via ffprobe, or None on failure."""
+    if not audio_path or not os.path.exists(audio_path):
+        return None
+    try:
+        import subprocess as _sp
+        r = _sp.run(
+            [
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                audio_path,
+            ],
+            capture_output=True, text=True, timeout=10,
+        )
+        return float(r.stdout.strip())
+    except Exception:
+        return None
+
+
+def _fmt_srt_time(sec: float) -> str:
+    h = int(sec) // 3600
+    m = (int(sec) % 3600) // 60
+    s = int(sec) % 60
+    ms = int(round((sec - int(sec)) * 1000))
+    if ms >= 1000:
+        ms = 999
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+
+def _split_line_to_chunks(line: str, max_chars: int = 22) -> list[str]:
+    """Split a paragraph into short subtitle chunks at punctuation boundaries."""
+    if len(line) <= max_chars:
+        return [line]
+    # Split at sentence-ending punctuation first
+    sentences = _re.split(r'(?<=[。！？!?])', line)
+    chunks: list[str] = []
+    for sent in sentences:
+        sent = sent.strip()
+        if not sent:
+            continue
+        if len(sent) <= max_chars:
+            chunks.append(sent)
+        else:
+            # Further split at clause punctuation
+            parts = _re.split(r'(?<=[，；、,;])', sent)
+            buf = ""
+            for part in parts:
+                if len(buf) + len(part) <= max_chars:
+                    buf += part
+                else:
+                    if buf.strip():
+                        chunks.append(buf.strip())
+                    buf = part
+            if buf.strip():
+                chunks.append(buf.strip())
+    return chunks if chunks else [line]
+
+
+def _build_srt_from_lines(lines: list[str], audio_path: str = "") -> str:
+    """Build SRT: split paragraphs into short chunks, distribute audio time evenly."""
+    if not lines:
+        return ""
+    all_chunks: list[str] = []
+    for line in lines:
+        all_chunks.extend(_split_line_to_chunks(line))
+    if not all_chunks:
+        all_chunks = lines
+    duration = _get_audio_duration(audio_path) or len(all_chunks) * 3.0
+    per_chunk = duration / len(all_chunks)
+    parts = []
+    for i, chunk in enumerate(all_chunks, 1):
+        s = (i - 1) * per_chunk
+        e = i * per_chunk
+        parts.append(f"{i}\n{_fmt_srt_time(s)} --> {_fmt_srt_time(e)}\n{chunk}")
+    return "\n\n".join(parts)
 
 
 # ── LLM prompt templates for script rewriting ────────────────────────
@@ -255,6 +338,8 @@ class SuperAgentPipelineUI(PipelineUI):
                             st.error(tr("super_agent.step2.legal_error", error=str(e)))
 
             st.markdown(f"**{tr('super_agent.step2.rewrite_result')}**")
+            if "_pending_sa_rewritten_script" in st.session_state:
+                st.session_state["sa_rewritten_script"] = st.session_state.pop("_pending_sa_rewritten_script")
             st.text_area(
                 "rewrite_display",
                 placeholder=tr("super_agent.step2.rewrite_placeholder"),
@@ -648,17 +733,10 @@ class SuperAgentPipelineUI(PipelineUI):
                         )
                         if script_text.strip():
                             lines = [ln.strip() for ln in script_text.strip().splitlines() if ln.strip()]
-                            srt_parts = []
-                            for i, line in enumerate(lines, 1):
-                                s_sec = (i - 1) * 3
-                                e_sec = i * 3
-                                sh, sm, ss = s_sec // 3600, (s_sec % 3600) // 60, s_sec % 60
-                                eh, em, es = e_sec // 3600, (e_sec % 3600) // 60, e_sec % 60
-                                srt_parts.append(
-                                    f"{i}\n{sh:02d}:{sm:02d}:{ss:02d},000 --> "
-                                    f"{eh:02d}:{em:02d}:{es:02d},000\n{line}"
-                                )
-                            st.session_state["sa_srt_content"] = "\n\n".join(srt_parts)
+                            st.session_state["sa_srt_content"] = _build_srt_from_lines(
+                                lines,
+                                audio_path=st.session_state.get("sa_audio_path", ""),
+                            )
 
                     if st.button(
                         tr("super_agent.step5.generate_srt"),
@@ -716,6 +794,8 @@ class SuperAgentPipelineUI(PipelineUI):
             st.markdown(f"**{tr('super_agent.step6.title')}**")
 
             st.markdown(f"**{tr('super_agent.step6.video_title_label')}**")
+            if "_pending_sa_video_title" in st.session_state:
+                st.session_state["sa_video_title"] = st.session_state.pop("_pending_sa_video_title")
             title_col, gen_col = st.columns([3, 1])
             with title_col:
                 st.text_input(
@@ -1078,21 +1158,10 @@ class SuperAgentPipelineUI(PipelineUI):
                             for ln in script_text.strip().splitlines()
                             if ln.strip()
                         ]
-                        srt_parts = []
-                        for i, line in enumerate(lines, 1):
-                            s_sec = (i - 1) * 3
-                            e_sec = i * 3
-                            sh = s_sec // 3600
-                            sm = (s_sec % 3600) // 60
-                            ss = s_sec % 60
-                            eh = e_sec // 3600
-                            em = (e_sec % 3600) // 60
-                            es = e_sec % 60
-                            srt_parts.append(
-                                f"{i}\n{sh:02d}:{sm:02d}:{ss:02d},000 --> "
-                                f"{eh:02d}:{em:02d}:{es:02d},000\n{line}"
-                            )
-                        st.session_state["sa_srt_content"] = "\n\n".join(srt_parts)
+                        st.session_state["sa_srt_content"] = _build_srt_from_lines(
+                            lines,
+                            audio_path=st.session_state.get("sa_audio_path", ""),
+                        )
                         st.rerun()
                     else:
                         st.warning(tr("super_agent.step5.srt_no_script"))
@@ -1161,14 +1230,20 @@ class SuperAgentPipelineUI(PipelineUI):
         from pixelle_video.services.publisher import PublisherService
         addr = st.session_state.get("sa_debugger_address", "127.0.0.1:9222")
         _, port = PublisherService.parse_address(addr)
+        driver_path = st.session_state.get("sa_driver_path", "") or ""
         try:
-            exe = PublisherService.launch_chrome_debug(port=port)
-            st.success(tr("super_agent.step7.launch_success", path=exe))
+            exe = PublisherService.launch_chrome_debug(port=port, chrome_path=driver_path)
+            if PublisherService.is_debug_port_open("127.0.0.1", port):
+                st.success(tr("super_agent.step7.launch_success", path=exe))
+            else:
+                manual_cmd = PublisherService._make_manual_cmd(exe, port)
+                st.warning(
+                    f"Chrome 已启动，正在等待调试端口就绪…\n\n"
+                    f"如果仍未连接，请手动在 CMD 中运行：\n```\n{manual_cmd}\n```"
+                )
             st.rerun()
         except FileNotFoundError:
             st.error(tr("super_agent.step7.chrome_not_found"))
-        except TimeoutError as e:
-            st.warning(str(e))
         except Exception as e:
             st.error(str(e))
 
@@ -1225,11 +1300,16 @@ class SuperAgentPipelineUI(PipelineUI):
 
     @staticmethod
     def _call_llm(pixelle_video: Any, prompt: str, target_key: str):
-        """Call LLM via pixelle_video.llm() and store result in session state."""
+        """Call LLM via pixelle_video.llm() and store result in session state.
+
+        Uses a _pending_ intermediate key so the value is applied BEFORE the
+        target widget is instantiated on the next rerun (Streamlit forbids
+        modifying a widget's session-state key after it has been rendered).
+        """
         with st.spinner(tr("super_agent.step2.rewriting")):
             try:
                 result = run_async(pixelle_video.llm(prompt, max_tokens=4096))
-                st.session_state[target_key] = result
+                st.session_state[f"_pending_{target_key}"] = result
                 st.rerun()
             except Exception as e:
                 st.error(tr("super_agent.step2.rewrite_error", error=str(e)))
@@ -1249,57 +1329,75 @@ class SuperAgentPipelineUI(PipelineUI):
         start_time = time.time()
 
         try:
-            async def _generate():
-                task_dir = st.session_state.get("sa_task_dir")
-                if not task_dir:
-                    task_dir, _ = create_task_output_dir()
-                    st.session_state["sa_task_dir"] = task_dir
+            # Resolve task_dir and character_image in the main thread before entering async
+            task_dir = st.session_state.get("sa_task_dir")
+            if not task_dir:
+                task_dir, _ = create_task_output_dir()
+                st.session_state["sa_task_dir"] = task_dir
 
+            character_image = custom_char_path
+            if not character_image:
+                from pixelle_video.utils.os_util import get_resource_path, resource_exists
+                char_map = {
+                    "young_male": "characters/young_male.png",
+                    "young_female": "characters/young_female.png",
+                    "middle_male": "characters/middle_male.png",
+                    "middle_female": "characters/middle_female.png",
+                }
+                char_file = char_map.get(character_key, "characters/young_male.png")
+                if resource_exists("", char_file):
+                    character_image = get_resource_path("", char_file)
+                else:
+                    character_image = None
+
+            wf_map = {
+                "v1": "workflows/runninghub/digital_combination.json",
+                "v2": "workflows/runninghub/digital_customize.json",
+            }
+            workflow_path = Path(wf_map.get(model_version, wf_map["v2"]))
+            if not workflow_path.exists():
+                raise FileNotFoundError(
+                    f"Digital human workflow not found: {workflow_path}"
+                )
+
+            with open(workflow_path, "r", encoding="utf-8") as f:
+                wf_config = json.load(f)
+
+            wf_params = {
+                "videoimage": character_image or "",
+                "audio": audio_path,
+            }
+
+            if wf_config.get("source") == "runninghub" and "workflow_id" in wf_config:
+                wf_input = wf_config["workflow_id"]
+            else:
+                wf_input = str(workflow_path)
+
+            # Update UI in main thread before entering background async
+            status_text.text(tr("super_agent.step4.generating"))
+            progress_bar.progress(20)
+
+            async def _generate(_wf_input, _wf_params, _task_dir):
+                """Pure async computation — no Streamlit calls inside (runs in background thread)."""
                 kit = await pixelle_video._get_or_create_comfykit()
 
-                character_image = custom_char_path
-                if not character_image:
-                    from pixelle_video.utils.os_util import get_resource_path, resource_exists
-                    char_map = {
-                        "young_male": "characters/young_male.png",
-                        "young_female": "characters/young_female.png",
-                        "middle_male": "characters/middle_male.png",
-                        "middle_female": "characters/middle_female.png",
-                    }
-                    char_file = char_map.get(character_key, "characters/young_male.png")
-                    if resource_exists("", char_file):
-                        character_image = get_resource_path("", char_file)
-                    else:
-                        character_image = None
-
-                status_text.text(tr("super_agent.step4.generating"))
-                progress_bar.progress(20)
-
-                wf_map = {
-                    "v1": "workflows/runninghub/digital_combination.json",
-                    "v2": "workflows/runninghub/digital_customize.json",
-                }
-                workflow_path = Path(wf_map.get(model_version, wf_map["v2"]))
-                if not workflow_path.exists():
-                    raise FileNotFoundError(
-                        f"Digital human workflow not found: {workflow_path}"
-                    )
-
-                with open(workflow_path, "r", encoding="utf-8") as f:
-                    wf_config = json.load(f)
-
-                wf_params = {
-                    "videoimage": character_image or "",
-                    "audio": audio_path,
-                }
-
-                if wf_config.get("source") == "runninghub" and "workflow_id" in wf_config:
-                    wf_input = wf_config["workflow_id"]
-                else:
-                    wf_input = str(workflow_path)
-
-                progress_bar.progress(40)
-                result = await kit.execute(wf_input, wf_params)
+                max_attempts = 5
+                retry_wait = 30
+                result = None
+                for attempt in range(1, max_attempts + 1):
+                    result = await kit.execute(_wf_input, _wf_params)
+                    status = getattr(result, "status", "")
+                    msg = getattr(result, "msg", "") or ""
+                    if status == "completed":
+                        break
+                    if "TASK_QUEUE_MAXED" in msg and attempt < max_attempts:
+                        logger.warning(
+                            f"RunningHub queue full (attempt {attempt}/{max_attempts}), "
+                            f"retrying in {retry_wait}s..."
+                        )
+                        await asyncio.sleep(retry_wait)
+                        continue
+                    break
 
                 logger.info(
                     f"Workflow result: status={getattr(result, 'status', 'N/A')}, "
@@ -1356,19 +1454,29 @@ class SuperAgentPipelineUI(PipelineUI):
                         f"Dump: {result.model_dump() if hasattr(result, 'model_dump') else str(result)}"
                     )
 
-                progress_bar.progress(80)
-                final_path = os.path.join(task_dir, "digital_human.mp4")
+                logger.info(f"Downloading generated media from: {generated_url}")
+                final_path = os.path.join(_task_dir, "digital_human.mp4")
                 timeout = httpx.Timeout(300.0)
-                async with httpx.AsyncClient(timeout=timeout) as client:
+                async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
                     resp = await client.get(generated_url)
                     resp.raise_for_status()
+                    content_type = resp.headers.get("content-type", "")
+                    content = resp.content
+                    logger.info(
+                        f"Download complete: {len(content)} bytes, "
+                        f"Content-Type: {content_type}"
+                    )
+                    if len(content) == 0:
+                        raise RuntimeError(
+                            f"Downloaded file is empty (0 bytes). URL: {generated_url}"
+                        )
                     with open(final_path, "wb") as f:
-                        f.write(resp.content)
+                        f.write(content)
 
-                progress_bar.progress(100)
                 return final_path
 
-            video_path = run_async(_generate())
+            video_path = run_async(_generate(wf_input, wf_params, task_dir))
+            progress_bar.progress(100)
             status_text.text(tr("super_agent.step4.success"))
             st.session_state["sa_video_path"] = video_path
 
@@ -1384,7 +1492,8 @@ class SuperAgentPipelineUI(PipelineUI):
         except Exception as e:
             status_text.text("")
             progress_bar.empty()
-            st.error(tr("super_agent.step4.error", error=str(e)))
+            error_detail = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+            st.error(tr("super_agent.step4.error", error=error_detail))
             logger.exception(e)
 
     def _do_assemble(
