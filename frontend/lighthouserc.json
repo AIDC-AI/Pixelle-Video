@@ -1,0 +1,31 @@
+{
+  "ci": {
+    "collect": {
+      "numberOfRuns": 1,
+      "settings": {
+        "chromeFlags": "--no-sandbox --disable-dev-shm-usage",
+        "preset": "desktop"
+      },
+      "url": [
+        "http://127.0.0.1:3000/create",
+        "http://127.0.0.1:3000/library/videos",
+        "http://127.0.0.1:3000/batch",
+        "http://127.0.0.1:3000/settings"
+      ]
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": [
+          "error",
+          {
+            "minScore": 0.85
+          }
+        ]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": ".lighthouseci"
+    }
+  }
+}

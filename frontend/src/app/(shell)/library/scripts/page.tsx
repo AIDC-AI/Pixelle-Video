@@ -6,11 +6,12 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Copy, FileText, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { LibraryEmptyState } from '@/components/library/library-empty-state';
 import { LibraryFilterBar } from '@/components/library/library-filter-bar';
 import { LibraryTable } from '@/components/library/library-table';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { EmptyState } from '@/components/shared/empty-state';
+import { SkeletonTable } from '@/components/shared/skeleton-table';
 import { useCurrentProjectHydration } from '@/lib/hooks/use-current-project';
 import { useLibraryScripts } from '@/lib/hooks/use-library-assets';
 import { useProjects } from '@/lib/hooks/use-projects';
@@ -179,19 +180,15 @@ function LibraryScriptsPageContent() {
         onProjectFilterChange={handleProjectFilterChange}
       />
 
-      {isInitialLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={`script-skeleton-${index}`} className="h-24 animate-pulse rounded-2xl border border-border/70 bg-muted/30" />
-          ))}
-        </div>
-      ) : null}
+      {isInitialLoading ? <SkeletonTable cellCount={5} gridClassName={TABLE_GRID_CLASS} /> : null}
 
       {isEmpty ? (
-        <LibraryEmptyState
+        <EmptyState
           icon={FileText}
           title={projectFilter !== 'all' ? 'This project has no script history yet.' : 'No script history indexed yet.'}
           description="Narration and prompt history will appear here after generation or assistive writing flows complete."
+          actionHref="/create"
+          actionLabel="Go to Create"
         />
       ) : null}
 

@@ -104,3 +104,108 @@ jobs:
           name: playwright-test-results
           path: frontend/test-results/playwright/
           retention-days: 7
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint-test-build
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install backend deps
+        working-directory: .
+        run: uv sync --extra dev
+
+      - name: Build frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+        run: pnpm build
+
+      - name: Start backend mock
+        working-directory: .
+        run: |
+          COMFY_MOCK=1 TTS_MOCK=1 LLM_MOCK=1 uv run uvicorn api.app:app --host 127.0.0.1 --port 8000 > /tmp/pixelle-backend.log 2>&1 &
+          echo $! > /tmp/pixelle-backend.pid
+          python - <<'PY'
+          import time
+          import urllib.request
+
+          deadline = time.time() + 60
+          url = "http://127.0.0.1:8000/health"
+          while time.time() < deadline:
+              try:
+                  with urllib.request.urlopen(url, timeout=2) as response:
+                      if response.status == 200:
+                          raise SystemExit(0)
+              except Exception:
+                  time.sleep(1)
+          raise SystemExit("Backend did not become ready in time")
+          PY
+
+      - name: Start frontend server
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+        run: |
+          pnpm exec next start --hostname 127.0.0.1 --port 3000 > /tmp/pixelle-frontend.log 2>&1 &
+          echo $! > /tmp/pixelle-frontend.pid
+          node - <<'JS'
+          const http = require('node:http');
+
+          const deadline = Date.now() + 60_000;
+          const url = 'http://127.0.0.1:3000/create';
+
+          function check() {
+            http.get(url, (response) => {
+              response.resume();
+              if (response.statusCode === 200) {
+                process.exit(0);
+              }
+              retry();
+            }).on('error', retry);
+          }
+
+          function retry() {
+            if (Date.now() > deadline) {
+              console.error('Frontend did not become ready in time');
+              process.exit(1);
+            }
+            setTimeout(check, 1000);
+          }
+
+          check();
+          JS
+
+      - name: Run Lighthouse CI
+        run: pnpm test:lighthouse
+
+      - name: Upload Lighthouse artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: frontend/.lighthouseci/
+          retention-days: 7
+
+      - name: Stop mock servers
+        if: always()
+        run: |
+          test -f /tmp/pixelle-frontend.pid && kill "$(cat /tmp/pixelle-frontend.pid)" || true
+          test -f /tmp/pixelle-backend.pid && kill "$(cat /tmp/pixelle-backend.pid)" || true

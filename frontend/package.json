@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:lighthouse": "lhci autorun --config=./lighthouserc.json",
     "typecheck": "tsc --noEmit",
     "gen:api-types": "openapi-typescript http://localhost:8000/openapi.json -o src/types/api.d.ts"
   },
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@tanstack/react-query-devtools": "^5.99.2",

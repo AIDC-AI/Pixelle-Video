@@ -1,4 +1,6 @@
 import React from 'react';
+import { ErrorBoundary } from '@/components/shared/error-boundary';
+import { EmptyProjectsPrompt } from './empty-projects-prompt';
 import { Topbar } from './topbar';
 import { Sidebar } from './sidebar';
 
@@ -10,7 +12,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-[1600px] w-full px-6 py-6 lg:px-8">
-            {children}
+            <ErrorBoundary>
+              <EmptyProjectsPrompt />
+              {children}
+            </ErrorBoundary>
           </div>
         </main>
       </div>

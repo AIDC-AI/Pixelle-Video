@@ -263,6 +263,9 @@ cd Pixelle-Video
 ```bash
 # 使用 uv 运行（推荐，会自动安装依赖）
 uv run streamlit run web/app.py
+
+# optional: keep Streamlit in read-only history/preview mode
+PIXELLE_STREAMLIT_READ_ONLY=1 uv run streamlit run web/app.py
 ```
 
 浏览器会自动打开 http://localhost:8501

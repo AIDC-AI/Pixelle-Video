@@ -22,6 +22,7 @@ import streamlit as st
 from loguru import logger
 
 from web.i18n import tr, get_language
+from web.components.read_only import is_streamlit_read_only, read_only_notice
 from web.utils.async_helpers import run_async
 from pixelle_video.models.progress import ProgressEvent
 from pixelle_video.config import config_manager
@@ -68,6 +69,17 @@ def render_single_output(pixelle_video, video_params):
         # Check if system is configured
         if not config_manager.validate():
             st.warning(tr("settings.not_configured"))
+
+        if is_streamlit_read_only():
+            st.info(read_only_notice())
+            st.button(
+                tr("btn.generate"),
+                type="primary",
+                use_container_width=True,
+                disabled=True,
+                key="single_generate_read_only",
+            )
+            return
         
         # Generate Button
         if st.button(tr("btn.generate"), type="primary", use_container_width=True):
@@ -229,6 +241,17 @@ def render_batch_output(pixelle_video, video_params):
         # Check system configuration
         if not config_manager.validate():
             st.warning(tr("settings.not_configured"))
+            return
+
+        if is_streamlit_read_only():
+            st.info(read_only_notice())
+            st.button(
+                tr("batch.generate_button", count=batch_count),
+                type="primary",
+                use_container_width=True,
+                disabled=True,
+                key="batch_generate_read_only",
+            )
             return
         
         batch_count = len(topics)

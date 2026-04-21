@@ -7,9 +7,10 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Copy, Download, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { LibraryEmptyState } from '@/components/library/library-empty-state';
 import { LibraryFilterBar } from '@/components/library/library-filter-bar';
 import { LibraryGrid } from '@/components/library/library-grid';
+import { EmptyState } from '@/components/shared/empty-state';
+import { SkeletonCard } from '@/components/shared/skeleton-card';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,18 +37,6 @@ import type { components } from '@/types/api';
 type ImageItem = components['schemas']['ImageItem'];
 
 const DEFAULT_LIMIT = 12;
-
-function ImageSkeleton() {
-  return (
-    <Card className="overflow-hidden border-border/70 bg-card shadow-none">
-      <div className="aspect-[3/4] animate-pulse bg-muted/70" />
-      <CardContent className="space-y-3 p-4">
-        <div className="h-4 w-3/4 animate-pulse rounded bg-muted/70" />
-        <div className="h-3 w-1/2 animate-pulse rounded bg-muted/50" />
-      </CardContent>
-    </Card>
-  );
-}
 
 function buildReuseHref(item: ImageItem): string {
   const sourceImage = item.image_url ?? item.image_path;
@@ -194,16 +183,18 @@ function LibraryImagesPageContent() {
       {isInitialLoading ? (
         <LibraryGrid>
           {Array.from({ length: 8 }).map((_, index) => (
-            <ImageSkeleton key={`image-skeleton-${index}`} />
+            <SkeletonCard key={`image-skeleton-${index}`} aspectClassName="aspect-[3/4]" />
           ))}
         </LibraryGrid>
       ) : null}
 
       {isEmpty ? (
-        <LibraryEmptyState
+        <EmptyState
           icon={ImageIcon}
           title={projectFilter !== 'all' ? 'This project has no images yet.' : 'No images indexed yet.'}
           description={emptyDescription}
+          actionHref="/create"
+          actionLabel="Go to Create"
         />
       ) : null}
 

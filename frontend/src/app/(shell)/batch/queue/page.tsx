@@ -21,6 +21,7 @@ import {
   statusLabel,
 } from '@/lib/pipeline-utils';
 import { EmptyState } from '@/components/shared/empty-state';
+import { SkeletonTable } from '@/components/shared/skeleton-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress, ProgressIndicator, ProgressTrack } from '@/components/ui/progress';
@@ -44,23 +45,7 @@ const STATUS_FILTERS: Array<TaskStatus | 'all'> = [
   'failed',
   'cancelled',
 ];
-
-function QueueTableSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-border/70">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <div
-          key={`queue-skeleton-${index}`}
-          className="grid animate-pulse grid-cols-[1.4fr_0.8fr_1fr_1.2fr_1fr_1.2fr] gap-4 border-b border-border/50 bg-card px-4 py-4 last:border-none"
-        >
-          {Array.from({ length: 6 }).map((__, cellIndex) => (
-            <div key={`queue-skeleton-cell-${index}-${cellIndex}`} className="h-4 rounded bg-muted/70" />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
+const QUEUE_GRID_CLASS = 'grid grid-cols-[1.4fr_0.8fr_1fr_1.2fr_1fr_1.2fr]';
 
 function QueueRowActions({
   onCancel,
@@ -212,7 +197,7 @@ function BatchQueuePageContent() {
         </div>
       </div>
 
-      {isLoading ? <QueueTableSkeleton /> : null}
+      {isLoading ? <SkeletonTable cellCount={6} gridClassName={QUEUE_GRID_CLASS} /> : null}
 
       {!isLoading && tasks.length === 0 ? (
         <EmptyState
@@ -226,7 +211,7 @@ function BatchQueuePageContent() {
 
       {!isLoading && tasks.length > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-none">
-          <div className="grid grid-cols-[1.4fr_0.8fr_1fr_1.2fr_1fr_1.2fr] gap-4 border-b border-border/70 bg-muted/20 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className={`${QUEUE_GRID_CLASS} gap-4 border-b border-border/70 bg-muted/20 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground`}>
             <span>Task ID</span>
             <span>Status</span>
             <span>Pipeline</span>
@@ -242,7 +227,7 @@ function BatchQueuePageContent() {
             return (
               <div
                 key={task.task_id}
-                className="grid grid-cols-[1.4fr_0.8fr_1fr_1.2fr_1fr_1.2fr] gap-4 border-b border-border/60 px-4 py-4 text-sm last:border-none"
+                className={`${QUEUE_GRID_CLASS} gap-4 border-b border-border/60 px-4 py-4 text-sm last:border-none`}
               >
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">

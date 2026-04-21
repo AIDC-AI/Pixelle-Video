@@ -1,6 +1,5 @@
-import React from 'react';
-import { PagePlaceholder } from '@/components/shared/page-placeholder';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <PagePlaceholder title="Appearance" description="Appearance" />;
+  redirect('/settings?tab=appearance');
 }

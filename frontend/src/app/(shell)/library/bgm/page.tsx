@@ -5,11 +5,12 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Download, Music4, Sparkles } from 'lucide-react';
 
-import { LibraryEmptyState } from '@/components/library/library-empty-state';
 import { LibraryFilterBar } from '@/components/library/library-filter-bar';
 import { LibraryTable } from '@/components/library/library-table';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { EmptyState } from '@/components/shared/empty-state';
+import { SkeletonTable } from '@/components/shared/skeleton-table';
 import { useCurrentProjectHydration } from '@/lib/hooks/use-current-project';
 import { useLibraryBgm } from '@/lib/hooks/use-library-assets';
 import { useProjects } from '@/lib/hooks/use-projects';
@@ -177,18 +178,16 @@ function LibraryBgmPageContent() {
       </LibraryFilterBar>
 
       {isInitialLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={`bgm-skeleton-${index}`} className="h-20 animate-pulse rounded-2xl border border-border/70 bg-muted/30" />
-          ))}
-        </div>
+        <SkeletonTable cellCount={6} gridClassName={TABLE_GRID_CLASS} />
       ) : null}
 
       {isEmpty ? (
-        <LibraryEmptyState
+        <EmptyState
           icon={Music4}
           title={sourceTab === 'builtin' ? 'No built-in tracks available.' : 'No personal BGM history yet.'}
           description="Built-in tracks come from the shared resources catalog; your own reused tracks appear after generation history is indexed."
+          actionHref="/create"
+          actionLabel="Go to Create"
         />
       ) : null}
 

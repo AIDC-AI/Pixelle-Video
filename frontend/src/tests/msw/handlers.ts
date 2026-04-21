@@ -45,8 +45,11 @@ type BgmListResponse =
   paths['/api/resources/bgm']['get']['responses'][200]['content']['application/json'];
 type UploadResponse = paths['/api/uploads']['post']['responses'][201]['content']['application/json'];
 type ApiErrorResponse = components['schemas']['ApiErrorResponse'];
+type HealthResponse = paths['/health']['get']['responses'][200]['content']['application/json'];
 type BatchPipeline = components['schemas']['BatchPipeline'];
 type BatchStatus = components['schemas']['BatchStatus'];
+type SettingsPayload = components['schemas']['SettingsPayload'];
+type SettingsUpdatePayload = components['schemas']['SettingsUpdatePayload'];
 
 type SubmitRequestByEndpoint = {
   '/api/video/generate/async': paths['/api/video/generate/async']['post']['requestBody']['content']['application/json'];
@@ -131,6 +134,26 @@ let libraryScripts: ScriptItem[] = [];
 let batches: StoredBatch[] = [];
 let templates: TemplateInfo[] = [];
 let presets: PresetItem[] = [];
+let settingsPayload: SettingsPayload = {
+  project_name: 'Pixelle-Video',
+  llm: {
+    api_key: 'sk-****demo',
+    base_url: 'https://api.openai.com/v1',
+    model: 'gpt-5.4',
+  },
+  comfyui: {
+    comfyui_url: 'http://127.0.0.1:8188',
+    comfyui_api_key: 'cf-****demo',
+    runninghub_api_key: 'rh-****demo',
+    runninghub_concurrent_limit: 2,
+    runninghub_instance_type: 'plus',
+  },
+  template: {
+    default_template: '1080x1920/default.html',
+  },
+};
+let settingsWriteShouldFail = false;
+let healthShouldFail = false;
 const libraryVideoDetails = new Map<string, LibraryVideoDetailMode>();
 const workflowDetails = new Map<string, WorkflowDetailResponse>();
 
@@ -725,6 +748,110 @@ function setDefaultAdvancedResources(): void {
   );
 }
 
+function mergeSettings(
+  current: SettingsPayload,
+  updates: SettingsUpdatePayload
+): SettingsPayload {
+  const currentLlm = current.llm ?? {
+    api_key: '',
+    base_url: '',
+    model: '',
+  };
+  const currentComfyui = current.comfyui ?? {
+    comfyui_url: '',
+    comfyui_api_key: null,
+    runninghub_api_key: null,
+    runninghub_concurrent_limit: 1,
+    runninghub_instance_type: null,
+    tts: {
+      inference_mode: 'local',
+      local: {
+        voice: 'zh-CN-YunjianNeural',
+        speed: 1.0,
+      },
+      comfyui: {
+        default_workflow: null,
+      },
+    },
+    image: {
+      default_workflow: null,
+      prompt_prefix: '',
+    },
+    video: {
+      default_workflow: null,
+      prompt_prefix: '',
+    },
+  };
+  const currentTemplate = current.template ?? {
+    default_template: '',
+  };
+
+  return {
+    project_name: updates.project_name ?? current.project_name,
+    llm: {
+      api_key: updates.llm?.api_key ?? currentLlm.api_key,
+      base_url: updates.llm?.base_url ?? currentLlm.base_url,
+      model: updates.llm?.model ?? currentLlm.model,
+    },
+    comfyui: {
+      ...currentComfyui,
+      comfyui_url: updates.comfyui?.comfyui_url ?? currentComfyui.comfyui_url,
+      comfyui_api_key:
+        updates.comfyui?.comfyui_api_key === undefined
+          ? currentComfyui.comfyui_api_key
+          : updates.comfyui.comfyui_api_key,
+      runninghub_api_key:
+        updates.comfyui?.runninghub_api_key === undefined
+          ? currentComfyui.runninghub_api_key
+          : updates.comfyui.runninghub_api_key,
+      runninghub_concurrent_limit:
+        updates.comfyui?.runninghub_concurrent_limit ?? currentComfyui.runninghub_concurrent_limit,
+      runninghub_instance_type:
+        updates.comfyui?.runninghub_instance_type === undefined
+          ? currentComfyui.runninghub_instance_type
+          : updates.comfyui.runninghub_instance_type,
+      tts: updates.comfyui?.tts
+        ? {
+            inference_mode:
+              updates.comfyui.tts.inference_mode ?? currentComfyui.tts?.inference_mode ?? 'local',
+            local: updates.comfyui.tts.local
+              ? {
+                  voice:
+                    updates.comfyui.tts.local.voice ?? currentComfyui.tts?.local?.voice ?? 'zh-CN-YunjianNeural',
+                  speed: updates.comfyui.tts.local.speed ?? currentComfyui.tts?.local?.speed ?? 1.0,
+                }
+              : currentComfyui.tts?.local,
+            comfyui: updates.comfyui.tts.comfyui
+              ? {
+                  default_workflow:
+                    updates.comfyui.tts.comfyui.default_workflow ??
+                    currentComfyui.tts?.comfyui?.default_workflow ??
+                    null,
+                }
+              : currentComfyui.tts?.comfyui,
+          }
+        : currentComfyui.tts,
+      image: updates.comfyui?.image
+        ? {
+            default_workflow:
+              updates.comfyui.image.default_workflow ?? currentComfyui.image?.default_workflow ?? null,
+            prompt_prefix: updates.comfyui.image.prompt_prefix ?? currentComfyui.image?.prompt_prefix ?? '',
+          }
+        : currentComfyui.image,
+      video: updates.comfyui?.video
+        ? {
+            default_workflow:
+              updates.comfyui.video.default_workflow ?? currentComfyui.video?.default_workflow ?? null,
+            prompt_prefix: updates.comfyui.video.prompt_prefix ?? currentComfyui.video?.prompt_prefix ?? '',
+          }
+        : currentComfyui.video,
+    },
+    template: {
+      default_template: updates.template?.default_template ?? currentTemplate.default_template,
+    },
+  };
+}
+
 function getScenario(taskId: string): TaskScenario | undefined {
   return taskScenarios.get(taskId);
 }
@@ -793,6 +920,26 @@ function resetMockApiState(): void {
   setDefaultAdvancedResources();
   setDefaultTaskScenarios();
   setDefaultBatches();
+  settingsPayload = {
+    project_name: 'Pixelle-Video',
+    llm: {
+      api_key: 'sk-****demo',
+      base_url: 'https://api.openai.com/v1',
+      model: 'gpt-5.4',
+    },
+    comfyui: {
+      comfyui_url: 'http://127.0.0.1:8188',
+      comfyui_api_key: 'cf-****demo',
+      runninghub_api_key: 'rh-****demo',
+      runninghub_concurrent_limit: 2,
+      runninghub_instance_type: 'plus',
+    },
+    template: {
+      default_template: '1080x1920/default.html',
+    },
+  };
+  settingsWriteShouldFail = false;
+  healthShouldFail = false;
 }
 
 function setSubmitScenario(scenario: SubmitScenario, taskId = DEFAULT_SUCCESS_TASK_ID): void {
@@ -855,6 +1002,18 @@ function setProjects(nextProjects: Project[]): void {
   projects = structuredClone(nextProjects);
 }
 
+function setSettings(nextSettings: SettingsPayload): void {
+  settingsPayload = structuredClone(nextSettings);
+}
+
+function setSettingsWriteShouldFail(value: boolean): void {
+  settingsWriteShouldFail = value;
+}
+
+function setHealthShouldFail(value: boolean): void {
+  healthShouldFail = value;
+}
+
 function setLibraryVideos(items: VideoItem[]): void {
   libraryVideos = structuredClone(items);
 }
@@ -913,6 +1072,22 @@ function paginateItems<T>(items: T[], cursorParam: string | null, limitParam: st
 resetMockApiState();
 
 const handlers = [
+  http.get(`${baseURL}/health`, () => {
+    if (healthShouldFail) {
+      return HttpResponse.json<ApiErrorResponse>(
+        { detail: { code: 'HEALTH_UNAVAILABLE', message: 'Health endpoint unavailable' } },
+        { status: 503 }
+      );
+    }
+
+    const response: HealthResponse = {
+      status: 'healthy',
+      version: '0.1.0',
+      service: 'Pixelle-Video API',
+    };
+    return HttpResponse.json(response);
+  }),
+
   createSubmitHandler('/api/video/generate/async'),
   createSubmitHandler('/api/video/digital-human/async'),
   createSubmitHandler('/api/video/i2v/async'),
@@ -924,6 +1099,37 @@ const handlers = [
       items: structuredClone(projects),
     };
     return HttpResponse.json(response);
+  }),
+
+  http.delete(`${baseURL}/api/projects/:projectId`, ({ params }) => {
+    const projectId = String(params.projectId);
+    const index = projects.findIndex((project) => project.id === projectId);
+
+    if (index === -1) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    const deletedProject = {
+      ...projects[index],
+      deleted_at: DEFAULT_TIME,
+    };
+    projects = projects.filter((project) => project.id !== projectId);
+    return HttpResponse.json(deletedProject);
+  }),
+
+  http.get(`${baseURL}/api/settings`, () => HttpResponse.json(structuredClone(settingsPayload))),
+
+  http.put(`${baseURL}/api/settings`, async ({ request }) => {
+    if (settingsWriteShouldFail) {
+      return HttpResponse.json<ApiErrorResponse>(
+        { detail: { code: 'SETTINGS_WRITE_FAILED', message: 'Failed to update settings.' } },
+        { status: 500 }
+      );
+    }
+
+    const body = (await request.json()) as SettingsUpdatePayload;
+    settingsPayload = mergeSettings(settingsPayload, body);
+    return HttpResponse.json(structuredClone(settingsPayload));
   }),
 
   http.get(`${baseURL}/api/batch`, ({ request }) => {
@@ -1350,7 +1556,10 @@ export {
   setLibraryVoices,
   setPresets,
   setProjects,
+  setSettings,
+  setSettingsWriteShouldFail,
   setAsyncSubmitScenario,
+  setHealthShouldFail,
   setSubmitScenario,
   setTemplates,
   setTaskScenario,

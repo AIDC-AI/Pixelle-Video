@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { BatchProgressBar } from '@/components/batch/batch-progress-bar';
 import { BatchStatusBadge } from '@/components/batch/batch-status-badge';
 import { EmptyState } from '@/components/shared/empty-state';
+import { SkeletonTable } from '@/components/shared/skeleton-table';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -26,6 +27,8 @@ import { formatRelativeTime, normalizeProjectFilterValue, projectFilterLabel } f
 import { cn } from '@/lib/utils';
 
 const STATUS_OPTIONS = ['all', 'pending', 'running', 'completed', 'failed', 'cancelled', 'partial'] as const;
+const BATCH_LIST_GRID_CLASS =
+  'grid grid-cols-[1.6fr_1fr_0.7fr_0.7fr_0.7fr_0.7fr_0.9fr_1fr_1.1fr]';
 
 function toDateInput(value: string | null): string {
   return value ?? '';
@@ -198,11 +201,7 @@ function BatchListPageContent() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={`batch-list-skeleton-${index}`} className="h-20 animate-pulse rounded-2xl border border-border/70 bg-muted/30" />
-          ))}
-        </div>
+        <SkeletonTable cellCount={9} gridClassName={BATCH_LIST_GRID_CLASS} />
       ) : null}
 
       {!isLoading && items.length === 0 ? (
@@ -217,7 +216,7 @@ function BatchListPageContent() {
 
       {!isLoading && items.length > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-border/70 bg-card">
-          <div className="grid grid-cols-[1.6fr_1fr_0.7fr_0.7fr_0.7fr_0.7fr_0.9fr_1fr_1.1fr] gap-4 border-b border-border/70 bg-muted/20 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className={`${BATCH_LIST_GRID_CLASS} gap-4 border-b border-border/70 bg-muted/20 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground`}>
             <span>Name</span>
             <span>Pipeline</span>
             <span>Total</span>
@@ -232,7 +231,7 @@ function BatchListPageContent() {
           {items.map((batch) => (
             <div
               key={batch.id}
-              className="grid grid-cols-[1.6fr_1fr_0.7fr_0.7fr_0.7fr_0.7fr_0.9fr_1fr_1.1fr] gap-4 border-b border-border/60 px-4 py-4 last:border-none"
+              className={`${BATCH_LIST_GRID_CLASS} gap-4 border-b border-border/60 px-4 py-4 last:border-none`}
             >
               <div className="space-y-2">
                 <div className="font-medium text-foreground">{batch.name ?? batch.id}</div>

@@ -5,9 +5,10 @@ import React, { Suspense, useEffect, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AudioLines, Download, Sparkles } from 'lucide-react';
 
-import { LibraryEmptyState } from '@/components/library/library-empty-state';
 import { LibraryFilterBar } from '@/components/library/library-filter-bar';
 import { LibraryTable } from '@/components/library/library-table';
+import { EmptyState } from '@/components/shared/empty-state';
+import { SkeletonTable } from '@/components/shared/skeleton-table';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { useCurrentProjectHydration } from '@/lib/hooks/use-current-project';
 import { useLibraryVoices } from '@/lib/hooks/use-library-assets';
@@ -160,18 +161,16 @@ function LibraryVoicesPageContent() {
       />
 
       {isInitialLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={`voice-skeleton-${index}`} className="h-20 animate-pulse rounded-2xl border border-border/70 bg-muted/30" />
-          ))}
-        </div>
+        <SkeletonTable cellCount={6} gridClassName={TABLE_GRID_CLASS} />
       ) : null}
 
       {isEmpty ? (
-        <LibraryEmptyState
+        <EmptyState
           icon={AudioLines}
           title={projectFilter !== 'all' ? 'This project has no voice assets yet.' : 'No voice assets indexed yet.'}
           description="Generated TTS outputs will appear here once they have been synthesized by a pipeline."
+          actionHref="/create"
+          actionLabel="Go to Create"
         />
       ) : null}
 

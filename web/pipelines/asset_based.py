@@ -25,6 +25,7 @@ import streamlit as st
 from loguru import logger
 
 from web.i18n import tr, get_language
+from web.components.read_only import is_streamlit_read_only, read_only_notice
 from web.pipelines.base import PipelineUI, register_pipeline_ui
 from web.components.content_input import render_bgm_section, render_version_info
 from web.utils.async_helpers import run_async
@@ -292,6 +293,17 @@ class AssetBasedPipelineUI(PipelineUI):
             # Check configuration
             if not config_manager.validate():
                 st.warning(tr("settings.not_configured"))
+
+            if is_streamlit_read_only():
+                st.info(read_only_notice())
+                st.button(
+                    tr("btn.generate"),
+                    type="primary",
+                    use_container_width=True,
+                    disabled=True,
+                    key="asset_generate_read_only",
+                )
+                return
             
             # Check if assets are provided
             assets = video_params.get("assets", [])

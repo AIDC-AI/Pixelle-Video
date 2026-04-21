@@ -16,6 +16,7 @@ from typing import Optional
 import streamlit as st
 import streamlit.components.v1 as components
 
+from web.components.read_only import migration_banner_copy
 from web.utils.streamlit_helpers import safe_rerun
 
 BANNER_COOKIE_NAME = "pixelle_new_frontend_banner_hide_until"
@@ -99,15 +100,16 @@ def render_migration_banner() -> None:
     if not should_show_banner(session_value=session_value, cookie_value=cookie_value):
         return
 
+    title, description, button_label = migration_banner_copy()
+
     with st.container(border=True):
         content_col, action_col, dismiss_col = st.columns([5, 1.4, 1.4])
         with content_col:
-            st.markdown("#### 🆕 新版工作台已上线，点击切换")
-            st.caption("新工作台支持项目化管理、历史视频库与批量任务队列。")
+            st.markdown(title)
+            st.caption(description)
         with action_col:
-            st.link_button("切换到新版", get_new_frontend_url(), use_container_width=True)
+            st.link_button(button_label, get_new_frontend_url(), use_container_width=True)
         with dismiss_col:
             if st.button("稍后提醒我", key="dismiss_migration_banner", use_container_width=True):
                 _persist_banner_hide_until(hide_banner_for_24_hours())
                 safe_rerun()
-

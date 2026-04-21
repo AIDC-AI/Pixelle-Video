@@ -6,6 +6,7 @@ import { Layers3, ListFilter, PlusCircle } from 'lucide-react';
 import { BatchProgressBar } from '@/components/batch/batch-progress-bar';
 import { BatchStatusBadge } from '@/components/batch/batch-status-badge';
 import { EmptyState } from '@/components/shared/empty-state';
+import { SkeletonRow } from '@/components/shared/skeleton-row';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBatchList } from '@/lib/hooks/use-batches';
@@ -116,9 +117,12 @@ export default function BatchDashboardPage() {
         <CardContent className="space-y-4 p-4">
           {recentQuery.isLoading ? (
             Array.from({ length: 3 }).map((_, index) => (
-              <div
+              <SkeletonRow
                 key={`batch-dashboard-skeleton-${index}`}
-                className="h-28 animate-pulse rounded-2xl border border-border/70 bg-muted/30"
+                cellCount={2}
+                gridClassName="grid grid-cols-[1fr_10rem]"
+                className="rounded-2xl border border-border/70 bg-muted/10"
+                heightClassName="h-5"
               />
             ))
           ) : null}

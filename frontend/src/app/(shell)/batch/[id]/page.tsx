@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { BatchProgressBar } from '@/components/batch/batch-progress-bar';
 import { BatchStatusBadge } from '@/components/batch/batch-status-badge';
 import { EmptyState } from '@/components/shared/empty-state';
+import { SkeletonTable } from '@/components/shared/skeleton-table';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils';
 
 type Task = components['schemas']['Task'];
 const EMPTY_TASKS: Task[] = [];
+const BATCH_DETAIL_GRID_CLASS = 'grid grid-cols-[1.2fr_0.8fr_1fr_0.8fr_1.2fr]';
 
 function formatRuntime(task: Task): string {
   if (!task.started_at || !task.completed_at) {
@@ -88,7 +90,12 @@ function BatchDetailPageContent() {
   );
 
   if (batchQuery.isLoading) {
-    return <div className="p-4 text-sm text-muted-foreground">Loading batch detail…</div>;
+    return (
+      <div className="space-y-4 p-4 md:p-6">
+        <div className="h-10 w-72 animate-pulse rounded bg-muted/60" />
+        <SkeletonTable cellCount={5} gridClassName={BATCH_DETAIL_GRID_CLASS} />
+      </div>
+    );
   }
 
   if (!batch) {
@@ -160,7 +167,7 @@ function BatchDetailPageContent() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border/70 bg-card">
-        <div className="grid grid-cols-[1.2fr_0.8fr_1fr_0.8fr_1.2fr] gap-4 border-b border-border/70 bg-muted/20 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className={`${BATCH_DETAIL_GRID_CLASS} gap-4 border-b border-border/70 bg-muted/20 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground`}>
           <span>Task ID</span>
           <span>Status</span>
           <span>Progress</span>
@@ -171,7 +178,7 @@ function BatchDetailPageContent() {
         {children.map((task) => (
           <div
             key={task.task_id}
-            className="grid grid-cols-[1.2fr_0.8fr_1fr_0.8fr_1.2fr] gap-4 border-b border-border/60 px-4 py-4 last:border-none"
+            className={`${BATCH_DETAIL_GRID_CLASS} gap-4 border-b border-border/60 px-4 py-4 last:border-none`}
           >
             <div className="space-y-1">
               <div className="font-mono text-xs text-foreground">{task.task_id}</div>

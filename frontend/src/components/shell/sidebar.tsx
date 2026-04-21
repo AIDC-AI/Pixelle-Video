@@ -31,6 +31,7 @@ import {
   Cloud,
   Settings
 } from 'lucide-react';
+import { readSidebarCollapsedPreference, SIDEBAR_PREFERENCE_EVENT, writeSidebarCollapsedPreference } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
 const MENU_GROUPS = [
@@ -91,17 +92,19 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('sidebar-collapsed');
-    if (saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsCollapsed(saved === 'true');
-    }
+    const syncPreference = () => {
+      setIsCollapsed(readSidebarCollapsedPreference());
+    };
+
+    syncPreference();
+    window.addEventListener(SIDEBAR_PREFERENCE_EVENT, syncPreference as EventListener);
+    return () => window.removeEventListener(SIDEBAR_PREFERENCE_EVENT, syncPreference as EventListener);
   }, []);
 
   const toggleCollapse = () => {
     const nextState = !isCollapsed;
     setIsCollapsed(nextState);
-    localStorage.setItem('sidebar-collapsed', String(nextState));
+    writeSidebarCollapsedPreference(nextState);
   };
 
   const allItems = MENU_GROUPS.flatMap(g => g.items);

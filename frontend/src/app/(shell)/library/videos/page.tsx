@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { EmptyState } from '@/components/shared/empty-state';
+import { SkeletonCard } from '@/components/shared/skeleton-card';
 import { useCurrentProjectHydration } from '@/lib/hooks/use-current-project';
 import { useLibraryVideos, useTasksForLibrary } from '@/lib/hooks/use-library-videos';
 import { useProjects } from '@/lib/hooks/use-projects';
@@ -34,18 +35,6 @@ type VideoItem = components['schemas']['VideoItem'];
 type Task = components['schemas']['Task'];
 
 const DEFAULT_LIMIT = 12;
-
-function LibraryVideoSkeleton() {
-  return (
-    <Card className="overflow-hidden border-border/70 bg-card shadow-none">
-      <div className="aspect-[9/16] animate-pulse bg-muted/70" />
-      <CardContent className="space-y-3 p-4">
-        <div className="h-4 w-4/5 animate-pulse rounded bg-muted/70" />
-        <div className="h-3 w-2/3 animate-pulse rounded bg-muted/50" />
-      </CardContent>
-    </Card>
-  );
-}
 
 function VideoCard({ item, task }: { item: VideoItem; task?: Task }) {
   const status = task?.status ?? (item.video_url ? 'completed' : 'unknown');
@@ -204,7 +193,7 @@ function LibraryVideosPageContent() {
       {isInitialLoading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, index) => (
-            <LibraryVideoSkeleton key={`library-skeleton-${index}`} />
+            <SkeletonCard key={`library-skeleton-${index}`} />
           ))}
         </div>
       ) : null}

@@ -16,6 +16,7 @@ System settings component for web UI
 
 import streamlit as st
 
+from web.components.read_only import is_streamlit_read_only, read_only_notice
 from web.i18n import tr, get_language
 from web.utils.streamlit_helpers import safe_rerun
 from pixelle_video.config import config_manager
@@ -25,9 +26,13 @@ def render_advanced_settings():
     """Render system configuration (required) with 2-column layout"""
     # Check if system is configured
     is_configured = config_manager.validate()
+    is_read_only = is_streamlit_read_only()
     
     # Expand if not configured, collapse if configured
     with st.expander(tr("settings.title"), expanded=not is_configured):
+        if is_read_only:
+            st.info(read_only_notice())
+
         # 2-column layout: LLM | ComfyUI
         llm_col, comfyui_col = st.columns(2)
         
@@ -66,7 +71,8 @@ def render_advanced_settings():
                     options=preset_names,
                     index=default_index,
                     help=tr("settings.llm.quick_select_help"),
-                    key="llm_preset_select"
+                    key="llm_preset_select",
+                    disabled=is_read_only,
                 )
                 
                 # Auto-fill based on selected preset
@@ -103,7 +109,8 @@ def render_advanced_settings():
                     value=default_api_key,
                     type="password",
                     help=tr("settings.llm.api_key_help"),
-                    key=f"llm_api_key_input_{selected_preset}"
+                    key=f"llm_api_key_input_{selected_preset}",
+                    disabled=is_read_only,
                 )
                 
                 # Base URL (use unique key based on preset to force refresh)
@@ -111,7 +118,8 @@ def render_advanced_settings():
                     f"{tr('settings.llm.base_url')} *",
                     value=default_base_url,
                     help=tr("settings.llm.base_url_help"),
-                    key=f"llm_base_url_input_{selected_preset}"
+                    key=f"llm_base_url_input_{selected_preset}",
+                    disabled=is_read_only,
                 )
                 
                 # Model selection with dropdown and load button
@@ -139,7 +147,8 @@ def render_advanced_settings():
                         options=model_options,
                         index=default_model_index,
                         help=tr("settings.llm.model_help"),
-                        key=f"llm_model_select_{selected_preset}"
+                        key=f"llm_model_select_{selected_preset}",
+                        disabled=is_read_only,
                     )
                 
                 with load_col:
@@ -148,7 +157,8 @@ def render_advanced_settings():
                         f"🔄 {tr('settings.llm.load_models')}",
                         help=tr("settings.llm.load_models_help"),
                         key="load_models_btn",
-                        use_container_width=True
+                        use_container_width=True,
+                        disabled=is_read_only,
                     )
                 
                 with test_col:
@@ -157,7 +167,8 @@ def render_advanced_settings():
                         f"🔌 {tr('settings.llm.test_connection')}",
                         help=tr("settings.llm.test_connection_help"),
                         key="test_llm_connection_btn",
-                        use_container_width=True
+                        use_container_width=True,
+                        disabled=is_read_only,
                     )
                 
                 # Handle load models button click
@@ -197,7 +208,8 @@ def render_advanced_settings():
                         tr("settings.llm.custom_model_input"),
                         value=default_model,
                         help=tr("settings.llm.model_help"),
-                        key=f"llm_custom_model_input_{selected_preset}"
+                        key=f"llm_custom_model_input_{selected_preset}",
+                        disabled=is_read_only,
                     )
                 else:
                     llm_model = selected_model_option
@@ -220,7 +232,8 @@ def render_advanced_settings():
                         tr("settings.comfyui.comfyui_url"),
                         value=comfyui_config.get("comfyui_url", "http://127.0.0.1:8188"),
                         help=tr("settings.comfyui.comfyui_url_help"),
-                        key="comfyui_url_input"
+                        key="comfyui_url_input",
+                        disabled=is_read_only,
                     )
                 with key_col:
                     comfyui_api_key = st.text_input(
@@ -228,11 +241,17 @@ def render_advanced_settings():
                         value=comfyui_config.get("comfyui_api_key", ""),
                         type="password",
                         help=tr("settings.comfyui.comfyui_api_key_help"),
-                        key="comfyui_api_key_input"
+                        key="comfyui_api_key_input",
+                        disabled=is_read_only,
                     )
                 
                 # Test connection button
-                if st.button(tr("btn.test_connection"), key="test_comfyui", use_container_width=True):
+                if st.button(
+                    tr("btn.test_connection"),
+                    key="test_comfyui",
+                    use_container_width=True,
+                    disabled=is_read_only,
+                ):
                     try:
                         import requests
                         response = requests.get(f"{comfyui_url}/system_stats", timeout=5)
@@ -252,7 +271,8 @@ def render_advanced_settings():
                     value=comfyui_config.get("runninghub_api_key", ""),
                     type="password",
                     help=tr("settings.comfyui.runninghub_api_key_help"),
-                    key="runninghub_api_key_input"
+                    key="runninghub_api_key_input",
+                    disabled=is_read_only,
                 )
                 st.caption(
                     f"{tr('settings.comfyui.runninghub_hint')} "
@@ -269,7 +289,8 @@ def render_advanced_settings():
                         max_value=10,
                         value=comfyui_config.get("runninghub_concurrent_limit", 1),
                         help=tr("settings.comfyui.runninghub_concurrent_limit_help"),
-                        key="runninghub_concurrent_limit_input"
+                        key="runninghub_concurrent_limit_input",
+                        disabled=is_read_only,
                     )
                 with instance_col:
                     # Check if instance type is "plus" (48G VRAM enabled)
@@ -285,7 +306,8 @@ def render_advanced_settings():
                         options=instance_options,
                         index=1 if is_plus_enabled else 0,
                         help=tr("settings.comfyui.runninghub_instance_type_help"),
-                        key="runninghub_instance_type_input"
+                        key="runninghub_instance_type_input",
+                        disabled=is_read_only,
                     )
                     # Convert display value back to actual value
                     runninghub_48g_enabled = runninghub_instance_type_display == tr("settings.comfyui.runninghub_instance_48g")
@@ -297,7 +319,12 @@ def render_advanced_settings():
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button(tr("btn.save_config"), use_container_width=True, key="save_config_btn"):
+            if st.button(
+                tr("btn.save_config"),
+                use_container_width=True,
+                key="save_config_btn",
+                disabled=is_read_only,
+            ):
                 try:
                     # Validate and save LLM configuration
                     if not (llm_api_key and llm_base_url and llm_model):
@@ -325,11 +352,15 @@ def render_advanced_settings():
                     st.error(f"{tr('status.save_failed')}: {str(e)}")
         
         with col2:
-            if st.button(tr("btn.reset_config"), use_container_width=True, key="reset_config_btn"):
+            if st.button(
+                tr("btn.reset_config"),
+                use_container_width=True,
+                key="reset_config_btn",
+                disabled=is_read_only,
+            ):
                 # Reset to default
                 from pixelle_video.config.schema import PixelleVideoConfig
                 config_manager.config = PixelleVideoConfig()
                 config_manager.save()
                 st.success(tr("status.config_reset"))
                 safe_rerun()
-
