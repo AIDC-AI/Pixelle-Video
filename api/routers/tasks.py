@@ -21,7 +21,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
-from api.routers._helpers import normalize_project_filter_query
+from api.routers._helpers import api_error, normalize_project_filter_query
 from api.tasks import Task, TaskStatus, task_manager
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -55,7 +55,11 @@ async def list_tasks(
         
     except Exception as e:
         logger.error(f"List tasks error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise api_error(
+            status_code=500,
+            code="TASKS_LIST_FAILED",
+            message="Failed to list tasks.",
+        ) from e
 
 
 @router.get("/{task_id}", response_model=Task)
@@ -81,7 +85,11 @@ async def get_task(task_id: str):
         raise
     except Exception as e:
         logger.error(f"Get task error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise api_error(
+            status_code=500,
+            code="TASK_FETCH_FAILED",
+            message="Failed to fetch task.",
+        ) from e
 
 
 @router.delete("/{task_id}")
@@ -110,4 +118,8 @@ async def cancel_task(task_id: str):
         raise
     except Exception as e:
         logger.error(f"Cancel task error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise api_error(
+            status_code=500,
+            code="TASK_CANCEL_FAILED",
+            message="Failed to cancel task.",
+        ) from e

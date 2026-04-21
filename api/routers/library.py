@@ -7,6 +7,7 @@ from loguru import logger
 
 from api.dependencies import PixelleVideoDep
 from api.routers._helpers import (
+    api_error,
     normalize_project_filter_query,
     not_implemented,
     path_to_url,
@@ -56,9 +57,15 @@ async def list_videos(
                 )
             )
         return VideoListResponse(items=items, next_cursor=payload.get("next_cursor"))
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"List videos error: {exc}")
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise api_error(
+            status_code=500,
+            code="LIBRARY_LIST_FAILED",
+            message="Failed to list library videos.",
+        ) from exc
 
 
 @router.get("/videos/{video_id}")
