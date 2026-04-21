@@ -1,0 +1,9 @@
+node_modules
+.next
+coverage
+test-results
+.playwright-runtime
+.lighthouseci
+e2e/test-results
+vitest.config.ts.timestamp-*
+*.log

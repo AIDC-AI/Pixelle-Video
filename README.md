@@ -57,6 +57,23 @@ pnpm -C frontend dev
 
 详情见：[docs/migration-guide.md](docs/migration-guide.md)
 
+### Docker 快速启动
+
+```bash
+docker compose up -d
+```
+
+默认会启动：
+
+- `frontend`：Next.js 工作台
+- `backend`：FastAPI API
+
+如需旧版 Streamlit，只在显式开启 legacy profile 时启动：
+
+```bash
+docker compose --profile legacy up -d
+```
+
 ## 🖥️ Legacy UI 预览
 
 ![Web UI界面](resources/webui.png)

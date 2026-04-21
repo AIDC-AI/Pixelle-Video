@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Build Arguments Configuration
 # You can override these by setting environment variables before running docker-compose
 #
@@ -32,14 +30,14 @@ services:
       '
     restart: "no"
 
-  # API Service - FastAPI backend
-  api:
+  # Backend Service - FastAPI API
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         USE_CN_MIRROR: ${USE_CN_MIRROR:-false}
-    container_name: pixelle-video-api
+    container_name: pixelle-video-backend
     command: .venv/bin/python api/app.py --host 0.0.0.0 --port 8000
     depends_on:
       init:
@@ -73,18 +71,51 @@ services:
     networks:
       - pixelle-network
 
-  # Web UI Service - Streamlit frontend
-  web:
+  # Frontend Service - Next.js workbench
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    container_name: pixelle-video-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - pixelle-network
+
+  # Legacy Streamlit UI - opt-in only
+  streamlit:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         USE_CN_MIRROR: ${USE_CN_MIRROR:-false}
-    container_name: pixelle-video-web
+    container_name: pixelle-video-streamlit
     command: .venv/bin/streamlit run web/app.py --server.port 8501 --server.address 0.0.0.0
     depends_on:
       init:
         condition: service_completed_successfully
+      backend:
+        condition: service_healthy
     ports:
       - "8501:8501"
     volumes:
@@ -99,9 +130,11 @@ services:
       # Custom resources in data/* will override defaults
     environment:
       - TZ=Asia/Shanghai
+      - PIXELLE_STREAMLIT_READ_ONLY=1
       - STREAMLIT_SERVER_PORT=8501
       - STREAMLIT_SERVER_ADDRESS=0.0.0.0
       - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    profiles: ["legacy"]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
@@ -120,4 +153,3 @@ services:
 networks:
   pixelle-network:
     driver: bridge
-
