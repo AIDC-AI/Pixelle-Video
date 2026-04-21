@@ -25,8 +25,39 @@ https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 
 **零门槛，零剪辑经验**，让视频创作成为一句话的事！
 
+## 🚀 主入口：Next.js 创作工作台
 
-## 🖥️ Web 界面预览
+Pixelle-Video 现已默认以 **Next.js 工作台** 作为主入口。
+
+### 本地启动（推荐）
+
+先启动后端 API：
+
+```bash
+uv run python api/app.py --host 0.0.0.0 --port 8000
+```
+
+再启动前端工作台：
+
+```bash
+pnpm install
+pnpm -C frontend dev
+```
+
+启动后访问：
+
+- 前端工作台：`http://localhost:3000`
+- 后端 API：`http://localhost:8000`
+
+### 数据兼容说明
+
+- 新版 Next.js 工作台与旧版 Streamlit 共用同一个后端与数据目录
+- `Project`、任务、历史视频、批量任务不会因为切到新版而丢失
+- 旧版界面现在作为 **Legacy UI（只读模式可用）** 保留，适合查看历史与预览
+
+详情见：[docs/migration-guide.md](docs/migration-guide.md)
+
+## 🖥️ Legacy UI 预览
 
 ![Web UI界面](resources/webui.png)
 
@@ -258,25 +289,42 @@ git clone https://github.com/AIDC-AI/Pixelle-Video.git
 cd Pixelle-Video
 ```
 
-#### 第二步：启动 Web 界面
+#### 第二步：启动 Next.js 工作台与 API
 
 ```bash
-# 使用 uv 运行（推荐，会自动安装依赖）
-uv run streamlit run web/app.py
+# 终端 1：启动后端 API
+uv run python api/app.py --host 0.0.0.0 --port 8000
 
-# optional: keep Streamlit in read-only history/preview mode
-PIXELLE_STREAMLIT_READ_ONLY=1 uv run streamlit run web/app.py
+# 终端 2：启动 Next.js 工作台
+pnpm install
+pnpm -C frontend dev
 ```
 
-浏览器会自动打开 http://localhost:8501
+浏览器打开：
 
-#### 第三步：在 Web 界面配置
+- `http://localhost:3000` 查看新版工作台
+- `http://localhost:8000/docs` 查看 API 文档
+
+#### 第三步：在工作台中配置
 
 首次使用时，展开「⚙️ 系统配置」面板，填写：
 - **LLM 配置**: 选择 AI 模型（如通义千问、GPT 等）并填入 API Key
 - **图像配置**: 如需生成图片，配置 ComfyUI 地址或 RunningHub API Key
 
 配置好后点击「保存配置」，就可以开始生成视频了！
+
+### Legacy UI（只读模式可用）
+
+如果你需要继续使用旧版 Streamlit 界面查看历史或做兼容验证，可以单独启动：
+
+```bash
+uv run streamlit run web/app.py
+
+# 或只读模式
+PIXELLE_STREAMLIT_READ_ONLY=1 uv run streamlit run web/app.py
+```
+
+访问地址：`http://localhost:8501`
 
 <div id="tutorial-end" />
 
