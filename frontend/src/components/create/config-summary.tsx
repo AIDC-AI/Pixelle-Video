@@ -2,8 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ConfigSummaryProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 export function ConfigSummary({ config }: ConfigSummaryProps) {

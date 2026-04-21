@@ -22,7 +22,7 @@ export default function CreateHeroPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
         <div className="lg:col-span-2">
           <PipelineCard
-            title="Quick Pipeline"
+            title="Quick"
             description="最快速的视频生成方式。输入创意描述，系统自动编写脚本、配音并生成分镜视频。"
             timeEstimate="约 2-5 分钟"
             icon={Sparkles}
@@ -39,7 +39,7 @@ export default function CreateHeroPage() {
         />
 
         <PipelineCard
-          title="Image to Video"
+          title="Image → Video"
           description="图片转视频。上传一张或多张图片，使用高级动画模型让静态图像动起来。"
           timeEstimate="约 3-8 分钟"
           icon={ImageIcon}

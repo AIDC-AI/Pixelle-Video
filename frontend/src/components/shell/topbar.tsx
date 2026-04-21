@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Moon, Sun, Search, Bell, User, Clapperboard, ChevronDown, Plus } from 'lucide-react';
 import { useProjects, useCreateProject } from '@/lib/hooks/use-projects';
 import { cn } from '@/lib/utils';
+import type { ApiError } from '@/lib/api-client';
 
 export function Topbar() {
   const { currentProject, setCurrentProject } = useCurrentProjectStore();
@@ -40,6 +41,21 @@ export function Topbar() {
   const { data: projectsData } = useProjects();
   const createProject = useCreateProject();
 
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+      const message = (error as ApiError).message;
+      if (typeof message === 'string' && message.trim()) {
+        return message;
+      }
+    }
+
+    return 'Failed to create project';
+  };
+
   const handleCreateProject = () => {
     if (!newProjectName.trim()) return;
     createProject.mutate(
@@ -51,9 +67,8 @@ export function Topbar() {
           setNewProjectName('');
           toast.success('Project created successfully');
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        onError: (error: any) => {
-          toast.error(error.message || 'Failed to create project');
+        onError: (error: unknown) => {
+          toast.error(getErrorMessage(error));
         }
       }
     );

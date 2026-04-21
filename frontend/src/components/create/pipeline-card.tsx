@@ -14,7 +14,7 @@ interface PipelineCardProps {
 export function PipelineCard({ title, description, timeEstimate, icon: Icon, href }: PipelineCardProps) {
   return (
     <Link href={href}>
-      <Card className="group relative overflow-hidden flex flex-col p-6 h-full transition-all duration-150 ease-out hover:-translate-y-1 hover:shadow-md hover:border-primary border-border bg-card">
+      <Card className="group relative flex h-full transform-gpu flex-col overflow-hidden border-border bg-card p-6 transition-all duration-150 ease-out hover:-translate-y-1 hover:border-primary hover:shadow-md">
         <div className="mb-4">
           <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center transition-colors group-hover:bg-primary/10">
             <Icon className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -26,8 +26,8 @@ export function PipelineCard({ title, description, timeEstimate, icon: Icon, hre
         <p className="text-sm text-muted-foreground flex-1 mb-4">
           {description}
         </p>
-        <div className="text-xs font-medium text-muted-foreground mt-auto border-t border-border pt-4">
-          ⏱ {timeEstimate}
+        <div className="mt-auto border-t border-border pt-4 text-xs font-medium text-muted-foreground">
+          Time: {timeEstimate}
         </div>
       </Card>
     </Link>

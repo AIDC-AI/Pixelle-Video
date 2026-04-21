@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QuickIntentInput } from './quick-intent-input';
 
 const mockPush = vi.fn();
@@ -41,5 +42,16 @@ describe('QuickIntentInput', () => {
     const form = screen.getByRole('button', { name: /生成/i }).closest('form');
     fireEvent.submit(form!);
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('submits on Enter key from the input', async () => {
+    const user = userEvent.setup();
+    mockPush.mockClear();
+    render(<QuickIntentInput />);
+
+    const input = screen.getByPlaceholderText(/描述你的创意/i);
+    await user.type(input, 'planet explainer{enter}');
+
+    expect(mockPush).toHaveBeenCalledWith('/create/quick?topic=planet%20explainer');
   });
 });

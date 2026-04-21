@@ -1,15 +1,22 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Sidebar } from './sidebar';
 import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
+interface MockLinkProps {
+  children: ReactNode;
+  href: string;
+  className?: string;
+  title?: string;
+}
+
 vi.mock('next/link', () => ({
-  default: ({ children, href, className, title }: any) => (
+  default: ({ children, href, className, title }: MockLinkProps) => (
     <a href={href} className={className} title={title}>{children}</a>
   ),
 }));

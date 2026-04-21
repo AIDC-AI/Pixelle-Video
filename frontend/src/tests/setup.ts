@@ -1,7 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { beforeAll, afterAll, afterEach } from "vitest";
+import { resetMockApiState } from "./msw/handlers";
 import { server } from "./msw/server";
+
+process.env.NEXT_PUBLIC_TASK_POLL_INTERVAL_MS = '20';
 
 const createStorageMock = () => {
   let store: Record<string, string> = {};
@@ -38,6 +41,7 @@ afterAll(() => server.close());
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  resetMockApiState();
   globalThis.localStorage.clear();
   globalThis.sessionStorage.clear();
 });

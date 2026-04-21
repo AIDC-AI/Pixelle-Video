@@ -19,9 +19,9 @@ describe('Create Hero Page', () => {
 
   it('renders 5 pipeline cards', () => {
     render(<CreateHeroPage />);
-    expect(screen.getByText('Quick Pipeline')).toBeInTheDocument();
+    expect(screen.getByText('Quick')).toBeInTheDocument();
     expect(screen.getByText('Digital Human')).toBeInTheDocument();
-    expect(screen.getByText('Image to Video')).toBeInTheDocument();
+    expect(screen.getByText('Image → Video')).toBeInTheDocument();
     expect(screen.getByText('Action Transfer')).toBeInTheDocument();
     expect(screen.getByText('Custom Asset')).toBeInTheDocument();
   });

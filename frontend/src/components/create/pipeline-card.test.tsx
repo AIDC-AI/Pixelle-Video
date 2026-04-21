@@ -16,7 +16,7 @@ describe('PipelineCard', () => {
     );
     expect(screen.getByText('Test Pipeline')).toBeInTheDocument();
     expect(screen.getByText('A great pipeline')).toBeInTheDocument();
-    expect(screen.getByText(/1 min/i)).toBeInTheDocument();
+    expect(screen.getByText(/Time: 1 min/i)).toBeInTheDocument();
     expect(screen.getByRole('link')).toHaveAttribute('href', '/test');
   });
 });
