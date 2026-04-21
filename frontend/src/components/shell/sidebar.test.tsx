@@ -18,17 +18,17 @@ describe('Sidebar', () => {
   it('renders 5 groups', () => {
     vi.mocked(usePathname).mockReturnValue('/');
     render(<Sidebar />);
-    expect(screen.getByText('Create')).toBeInTheDocument();
-    expect(screen.getByText('Batch')).toBeInTheDocument();
-    expect(screen.getByText('Library')).toBeInTheDocument();
-    expect(screen.getByText('Advanced')).toBeInTheDocument();
-    expect(screen.getByText('System')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Batch' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Library' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Advanced' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'System' })).toBeInTheDocument();
   });
 
   it('highlights active link', () => {
     vi.mocked(usePathname).mockReturnValue('/create/quick');
     render(<Sidebar />);
-    const activeLink = screen.getByText('Quick Create').closest('a');
+    const activeLink = screen.getByText('Quick').closest('a');
     expect(activeLink?.className).toContain('bg-accent');
   });
 

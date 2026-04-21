@@ -24,6 +24,77 @@ export interface paths {
       };
     };
   };
+  "/api/library": {
+    get: {
+      responses: {
+        200: {
+          content: {
+            "application/json": { items: components["schemas"]["Asset"][] };
+          };
+        };
+      };
+    };
+  };
+  "/api/uploads": {
+    post: {
+      requestBody: {
+        content: {
+          "multipart/form-data": { file: string };
+        };
+      };
+      responses: {
+        200: {
+          content: {
+            "application/json": components["schemas"]["Asset"];
+          };
+        };
+      };
+    };
+  };
+  "/api/pipeline_payloads": {
+    get: {
+      responses: {
+        200: {
+          content: {
+            "application/json": Record<string, unknown>;
+          };
+        };
+      };
+    };
+  };
+  "/api/settings": {
+    get: {
+      responses: {
+        200: {
+          content: {
+            "application/json": Record<string, unknown>;
+          };
+        };
+      };
+    };
+  };
+  "/api/batch": {
+    get: {
+      responses: {
+        200: {
+          content: {
+            "application/json": Record<string, unknown>;
+          };
+        };
+      };
+    };
+  };
+  "/api/video": {
+    get: {
+      responses: {
+        200: {
+          content: {
+            "application/json": Record<string, unknown>;
+          };
+        };
+      };
+    };
+  };
 }
 
 export interface components {
@@ -44,5 +115,10 @@ export interface components {
     ProjectCreateRequest: {
       name: string;
     };
+    Asset: {
+      id: string;
+      url: string;
+      type: string;
+    }
   };
 }

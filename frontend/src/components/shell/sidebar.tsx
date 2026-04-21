@@ -23,31 +23,35 @@ import {
   HardDrive,
   Info,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Zap,
+  LayoutDashboard,
+  PlusCircle,
+  Server,
+  Cloud,
+  Settings
 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '@/lib/utils';
 
 const MENU_GROUPS = [
   {
     label: 'Create',
     items: [
-      { href: '/create/quick', icon: Sparkles, label: 'Quick Create' },
+      { href: '/create', icon: Sparkles, label: 'Create' },
+      { href: '/create/quick', icon: Zap, label: 'Quick' },
       { href: '/create/digital-human', icon: User, label: 'Digital Human' },
-      { href: '/create/i2v', icon: ImageIcon, label: 'Image -> Video' },
+      { href: '/create/i2v', icon: ImageIcon, label: 'I2V' },
       { href: '/create/action-transfer', icon: Activity, label: 'Action Transfer' },
-      { href: '/create/custom', icon: PenTool, label: 'Custom Asset' },
+      { href: '/create/custom', icon: PenTool, label: 'Custom' },
     ],
   },
   {
     label: 'Batch',
     items: [
-      { href: '/batch', icon: ListOrdered, label: 'Batches' },
-      { href: '/batch/queue', icon: List, label: 'Task Queue' },
+      { href: '/batch', icon: LayoutDashboard, label: 'Batches' },
+      { href: '/batch/list', icon: ListOrdered, label: 'List' },
+      { href: '/batch/new', icon: PlusCircle, label: 'New' },
+      { href: '/batch/queue', icon: List, label: 'Queue' },
     ],
   },
   {
@@ -64,6 +68,8 @@ const MENU_GROUPS = [
     label: 'Advanced',
     items: [
       { href: '/workflows', icon: Settings2, label: 'Workflows' },
+      { href: '/workflows/self-host', icon: Server, label: 'Self-host' },
+      { href: '/workflows/runninghub', icon: Cloud, label: 'RunningHub' },
       { href: '/templates', icon: LayoutTemplate, label: 'Templates' },
       { href: '/presets', icon: Box, label: 'Presets' },
     ],
@@ -71,6 +77,7 @@ const MENU_GROUPS = [
   {
     label: 'System',
     items: [
+      { href: '/settings', icon: Settings, label: 'Settings' },
       { href: '/settings/keys', icon: Key, label: 'API Keys' },
       { href: '/settings/appearance', icon: Palette, label: 'Appearance' },
       { href: '/settings/storage', icon: HardDrive, label: 'Storage' },
@@ -114,7 +121,7 @@ export function Sidebar() {
             )}
             <nav className="flex flex-col gap-1">
               {group.items.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                const isActive = pathname === item.href;
                 return (
                   <Link
                     key={item.href}

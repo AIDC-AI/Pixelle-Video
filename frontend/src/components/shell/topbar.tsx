@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCurrentProjectStore } from '@/stores/current-project';
 import { useTheme } from 'next-themes';
-import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,16 +12,23 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Moon, Sun, Search, Bell, User, Clapperboard, ChevronDown, Plus } from 'lucide-react';
 import { useProjects, useCreateProject } from '@/lib/hooks/use-projects';
+import { cn } from '@/lib/utils';
 
 export function Topbar() {
   const { currentProject, setCurrentProject } = useCurrentProjectStore();
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
   const { data: projectsData } = useProjects();
   const createProject = useCreateProject();
 
@@ -33,7 +41,12 @@ export function Topbar() {
           setCurrentProject({ id: newProject.id, name: newProject.name });
           setIsDialogOpen(false);
           setNewProjectName('');
+          toast.success('Project created successfully');
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (error: any) => {
+          toast.error(error.message || 'Failed to create project');
+        }
       }
     );
   };
@@ -49,11 +62,9 @@ export function Topbar() {
         </div>
 
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="ghost" size="sm" className="h-8 gap-2 text-xs font-normal">
-              {currentProject ? currentProject.name : 'Select Project'}
-              <ChevronDown className="w-3 h-3 text-muted-foreground" />
-            </Button>
+          <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 gap-2 text-xs font-normal")}>
+            {currentProject ? currentProject.name : 'Select Project'}
+            <ChevronDown className="w-3 h-3 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
             {projectsData?.items?.map((p) => (
@@ -65,38 +76,37 @@ export function Topbar() {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Plus className="w-3 h-3 mr-2" />
-                  New Project
-                </DropdownMenuItem>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Project</DialogTitle>
-                </DialogHeader>
-                <div className="py-4">
-                  <input
-                    type="text"
-                    placeholder="Project Name"
-                    className="w-full px-3 py-2 border rounded-md text-sm focus:outline-ring"
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                  />
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreateProject} disabled={createProject.isPending}>
-                    Create
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <DropdownMenuItem onSelect={() => setIsDialogOpen(true)} onClick={() => setIsDialogOpen(true)}>
+              <Plus className="w-3 h-3 mr-2" />
+              New Project
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Project</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <input
+                type="text"
+                placeholder="Project Name"
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-ring"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateProject} disabled={createProject.isPending}>
+                Create
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="flex-1 flex justify-center">
@@ -116,7 +126,7 @@ export function Topbar() {
           className="h-8 w-8"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         >
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {mounted ? (theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />) : <div className="w-4 h-4" />}
           <span className="sr-only">Toggle theme</span>
         </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8">
