@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Topbar } from './topbar';
 import { useCurrentProjectStore } from '@/stores/current-project';
@@ -146,7 +146,9 @@ describe('Topbar', () => {
     await user.click(screen.getByRole('button', { name: /My Project/i }));
     await user.click(await screen.findByText('New Project'));
     await user.click(await screen.findByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByPlaceholderText('Project Name')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText('Project Name')).not.toBeInTheDocument();
+    });
   });
 
   it('handles empty input when creating project', async () => {
