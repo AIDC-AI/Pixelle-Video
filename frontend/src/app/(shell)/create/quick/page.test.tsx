@@ -7,7 +7,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useCurrentProjectStore } from '@/stores/current-project';
 import { useSubmitQuick, useTaskPolling } from '@/lib/hooks/use-create-video';
 import { useTtsWorkflows, useMediaWorkflows, useImageWorkflows, useBgmList } from '@/lib/hooks/use-resources';
-import { toast } from 'sonner';
 
 vi.mock('@/stores/current-project');
 vi.mock('@/lib/hooks/use-create-video');
@@ -120,7 +119,8 @@ describe('QuickCreatePage', () => {
     await user.click(submitBtn);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('请先在顶部选择或创建一个项目');
+      expect(screen.getByText('未选择项目')).toBeInTheDocument();
+      expect(screen.getByText(/视频生成需要归属于一个项目/)).toBeInTheDocument();
     });
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });

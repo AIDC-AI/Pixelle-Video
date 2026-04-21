@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { toast } from 'sonner';
 
 import { useSubmitQuick, useTaskPolling, useCancelTask } from '@/lib/hooks/use-create-video';
 import { useTtsWorkflows, useMediaWorkflows, useImageWorkflows, useBgmList } from '@/lib/hooks/use-resources';
@@ -19,6 +18,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertCircle } from 'lucide-react';
 
 import { ConfigSummary } from '@/components/create/config-summary';
 import { TaskProgress } from '@/components/create/task-progress';
@@ -47,6 +48,7 @@ function QuickCreateContent() {
   const [appState, setAppState] = useState<'idle' | 'running' | 'done' | 'failed'>('idle');
   const [taskId, setTaskId] = useState<string | undefined>();
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [showProjectDialog, setShowProjectDialog] = useState(false);
 
   const currentProject = useCurrentProjectStore((state) => state.currentProject);
   const isHydrated = useCurrentProjectStore.persist.hasHydrated();
@@ -100,7 +102,7 @@ function QuickCreateContent() {
 
   const onSubmit = async (values: FormValues) => {
     if (!currentProject) {
-      toast.error('请先在顶部选择或创建一个项目');
+      setShowProjectDialog(true);
       return;
     }
 
@@ -384,7 +386,7 @@ function QuickCreateContent() {
               <div className="pt-4">
                 <Button 
                   type="submit" 
-                  className="w-full h-12 text-base" 
+                  className="w-full h-12 text-base font-semibold" 
                   disabled={appState === 'running'}
                 >
                   {appState === 'running' ? '生成中...' : '生成视频'}
@@ -429,6 +431,25 @@ function QuickCreateContent() {
           </Card>
         )}
       </div>
+
+      <Dialog open={showProjectDialog} onOpenChange={setShowProjectDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+              <AlertCircle className="w-6 h-6 text-destructive" />
+            </div>
+            <DialogTitle className="text-center">未选择项目</DialogTitle>
+            <DialogDescription className="text-center">
+              视频生成需要归属于一个项目。请在页面顶部的项目切换器中选择或创建一个项目后再重试。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button className="w-full" onClick={() => setShowProjectDialog(false)}>
+              知道了
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
