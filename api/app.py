@@ -54,6 +54,11 @@ from api.routers import (
     files_router,
     resources_router,
     frame_router,
+    projects_router,
+    library_router,
+    batch_router,
+    settings_router,
+    uploads_router,
 )
 
 
@@ -133,6 +138,11 @@ app.include_router(tasks_router, prefix=api_config.api_prefix)
 app.include_router(files_router, prefix=api_config.api_prefix)
 app.include_router(resources_router, prefix=api_config.api_prefix)
 app.include_router(frame_router, prefix=api_config.api_prefix)
+app.include_router(projects_router, prefix=api_config.api_prefix)
+app.include_router(library_router, prefix=api_config.api_prefix)
+app.include_router(batch_router, prefix=api_config.api_prefix)
+app.include_router(settings_router, prefix=api_config.api_prefix)
+app.include_router(uploads_router, prefix=api_config.api_prefix)
 
 
 @app.get("/")
@@ -153,6 +163,11 @@ async def root():
             "files": f"{api_config.api_prefix}/files",
             "resources": f"{api_config.api_prefix}/resources",
             "frame": f"{api_config.api_prefix}/frame",
+            "projects": f"{api_config.api_prefix}/projects",
+            "library": f"{api_config.api_prefix}/library",
+            "batch": f"{api_config.api_prefix}/batch",
+            "settings": f"{api_config.api_prefix}/settings",
+            "uploads": f"{api_config.api_prefix}/uploads",
         }
     }
 
@@ -188,4 +203,3 @@ Press Ctrl+C to stop the server
         port=args.port,
         reload=args.reload,
     )
-

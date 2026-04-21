@@ -1,0 +1,9 @@
+{
+  "assets": [
+    "tests/fixtures/pipelines/source.png"
+  ],
+  "video_title": "Mock Asset Video",
+  "intent": "Promote the mock asset",
+  "duration": 3,
+  "project_id": "project-asset"
+}

@@ -46,6 +46,7 @@ class Task(BaseModel):
     """Task model"""
     task_id: str
     task_type: TaskType
+    project_id: Optional[str] = None
     status: TaskStatus = TaskStatus.PENDING
     
     # Progress tracking
@@ -67,4 +68,3 @@ class Task(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
-

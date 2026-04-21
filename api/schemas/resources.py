@@ -67,3 +67,16 @@ class BGMListResponse(BaseModel):
     message: str = "Success"
     bgm_files: List[BGMInfo] = Field(..., description="List of available BGM files")
 
+
+class PresetInfo(BaseModel):
+    """LLM preset information"""
+    name: str = Field(..., description="Preset name")
+    model: Optional[str] = Field(None, description="Model name")
+    base_url: Optional[str] = Field(None, description="Preset base URL")
+
+
+class PresetListResponse(BaseModel):
+    """Preset list response"""
+    success: bool = True
+    message: str = "Success"
+    presets: List[PresetInfo] = Field(default_factory=list, description="List of presets")

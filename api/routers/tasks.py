@@ -28,6 +28,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 @router.get("", response_model=List[Task])
 async def list_tasks(
     status: Optional[TaskStatus] = Query(None, description="Filter by status"),
+    project_id: Optional[str] = Query(None, description="Filter by project ID"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of tasks")
 ):
     """
@@ -41,7 +42,7 @@ async def list_tasks(
     Returns list of tasks sorted by creation time (newest first).
     """
     try:
-        tasks = task_manager.list_tasks(status=status, limit=limit)
+        tasks = task_manager.list_tasks(status=status, project_id=project_id, limit=limit)
         return tasks
         
     except Exception as e:
@@ -102,4 +103,3 @@ async def cancel_task(task_id: str):
     except Exception as e:
         logger.error(f"Cancel task error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-

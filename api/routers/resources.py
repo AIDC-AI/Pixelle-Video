@@ -28,7 +28,9 @@ from api.schemas.resources import (
     TemplateListResponse,
     BGMInfo,
     BGMListResponse,
+    PresetListResponse,
 )
+from api.routers._helpers import not_implemented
 from pixelle_video.utils.os_util import list_resource_files, get_root_path, get_data_path
 from pixelle_video.utils.template_util import get_all_templates_with_info
 
@@ -267,3 +269,12 @@ async def list_bgm():
         logger.error(f"List BGM error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/workflows/{workflow_id}", response_model=WorkflowInfo)
+async def get_workflow_detail(workflow_id: str):
+    raise not_implemented(f"Workflow detail for {workflow_id} is not implemented yet")
+
+
+@router.get("/presets", response_model=PresetListResponse)
+async def list_presets():
+    raise not_implemented("Preset listing is not implemented yet")

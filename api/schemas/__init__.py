@@ -31,6 +31,41 @@ from api.schemas.video import (
     VideoGenerateResponse,
     VideoGenerateAsyncResponse,
 )
+from api.schemas.projects import (
+    Project,
+    ProjectCreateRequest,
+    ProjectUpdateRequest,
+    ProjectListResponse,
+)
+from api.schemas.library import (
+    VideoItem,
+    VideoListResponse,
+    PlaceholderListResponse,
+)
+from api.schemas.batch import (
+    Batch,
+    BatchCreateRequest,
+    BatchListResponse,
+)
+from api.schemas.settings import SettingsPayload
+from api.schemas.uploads import UploadResponse
+from api.schemas.pipeline_payloads import (
+    DigitalHumanAsyncRequest,
+    I2VAsyncRequest,
+    ActionTransferAsyncRequest,
+    CustomScene,
+    CustomAsyncRequest,
+)
+from api.schemas.resources import (
+    WorkflowInfo,
+    WorkflowListResponse,
+    TemplateInfo,
+    TemplateListResponse,
+    BGMInfo,
+    BGMListResponse,
+    PresetInfo,
+    PresetListResponse,
+)
 
 __all__ = [
     # Base
@@ -56,5 +91,36 @@ __all__ = [
     "VideoGenerateRequest",
     "VideoGenerateResponse",
     "VideoGenerateAsyncResponse",
+    # Projects
+    "Project",
+    "ProjectCreateRequest",
+    "ProjectUpdateRequest",
+    "ProjectListResponse",
+    # Library
+    "VideoItem",
+    "VideoListResponse",
+    "PlaceholderListResponse",
+    # Batch
+    "Batch",
+    "BatchCreateRequest",
+    "BatchListResponse",
+    # Settings
+    "SettingsPayload",
+    # Uploads
+    "UploadResponse",
+    # Pipeline payloads
+    "DigitalHumanAsyncRequest",
+    "I2VAsyncRequest",
+    "ActionTransferAsyncRequest",
+    "CustomScene",
+    "CustomAsyncRequest",
+    # Resources
+    "WorkflowInfo",
+    "WorkflowListResponse",
+    "TemplateInfo",
+    "TemplateListResponse",
+    "BGMInfo",
+    "BGMListResponse",
+    "PresetInfo",
+    "PresetListResponse",
 ]
-

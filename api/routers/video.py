@@ -17,72 +17,104 @@ Supports both synchronous and asynchronous video generation.
 """
 
 import os
+from typing import Any, Awaitable, Callable
+
 from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
 
 from api.dependencies import PixelleVideoDep
+from api.routers._helpers import path_to_url
+from api.schemas.pipeline_payloads import (
+    ActionTransferAsyncRequest,
+    CustomAsyncRequest,
+    DigitalHumanAsyncRequest,
+    I2VAsyncRequest,
+)
 from api.schemas.video import (
+    VideoGenerateAsyncResponse,
     VideoGenerateRequest,
     VideoGenerateResponse,
-    VideoGenerateAsyncResponse,
 )
-from api.tasks import task_manager, TaskType
+from api.tasks import TaskType, task_manager
+from pixelle_video.pipelines import action_transfer, asset_based, digital_human, i2v
 
 router = APIRouter(prefix="/video", tags=["Video Generation"])
 
+PipelineRunner = Callable[[], Awaitable[Any]]
 
-def path_to_url(request: Request, file_path: str) -> str:
-    """
-    Convert file path to accessible URL
-    
-    Handles both absolute and relative paths, extracting the path relative
-    to the output directory for URL construction.
-    
-    Args:
-        request: FastAPI Request object (provides base_url from actual request)
-        file_path: Absolute or relative file path
-    
-    Returns:
-        Full URL to access the file
-    
-    Examples:
-        Windows: G:\\...\\output\\20251205_233630_c939\\final.mp4
-              -> http://localhost:8000/api/files/20251205_233630_c939/final.mp4
-        
-        Linux:   /home/user/.../output/20251205_233630_c939/final.mp4
-              -> http://localhost:8000/api/files/20251205_233630_c939/final.mp4
-        
-        Domain:  With domain request -> https://your-domain.com/api/files/...
-    """
-    from pathlib import Path
-    import os
-    
-    # Normalize path separators to forward slashes first (for cross-platform compatibility)
-    file_path = file_path.replace("\\", "/")
-    
-    # Check if it's an absolute path (works for both Windows and Linux)
-    is_absolute = os.path.isabs(file_path) or Path(file_path).is_absolute()
-    
-    if is_absolute:
-        # Find "output" in the path and get everything after it
-        # Split by / to work with normalized paths
-        parts = file_path.split("/")
-        try:
-            output_idx = parts.index("output")
-            # Get all parts after "output" and join them
-            relative_parts = parts[output_idx + 1:]
-            file_path = "/".join(relative_parts)
-        except ValueError:
-            # If "output" not in path, use the filename only
-            file_path = Path(file_path).name
-    else:
-        # If relative path starting with "output/", remove it
-        if file_path.startswith("output/"):
-            file_path = file_path[7:]  # Remove "output/"
-    
-    # Build URL using request's base_url (automatically matches the request host)
-    base_url = str(request.base_url).rstrip('/')
-    return f"{base_url}/api/files/{file_path}"
+
+def _build_standard_video_params(request_body: VideoGenerateRequest) -> dict[str, Any]:
+    if not request_body.frame_template:
+        raise ValueError("frame_template is required to determine media size")
+
+    from pixelle_video.services.frame_html import HTMLFrameGenerator
+    from pixelle_video.utils.template_util import resolve_template_path
+
+    template_path = resolve_template_path(request_body.frame_template)
+    generator = HTMLFrameGenerator(template_path)
+    media_width, media_height = generator.get_media_size()
+    logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
+
+    video_params: dict[str, Any] = {
+        "text": request_body.text,
+        "mode": request_body.mode,
+        "title": request_body.title,
+        "project_id": request_body.project_id,
+        "n_scenes": request_body.n_scenes,
+        "min_narration_words": request_body.min_narration_words,
+        "max_narration_words": request_body.max_narration_words,
+        "min_image_prompt_words": request_body.min_image_prompt_words,
+        "max_image_prompt_words": request_body.max_image_prompt_words,
+        "media_width": media_width,
+        "media_height": media_height,
+        "media_workflow": request_body.media_workflow,
+        "video_fps": request_body.video_fps,
+        "frame_template": request_body.frame_template,
+        "prompt_prefix": request_body.prompt_prefix,
+        "bgm_path": request_body.bgm_path,
+        "bgm_volume": request_body.bgm_volume,
+    }
+    if request_body.tts_workflow:
+        video_params["tts_workflow"] = request_body.tts_workflow
+    if request_body.ref_audio:
+        video_params["ref_audio"] = request_body.ref_audio
+    if request_body.voice_id:
+        logger.warning("voice_id parameter is deprecated, please use tts_workflow instead")
+        video_params["voice_id"] = request_body.voice_id
+    if request_body.template_params:
+        video_params["template_params"] = request_body.template_params
+    return video_params
+
+
+def _build_task_result(request: Request, result: Any) -> dict[str, Any]:
+    file_size = os.path.getsize(result.video_path) if os.path.exists(result.video_path) else 0
+    return {
+        "video_url": path_to_url(request, result.video_path),
+        "video_path": result.video_path,
+        "duration": result.duration,
+        "file_size": file_size,
+    }
+
+
+async def _schedule_pipeline_task(
+    *,
+    request: Request,
+    request_params: dict[str, Any],
+    project_id: str | None,
+    runner: PipelineRunner,
+) -> VideoGenerateAsyncResponse:
+    task = task_manager.create_task(
+        task_type=TaskType.VIDEO_GENERATION,
+        request_params=request_params,
+        project_id=project_id,
+    )
+
+    async def execute_pipeline() -> dict[str, Any]:
+        result = await runner()
+        return _build_task_result(request, result)
+
+    await task_manager.execute_task(task_id=task.task_id, coro_func=execute_pipeline)
+    return VideoGenerateAsyncResponse(task_id=task.task_id)
 
 
 @router.post("/generate/sync", response_model=VideoGenerateResponse)
@@ -106,68 +138,17 @@ async def generate_video_sync(
     """
     try:
         logger.info(f"Sync video generation: {request_body.text[:50]}...")
-        
-        # Auto-determine media_width and media_height from template meta tags (required)
-        if not request_body.frame_template:
-            raise ValueError("frame_template is required to determine media size")
-        
-        from pixelle_video.services.frame_html import HTMLFrameGenerator
-        from pixelle_video.utils.template_util import resolve_template_path
-        template_path = resolve_template_path(request_body.frame_template)
-        generator = HTMLFrameGenerator(template_path)
-        media_width, media_height = generator.get_media_size()
-        logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
-        
-        # Build video generation parameters
-        video_params = {
-            "text": request_body.text,
-            "mode": request_body.mode,
-            "title": request_body.title,
-            "n_scenes": request_body.n_scenes,
-            "min_narration_words": request_body.min_narration_words,
-            "max_narration_words": request_body.max_narration_words,
-            "min_image_prompt_words": request_body.min_image_prompt_words,
-            "max_image_prompt_words": request_body.max_image_prompt_words,
-            "media_width": media_width,
-            "media_height": media_height,
-            "media_workflow": request_body.media_workflow,
-            "video_fps": request_body.video_fps,
-            "frame_template": request_body.frame_template,
-            "prompt_prefix": request_body.prompt_prefix,
-            "bgm_path": request_body.bgm_path,
-            "bgm_volume": request_body.bgm_volume,
-        }
-        
-        # Add TTS workflow if specified
-        if request_body.tts_workflow:
-            video_params["tts_workflow"] = request_body.tts_workflow
-        
-        # Add ref_audio if specified
-        if request_body.ref_audio:
-            video_params["ref_audio"] = request_body.ref_audio
-        
-        # Legacy voice_id support (deprecated)
-        if request_body.voice_id:
-            logger.warning("voice_id parameter is deprecated, please use tts_workflow instead")
-            video_params["voice_id"] = request_body.voice_id
-        
-        # Add custom template parameters if specified
-        if request_body.template_params:
-            video_params["template_params"] = request_body.template_params
-        
-        # Call video generator service
-        result = await pixelle_video.generate_video(**video_params)
-        
-        # Get file size
-        file_size = os.path.getsize(result.video_path) if os.path.exists(result.video_path) else 0
-        
-        # Convert path to URL
-        video_url = path_to_url(request, result.video_path)
+        video_params = _build_standard_video_params(request_body)
+        generate_video = pixelle_video.generate_video
+        if generate_video is None:
+            raise RuntimeError("Standard video pipeline is not initialized")
+        result = await generate_video(**video_params)
+        payload = _build_task_result(request, result)
         
         return VideoGenerateResponse(
-            video_url=video_url,
-            duration=result.duration,
-            file_size=file_size
+            video_url=payload["video_url"],
+            duration=payload["duration"],
+            file_size=payload["file_size"],
         )
         
     except Exception as e:
@@ -200,91 +181,92 @@ async def generate_video_async(
     """
     try:
         logger.info(f"Async video generation: {request_body.text[:50]}...")
-        
-        # Create task
-        task = task_manager.create_task(
-            task_type=TaskType.VIDEO_GENERATION,
-            request_params=request_body.model_dump()
+        video_params = _build_standard_video_params(request_body)
+        generate_video = pixelle_video.generate_video
+        if generate_video is None:
+            raise RuntimeError("Standard video pipeline is not initialized")
+        return await _schedule_pipeline_task(
+            request=request,
+            request_params=request_body.model_dump(),
+            project_id=request_body.project_id,
+            runner=lambda: generate_video(**video_params),
         )
-        
-        # Define async execution function
-        async def execute_video_generation():
-            """Execute video generation in background"""
-            # Auto-determine media_width and media_height from template meta tags (required)
-            if not request_body.frame_template:
-                raise ValueError("frame_template is required to determine media size")
-            
-            from pixelle_video.services.frame_html import HTMLFrameGenerator
-            from pixelle_video.utils.template_util import resolve_template_path
-            template_path = resolve_template_path(request_body.frame_template)
-            generator = HTMLFrameGenerator(template_path)
-            media_width, media_height = generator.get_media_size()
-            logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
-            
-            # Build video generation parameters
-            video_params = {
-                "text": request_body.text,
-                "mode": request_body.mode,
-                "title": request_body.title,
-                "n_scenes": request_body.n_scenes,
-                "min_narration_words": request_body.min_narration_words,
-                "max_narration_words": request_body.max_narration_words,
-                "min_image_prompt_words": request_body.min_image_prompt_words,
-                "max_image_prompt_words": request_body.max_image_prompt_words,
-                "media_width": media_width,
-                "media_height": media_height,
-                "media_workflow": request_body.media_workflow,
-                "video_fps": request_body.video_fps,
-                "frame_template": request_body.frame_template,
-                "prompt_prefix": request_body.prompt_prefix,
-                "bgm_path": request_body.bgm_path,
-                "bgm_volume": request_body.bgm_volume,
-                # Progress callback can be added here if needed
-                # "progress_callback": lambda event: task_manager.update_progress(...)
-            }
-            
-            # Add TTS workflow if specified
-            if request_body.tts_workflow:
-                video_params["tts_workflow"] = request_body.tts_workflow
-            
-            # Add ref_audio if specified
-            if request_body.ref_audio:
-                video_params["ref_audio"] = request_body.ref_audio
-            
-            # Legacy voice_id support (deprecated)
-            if request_body.voice_id:
-                logger.warning("voice_id parameter is deprecated, please use tts_workflow instead")
-                video_params["voice_id"] = request_body.voice_id
-            
-            # Add custom template parameters if specified
-            if request_body.template_params:
-                video_params["template_params"] = request_body.template_params
-            
-            result = await pixelle_video.generate_video(**video_params)
-            
-            # Get file size
-            file_size = os.path.getsize(result.video_path) if os.path.exists(result.video_path) else 0
-            
-            # Convert path to URL
-            video_url = path_to_url(request, result.video_path)
-            
-            return {
-                "video_url": video_url,
-                "duration": result.duration,
-                "file_size": file_size
-            }
-        
-        # Start execution
-        await task_manager.execute_task(
-            task_id=task.task_id,
-            coro_func=execute_video_generation
-        )
-        
-        return VideoGenerateAsyncResponse(
-            task_id=task.task_id
-        )
-        
     except Exception as e:
         logger.error(f"Async video generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/digital-human/async", response_model=VideoGenerateAsyncResponse)
+async def generate_digital_human_async(
+    request_body: DigitalHumanAsyncRequest,
+    pixelle_video: PixelleVideoDep,
+    request: Request,
+):
+    try:
+        logger.info("Async digital human generation request received")
+        return await _schedule_pipeline_task(
+            request=request,
+            request_params=request_body.model_dump(),
+            project_id=request_body.project_id,
+            runner=lambda: digital_human.run(pixelle_video, **request_body.model_dump()),
+        )
+    except Exception as exc:
+        logger.error(f"Async digital human generation error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/i2v/async", response_model=VideoGenerateAsyncResponse)
+async def generate_i2v_async(
+    request_body: I2VAsyncRequest,
+    pixelle_video: PixelleVideoDep,
+    request: Request,
+):
+    try:
+        logger.info("Async i2v generation request received")
+        return await _schedule_pipeline_task(
+            request=request,
+            request_params=request_body.model_dump(),
+            project_id=request_body.project_id,
+            runner=lambda: i2v.run(pixelle_video, **request_body.model_dump()),
+        )
+    except Exception as exc:
+        logger.error(f"Async i2v generation error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/action-transfer/async", response_model=VideoGenerateAsyncResponse)
+async def generate_action_transfer_async(
+    request_body: ActionTransferAsyncRequest,
+    pixelle_video: PixelleVideoDep,
+    request: Request,
+):
+    try:
+        logger.info("Async action transfer generation request received")
+        return await _schedule_pipeline_task(
+            request=request,
+            request_params=request_body.model_dump(),
+            project_id=request_body.project_id,
+            runner=lambda: action_transfer.run(pixelle_video, **request_body.model_dump()),
+        )
+    except Exception as exc:
+        logger.error(f"Async action transfer generation error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/custom/async", response_model=VideoGenerateAsyncResponse)
+async def generate_custom_async(
+    request_body: CustomAsyncRequest,
+    pixelle_video: PixelleVideoDep,
+    request: Request,
+):
+    try:
+        logger.info("Async custom asset pipeline generation request received")
+        return await _schedule_pipeline_task(
+            request=request,
+            request_params=request_body.model_dump(),
+            project_id=request_body.project_id,
+            runner=lambda: asset_based.run(pixelle_video, **request_body.model_dump()),
+        )
+    except Exception as exc:
+        logger.error(f"Async custom generation error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))

@@ -170,6 +170,18 @@ class HistoryManager:
     async def rebuild_index(self):
         """Rebuild task index (useful for maintenance or after manual changes)"""
         await self.persistence.rebuild_index()
+
+    async def list_video_items(
+        self,
+        project_id: Optional[str] = None,
+        cursor: Optional[str] = None,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        return await self.persistence.list_video_items(
+            project_id=project_id,
+            cursor=cursor,
+            limit=limit,
+        )
     
     # ========================================================================
     # Future Extensions (Phase 3)
@@ -221,4 +233,3 @@ class HistoryManager:
         """
         logger.warning("export_task is not implemented yet (Phase 3 feature)")
         return None
-

@@ -5,14 +5,13 @@ from typing import Any
 
 import streamlit as st
 from loguru import logger
-import httpx
 from web.i18n import tr, get_language
 from web.pipelines.base import PipelineUI, register_pipeline_ui
 from web.components.content_input import render_version_info
 from web.utils.async_helpers import run_async
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
 from pixelle_video.config import config_manager
-from pixelle_video.utils.os_util import create_task_output_dir
+from pixelle_video.pipelines import i2v as _impl
 
 class ImageToVideoPipelineUI(PipelineUI):
     """
@@ -200,62 +199,21 @@ class ImageToVideoPipelineUI(PipelineUI):
 
                 try:
                     async def generate_audio_visual_video():
-                        task_dir, task_id = create_task_output_dir()
-                        logger.info(f"[Initialization] Task Directory: {task_dir}")
-                        kit = await pixelle_video._get_or_create_comfykit()
-                        
-                        import json
-                        from pathlib import Path
-
                         status_text.text(tr("progress.generation"))
                         progress_bar.progress(10)
-                        image_path = audio_assets[0]
-                        prompt = prompt_text
-
-                        workflow_path = Path("workflows") / workflow_key
-
-                        if not workflow_path.exists():
-                            raise Exception(f"The workflow file does not exist: {workflow_path}")
-
-                        with open(workflow_path, 'r', encoding='utf-8') as f:
-                            workflow_config = json.load(f)
-
-                        workflow_params = {
-                            "image": image_path,
-                            "prompt": prompt
-                        }
-
-                        if workflow_config.get("source") == "runninghub" and "workflow_id" in workflow_config:
-                            workflow_input = workflow_config["workflow_id"]
-                        else:
-                            workflow_input = str(workflow_path)
-
-                        video_result = await kit.execute(workflow_input, workflow_params)
-
-                        generated_video_url = None
-                        if hasattr(video_result, 'videos') and video_result.videos:
-                            generated_video_url = video_result.videos[0]
-                        elif hasattr(video_result, 'outputs') and video_result.outputs:
-                            for node_id, node_output in video_result.outputs.items():
-                                if isinstance(node_output, dict) and 'videos' in node_output:
-                                    videos = node_output['videos']
-                                    if videos and len(videos) > 0:
-                                        generated_video_url = videos[0]
-                                        break
-
-                        if not generated_video_url:
-                            raise Exception("The workflow did not return a video. Please check the workflow configuration.")
-
-                        final_video_path = os.path.join(task_dir, "final.mp4")
-                        timeout = httpx.Timeout(300.0)
-                        async with httpx.AsyncClient(timeout=timeout) as client:
-                            response = await client.get(generated_video_url)
-                            response.raise_for_status()
-                            with open(final_video_path, 'wb') as f:
-                                f.write(response.content)
+                        result = await _impl.run(
+                            pixelle_video,
+                            source_image=audio_assets[0],
+                            motion_prompt=prompt_text,
+                            media_workflow=workflow_key,
+                            progress_callback=lambda key, progress: (
+                                status_text.text(tr(key)),
+                                progress_bar.progress(progress),
+                            ),
+                        )
                         progress_bar.progress(100)
                         status_text.text(tr("status.success"))
-                        return final_video_path
+                        return result.video_path
                     
                     # Execute async generation
                     final_video_path = run_async(generate_audio_visual_video())

@@ -48,6 +48,7 @@ from pixelle_video.utils.os_util import (
 from pixelle_video.utils.template_util import get_template_type
 from pixelle_video.utils.prompt_helper import build_image_prompt
 from pixelle_video.services.video import VideoService
+from pixelle_video.pipelines.mock_runtime import maybe_create_mock_result
 
 
 
@@ -515,3 +516,42 @@ class StandardPipeline(LinearVideoPipeline):
         except Exception as e:
             logger.error(f"Failed to persist task data: {e}")
             # Don't raise - persistence failure shouldn't break video generation
+
+
+async def run(
+    core,
+    *,
+    text: str,
+    title: Optional[str] = None,
+    project_id: Optional[str] = None,
+    n_scenes: int = 5,
+    mode: Literal["generate", "fixed"] = "generate",
+    **kwargs,
+) -> VideoGenerationResult:
+    input_payload = {
+        "text": text,
+        "title": title,
+        "project_id": project_id,
+        "n_scenes": n_scenes,
+        "mode": mode,
+        **kwargs,
+    }
+    mock_result = await maybe_create_mock_result(
+        core,
+        "standard",
+        input_payload,
+        title=title or "Standard Video",
+        n_frames=n_scenes,
+        duration=float(max(n_scenes, 1) * 2),
+    )
+    if mock_result is not None:
+        return mock_result
+
+    return await StandardPipeline(core)(
+        text=text,
+        title=title,
+        project_id=project_id,
+        n_scenes=n_scenes,
+        mode=mode,
+        **kwargs,
+    )

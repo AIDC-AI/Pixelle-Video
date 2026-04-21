@@ -32,6 +32,7 @@ class VideoGenerateRequest(BaseModel):
     
     # === Optional Title ===
     title: Optional[str] = Field(None, description="Video title (auto-generated if not provided)")
+    project_id: Optional[str] = Field(None, description="Linked project ID")
     
     # === Basic Config ===
     n_scenes: Optional[int] = Field(5, ge=1, le=20, description="Number of scenes (only used in 'generate' mode, ignored in 'fixed' mode)")
@@ -113,4 +114,3 @@ class VideoGenerateAsyncResponse(BaseModel):
     success: bool = True
     message: str = "Task created successfully"
     task_id: str = Field(..., description="Task ID for tracking progress")
-

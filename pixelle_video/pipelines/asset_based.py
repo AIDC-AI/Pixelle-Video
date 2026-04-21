@@ -44,6 +44,7 @@ from pixelle_video.utils.os_util import (
     create_task_output_dir,
     get_task_final_video_path
 )
+from pixelle_video.pipelines.mock_runtime import maybe_create_mock_result
 
 # Type alias for progress callback
 ProgressCallback = Optional[Callable[[ProgressEvent], None]]
@@ -863,4 +864,60 @@ class AssetBasedPipeline(LinearVideoPipeline):
             return "video"
         else:
             return "unknown"
+
+
+async def run(
+    core,
+    *,
+    scenes: Optional[List[Any]] = None,
+    assets: Optional[List[str]] = None,
+    video_title: str = "",
+    intent: Optional[str] = None,
+    duration: int = 30,
+    project_id: Optional[str] = None,
+    progress_callback: ProgressCallback = None,
+    **kwargs,
+) -> Any:
+    normalized_scenes = []
+    if scenes:
+        for scene in scenes:
+            normalized_scenes.append(scene.model_dump() if hasattr(scene, "model_dump") else dict(scene))
+
+    derived_assets = assets or [scene["media"] for scene in normalized_scenes]
+    derived_intent = intent or "\n".join(
+        scene.get("narration", "") for scene in normalized_scenes if scene.get("narration")
+    )
+    derived_duration = duration
+    if normalized_scenes:
+        derived_duration = sum(int(scene.get("duration", 0)) for scene in normalized_scenes) or duration
+
+    input_payload = {
+        "assets": derived_assets,
+        "video_title": video_title,
+        "intent": derived_intent,
+        "duration": derived_duration,
+        "project_id": project_id,
+        "scenes": normalized_scenes,
+        **kwargs,
+    }
+    mock_result = await maybe_create_mock_result(
+        core,
+        "asset_based",
+        input_payload,
+        title=video_title or "Custom Assets",
+        n_frames=max(len(derived_assets), 1),
+        duration=2.0,
+    )
+    if mock_result is not None:
+        return mock_result
+
+    return await AssetBasedPipeline(core)(
+        assets=derived_assets,
+        video_title=video_title,
+        intent=derived_intent or video_title,
+        duration=derived_duration,
+        project_id=project_id,
+        progress_callback=progress_callback,
+        **kwargs,
+    )
     

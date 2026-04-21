@@ -78,7 +78,8 @@ class TaskManager:
     def create_task(
         self,
         task_type: TaskType,
-        request_params: Optional[dict] = None
+        request_params: Optional[dict] = None,
+        project_id: Optional[str] = None,
     ) -> Task:
         """
         Create a new task
@@ -94,6 +95,7 @@ class TaskManager:
         task = Task(
             task_id=task_id,
             task_type=task_type,
+            project_id=project_id,
             status=TaskStatus.PENDING,
             request_params=request_params,
         )
@@ -156,6 +158,7 @@ class TaskManager:
     def list_tasks(
         self,
         status: Optional[TaskStatus] = None,
+        project_id: Optional[str] = None,
         limit: int = 100
     ) -> List[Task]:
         """
@@ -172,6 +175,8 @@ class TaskManager:
         
         if status:
             tasks = [t for t in tasks if t.status == status]
+        if project_id is not None:
+            tasks = [t for t in tasks if t.project_id == project_id]
         
         # Sort by created_at descending
         tasks.sort(key=lambda t: t.created_at, reverse=True)
@@ -263,4 +268,3 @@ class TaskManager:
 
 # Global task manager instance
 task_manager = TaskManager()
-

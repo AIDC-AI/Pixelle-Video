@@ -24,6 +24,11 @@ from api.routers.tasks import router as tasks_router
 from api.routers.files import router as files_router
 from api.routers.resources import router as resources_router
 from api.routers.frame import router as frame_router
+from api.routers.projects import router as projects_router
+from api.routers.library import router as library_router
+from api.routers.batch import router as batch_router
+from api.routers.settings import router as settings_router
+from api.routers.uploads import router as uploads_router
 
 __all__ = [
     "health_router",
@@ -36,5 +41,9 @@ __all__ = [
     "files_router",
     "resources_router",
     "frame_router",
+    "projects_router",
+    "library_router",
+    "batch_router",
+    "settings_router",
+    "uploads_router",
 ]
-

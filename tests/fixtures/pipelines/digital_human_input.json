@@ -1,0 +1,6 @@
+{
+  "portrait_url": "tests/fixtures/pipelines/portrait.png",
+  "narration": "Mock digital human narration",
+  "voice_workflow": "runninghub/tts_edge.json",
+  "project_id": "project-digital"
+}

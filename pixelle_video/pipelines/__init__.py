@@ -19,9 +19,18 @@ Each pipeline implements a specific video generation approach.
 
 from pixelle_video.pipelines.base import BasePipeline
 from pixelle_video.pipelines.linear import LinearVideoPipeline, PipelineContext
-from pixelle_video.pipelines.standard import StandardPipeline
+from pixelle_video.pipelines.standard import StandardPipeline, run as run_standard
 from pixelle_video.pipelines.custom import CustomPipeline
-from pixelle_video.pipelines.asset_based import AssetBasedPipeline
+from pixelle_video.pipelines.asset_based import AssetBasedPipeline, run as run_asset_based
+from pixelle_video.pipelines import action_transfer, digital_human, i2v
+
+PIPELINE_REGISTRY = {
+    "standard": run_standard,
+    "digital_human": digital_human.run,
+    "i2v": i2v.run,
+    "action_transfer": action_transfer.run,
+    "asset_based": run_asset_based,
+}
 
 __all__ = [
     "BasePipeline",
@@ -30,5 +39,5 @@ __all__ = [
     "StandardPipeline",
     "CustomPipeline",
     "AssetBasedPipeline",
+    "PIPELINE_REGISTRY",
 ]
-
