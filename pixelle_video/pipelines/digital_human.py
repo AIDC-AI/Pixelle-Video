@@ -106,6 +106,7 @@ async def run(
     tts_speed: Optional[float] = None,
     tts_workflow: Optional[str] = None,
     ref_audio: Optional[str] = None,
+    task_id_override: Optional[str] = None,
     **_: Any,
 ) -> VideoGenerationResult:
     input_payload = {
@@ -129,6 +130,7 @@ async def run(
         input_payload,
         title=goods_title or "Digital Human",
         n_frames=1,
+        task_id_override=task_id_override,
     )
     if mock_result is not None:
         return mock_result

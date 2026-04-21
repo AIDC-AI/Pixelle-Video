@@ -55,3 +55,6 @@ ignore = ["E501"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "parity: streamlit-vs-api pipeline parity checks",
+]

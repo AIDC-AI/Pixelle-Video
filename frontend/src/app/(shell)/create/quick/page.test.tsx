@@ -195,7 +195,7 @@ describe('QuickCreatePage', () => {
       min_image_prompt_words: 30,
       max_image_prompt_words: 60,
       video_fps: 30,
-      frame_template: null,
+      frame_template: '1080x1920/image_default.html',
       template_params: null,
       prompt_prefix: null,
       bgm_path: null,

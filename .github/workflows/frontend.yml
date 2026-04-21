@@ -53,3 +53,54 @@ jobs:
           name: frontend-coverage
           path: frontend/coverage/
           retention-days: 7
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint-test-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install backend deps
+        working-directory: .
+        run: uv sync --extra dev
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build frontend
+        run: pnpm build
+
+      - name: Run E2E suite
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: frontend/test-results/playwright/
+          retention-days: 7

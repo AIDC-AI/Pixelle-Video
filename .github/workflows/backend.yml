@@ -1,0 +1,32 @@
+name: backend
+
+on:
+  push:
+    paths:
+      - "api/**"
+      - "pixelle_video/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "api/**"
+      - "pixelle_video/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/backend.yml"
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install backend deps
+        run: uv sync --extra dev
+
+      - name: Run parity gate
+        run: uv run pytest -m parity

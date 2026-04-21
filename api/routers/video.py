@@ -36,24 +36,28 @@ from api.schemas.video import (
     VideoGenerateResponse,
 )
 from api.tasks import TaskType, task_manager
-from pixelle_video.pipelines import action_transfer, asset_based, digital_human, i2v
+from pixelle_video.pipelines import action_transfer, asset_based, digital_human, i2v, standard
 
 router = APIRouter(prefix="/video", tags=["Video Generation"])
 
-PipelineRunner = Callable[[], Awaitable[Any]]
+PipelineRunner = Callable[[str], Awaitable[Any]]
 
 
 def _build_standard_video_params(request_body: VideoGenerateRequest) -> dict[str, Any]:
     if not request_body.frame_template:
         raise ValueError("frame_template is required to determine media size")
 
-    from pixelle_video.services.frame_html import HTMLFrameGenerator
-    from pixelle_video.utils.template_util import resolve_template_path
+    if os.getenv("COMFY_MOCK") == "1":
+        media_width, media_height = 1024, 1024
+        logger.debug("COMFY_MOCK enabled, skipping template media size inspection")
+    else:
+        from pixelle_video.services.frame_html import HTMLFrameGenerator
+        from pixelle_video.utils.template_util import resolve_template_path
 
-    template_path = resolve_template_path(request_body.frame_template)
-    generator = HTMLFrameGenerator(template_path)
-    media_width, media_height = generator.get_media_size()
-    logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
+        template_path = resolve_template_path(request_body.frame_template)
+        generator = HTMLFrameGenerator(template_path)
+        media_width, media_height = generator.get_media_size()
+        logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
 
     video_params: dict[str, Any] = {
         "text": request_body.text,
@@ -110,7 +114,7 @@ async def _schedule_pipeline_task(
     )
 
     async def execute_pipeline() -> dict[str, Any]:
-        result = await runner()
+        result = await runner(task.task_id)
         return _build_task_result(request, result)
 
     await task_manager.execute_task(task_id=task.task_id, coro_func=execute_pipeline)
@@ -139,10 +143,7 @@ async def generate_video_sync(
     try:
         logger.info(f"Sync video generation: {request_body.text[:50]}...")
         video_params = _build_standard_video_params(request_body)
-        generate_video = pixelle_video.generate_video
-        if generate_video is None:
-            raise RuntimeError("Standard video pipeline is not initialized")
-        result = await generate_video(**video_params)
+        result = await standard.run(pixelle_video, **video_params)
         payload = _build_task_result(request, result)
         
         return VideoGenerateResponse(
@@ -182,14 +183,11 @@ async def generate_video_async(
     try:
         logger.info(f"Async video generation: {request_body.text[:50]}...")
         video_params = _build_standard_video_params(request_body)
-        generate_video = pixelle_video.generate_video
-        if generate_video is None:
-            raise RuntimeError("Standard video pipeline is not initialized")
         return await _schedule_pipeline_task(
             request=request,
             request_params=request_body.model_dump(),
             project_id=request_body.project_id,
-            runner=lambda: generate_video(**video_params),
+            runner=lambda task_id: standard.run(pixelle_video, task_id_override=task_id, **video_params),
         )
     except Exception as e:
         logger.error(f"Async video generation error: {e}")
@@ -208,7 +206,11 @@ async def generate_digital_human_async(
             request=request,
             request_params=request_body.model_dump(),
             project_id=request_body.project_id,
-            runner=lambda: digital_human.run(pixelle_video, **request_body.model_dump()),
+            runner=lambda task_id: digital_human.run(
+                pixelle_video,
+                task_id_override=task_id,
+                **request_body.model_dump(),
+            ),
         )
     except Exception as exc:
         logger.error(f"Async digital human generation error: {exc}")
@@ -227,7 +229,7 @@ async def generate_i2v_async(
             request=request,
             request_params=request_body.model_dump(),
             project_id=request_body.project_id,
-            runner=lambda: i2v.run(pixelle_video, **request_body.model_dump()),
+            runner=lambda task_id: i2v.run(pixelle_video, task_id_override=task_id, **request_body.model_dump()),
         )
     except Exception as exc:
         logger.error(f"Async i2v generation error: {exc}")
@@ -246,7 +248,11 @@ async def generate_action_transfer_async(
             request=request,
             request_params=request_body.model_dump(),
             project_id=request_body.project_id,
-            runner=lambda: action_transfer.run(pixelle_video, **request_body.model_dump()),
+            runner=lambda task_id: action_transfer.run(
+                pixelle_video,
+                task_id_override=task_id,
+                **request_body.model_dump(),
+            ),
         )
     except Exception as exc:
         logger.error(f"Async action transfer generation error: {exc}")
@@ -265,7 +271,11 @@ async def generate_custom_async(
             request=request,
             request_params=request_body.model_dump(),
             project_id=request_body.project_id,
-            runner=lambda: asset_based.run(pixelle_video, **request_body.model_dump()),
+            runner=lambda task_id: asset_based.run(
+                pixelle_video,
+                task_id_override=task_id,
+                **request_body.model_dump(),
+            ),
         )
     except Exception as exc:
         logger.error(f"Async custom generation error: {exc}")

@@ -1,0 +1,8 @@
+{
+  "text": "Parity quick pipeline input for deterministic mock output.",
+  "mode": "generate",
+  "title": "Parity Standard",
+  "n_scenes": 2,
+  "project_id": "parity-standard-project",
+  "frame_template": "1080x1920/image_default.html"
+}

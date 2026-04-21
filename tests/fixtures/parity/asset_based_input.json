@@ -1,0 +1,15 @@
+{
+  "project_id": "parity-asset-project",
+  "scenes": [
+    {
+      "media": "tests/fixtures/pipelines/source.png",
+      "narration": "Scene one parity narration.",
+      "duration": 3
+    },
+    {
+      "media": "tests/fixtures/pipelines/source.png",
+      "narration": "Scene two parity narration.",
+      "duration": 4
+    }
+  ]
+}

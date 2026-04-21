@@ -35,6 +35,7 @@ async def run(
     media_workflow: str,
     project_id: Optional[str] = None,
     progress_callback: ProgressCallback = None,
+    task_id_override: Optional[str] = None,
     **_: Any,
 ) -> VideoGenerationResult:
     input_payload = {
@@ -49,6 +50,7 @@ async def run(
         input_payload,
         title="Image To Video",
         n_frames=1,
+        task_id_override=task_id_override,
     )
     if mock_result is not None:
         return mock_result

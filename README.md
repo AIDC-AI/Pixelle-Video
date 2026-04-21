@@ -220,6 +220,30 @@ sudo apt update
 sudo apt install ffmpeg
 ```
 
+## 🧪 Phase 2 验证命令
+
+### 前端 Playwright E2E
+
+```bash
+cd frontend
+pnpm exec playwright install --with-deps chromium
+pnpm test:e2e
+```
+
+### Pipeline Parity Gate
+
+```bash
+uv run pytest -m parity
+```
+
+Playwright 会启动真实的 Next.js + FastAPI，并自动注入：
+
+- `COMFY_MOCK=1`
+- `TTS_MOCK=1`
+- `LLM_MOCK=1`
+
+Parity Gate 会对同一输入分别走旧 pipeline `.run(...)` 路径和 `/api/video/*` 路径，比较 mock 输出的一致性。
+
 **Windows**
 - 下载地址：https://ffmpeg.org/download.html
 - 下载后解压，将 `bin` 目录添加到系统环境变量 PATH 中
@@ -433,4 +457,3 @@ Pixelle-Video 的设计受到以下优秀开源项目的启发：
 ## ⭐ Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.com/#AIDC-AI/Pixelle-Video&Date)
-

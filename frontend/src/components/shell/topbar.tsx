@@ -85,7 +85,10 @@ export function Topbar() {
         </div>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 gap-2 text-xs font-normal")}>
+          <DropdownMenuTrigger
+            data-testid="project-switcher-trigger"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 gap-2 text-xs font-normal")}
+          >
             {!isHydrated ? (
               <span className="w-24 h-4 bg-muted animate-pulse rounded-md" />
             ) : currentProject ? currentProject.name : 'Select Project'}
@@ -115,6 +118,7 @@ export function Topbar() {
             </DialogHeader>
             <div className="py-4">
               <input
+                data-testid="create-project-name-input"
                 type="text"
                 placeholder="Project Name"
                 className="w-full px-3 py-2 border rounded-md text-sm focus:outline-ring"
@@ -126,7 +130,7 @@ export function Topbar() {
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateProject} disabled={createProject.isPending}>
+              <Button data-testid="create-project-submit" onClick={handleCreateProject} disabled={createProject.isPending}>
                 Create
               </Button>
             </DialogFooter>

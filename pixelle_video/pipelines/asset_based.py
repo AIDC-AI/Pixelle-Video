@@ -876,6 +876,7 @@ async def run(
     duration: int = 30,
     project_id: Optional[str] = None,
     progress_callback: ProgressCallback = None,
+    task_id_override: Optional[str] = None,
     **kwargs,
 ) -> Any:
     normalized_scenes = []
@@ -907,6 +908,7 @@ async def run(
         title=video_title or "Custom Assets",
         n_frames=max(len(derived_assets), 1),
         duration=2.0,
+        task_id_override=task_id_override,
     )
     if mock_result is not None:
         return mock_result

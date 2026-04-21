@@ -526,6 +526,7 @@ async def run(
     project_id: Optional[str] = None,
     n_scenes: int = 5,
     mode: Literal["generate", "fixed"] = "generate",
+    task_id_override: Optional[str] = None,
     **kwargs,
 ) -> VideoGenerationResult:
     input_payload = {
@@ -543,6 +544,7 @@ async def run(
         title=title or "Standard Video",
         n_frames=n_scenes,
         duration=float(max(n_scenes, 1) * 2),
+        task_id_override=task_id_override,
     )
     if mock_result is not None:
         return mock_result

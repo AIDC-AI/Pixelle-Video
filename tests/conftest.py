@@ -68,6 +68,14 @@ def clear_task_manager() -> None:
 def dummy_core(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> DummyCore:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("COMFY_MOCK", "1")
+    monkeypatch.setenv("PIXELLE_VIDEO_ROOT", str(tmp_path))
+
+    for directory in ("templates", "workflows", "bgm", "resources", "data"):
+        target = PROJECT_ROOT / directory
+        link = tmp_path / directory
+        if target.exists() and not link.exists():
+            link.symlink_to(target, target_is_directory=True)
+
     output_dir = tmp_path / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
     return DummyCore(output_dir=output_dir)

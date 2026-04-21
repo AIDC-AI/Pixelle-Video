@@ -8,6 +8,7 @@ Mock helpers for pipeline parity tests
 
 from __future__ import annotations
 
+import asyncio
 import os
 from datetime import datetime
 from pathlib import Path
@@ -30,11 +31,21 @@ async def maybe_create_mock_result(
     title: str,
     n_frames: int = 1,
     duration: float = 2.0,
+    task_id_override: Optional[str] = None,
 ) -> Optional[VideoGenerationResult]:
     if os.getenv("COMFY_MOCK") != "1":
         return None
 
-    task_dir, task_id = create_task_output_dir()
+    raw_delay_ms = os.getenv("COMFY_MOCK_DELAY_MS", "").strip()
+    if raw_delay_ms:
+        try:
+            delay_ms = max(0, int(raw_delay_ms))
+        except ValueError:
+            delay_ms = 0
+        if delay_ms > 0:
+            await asyncio.sleep(delay_ms / 1000)
+
+    task_dir, task_id = create_task_output_dir(task_id_override)
     final_video_path = Path(get_task_final_video_path(task_id))
     final_video_path.parent.mkdir(parents=True, exist_ok=True)
     final_video_path.write_bytes(f"mock-{pipeline_name}".encode("utf-8"))
