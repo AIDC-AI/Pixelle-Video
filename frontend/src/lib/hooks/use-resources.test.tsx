@@ -75,6 +75,14 @@ describe('use-resources hooks', () => {
           key: 'selfhost/media_default.json',
           workflow_id: null,
         },
+        {
+          name: 'pose_default.json',
+          display_name: 'Pose 1',
+          source: 'selfhost',
+          path: '/workflows/media/pose_default.json',
+          key: 'selfhost/pose_default.json',
+          workflow_id: null,
+        },
       ],
     });
   });

@@ -31,6 +31,37 @@ globalThis.sessionStorage = createStorageMock() as Storage;
 
 // Polyfill for Base UI and Radix UI components in JSDOM
 if (typeof window !== 'undefined') {
+  class ResizeObserver {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+
+  if (!window.ResizeObserver) {
+    window.ResizeObserver = ResizeObserver;
+  }
+
+  if (!window.PointerEvent) {
+    class PointerEventPolyfill extends MouseEvent {
+      isPrimary: boolean;
+      pointerId: number;
+      pointerType: string;
+
+      constructor(type: string, params: PointerEventInit = {}) {
+        super(type, params);
+        this.pointerId = params.pointerId ?? 1;
+        this.pointerType = params.pointerType ?? 'mouse';
+        this.isPrimary = params.isPrimary ?? true;
+      }
+    }
+
+    Object.defineProperty(window, 'PointerEvent', {
+      value: PointerEventPolyfill,
+      configurable: true,
+      writable: true,
+    });
+  }
+
   window.HTMLElement.prototype.getAnimations = () => [];
   window.HTMLElement.prototype.scrollIntoView = () => {};
 }

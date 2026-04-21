@@ -3,10 +3,20 @@ import { apiClient, type ApiError } from '../api-client';
 import { useCurrentProjectStore } from '@/stores/current-project';
 import type { components, paths } from '@/types/api';
 
+type AsyncVideoPath =
+  | '/api/video/generate/async'
+  | '/api/video/digital-human/async'
+  | '/api/video/i2v/async'
+  | '/api/video/action-transfer/async'
+  | '/api/video/custom/async';
+
+type AsyncVideoRequest<Path extends AsyncVideoPath> =
+  Omit<paths[Path]['post']['requestBody']['content']['application/json'], 'project_id'>;
+type AsyncVideoResponse<Path extends AsyncVideoPath> =
+  paths[Path]['post']['responses'][200]['content']['application/json'];
+
 type VideoGenerateRequest =
   paths['/api/video/generate/async']['post']['requestBody']['content']['application/json'];
-type VideoGenerateAsyncResponse =
-  paths['/api/video/generate/async']['post']['responses'][200]['content']['application/json'];
 type Task = paths['/api/tasks/{task_id}']['get']['responses'][200]['content']['application/json'];
 type CancelTaskResponse =
   paths['/api/tasks/{task_id}']['delete']['responses'][200]['content']['application/json'];
@@ -24,20 +34,40 @@ function getBasePollIntervalMs(): number {
   return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : DEFAULT_POLL_INTERVAL_MS;
 }
 
-export function useSubmitQuick() {
+function useSubmitAsyncVideo<Path extends AsyncVideoPath>(endpoint: Path) {
   const currentProject = useCurrentProjectStore((state) => state.currentProject);
 
-  return useMutation<VideoGenerateAsyncResponse, ApiError, QuickSubmitRequest>({
+  return useMutation<AsyncVideoResponse<Path>, ApiError, AsyncVideoRequest<Path>>({
     mutationFn: async (data) => {
       if (!currentProject?.id) {
         throw new Error('Project ID is required');
       }
-      return apiClient<VideoGenerateAsyncResponse>('/api/video/generate/async', {
+      return apiClient<AsyncVideoResponse<Path>>(endpoint, {
         method: 'POST',
         body: JSON.stringify({ ...data, project_id: currentProject.id }),
       });
     },
   });
+}
+
+export function useSubmitQuick() {
+  return useSubmitAsyncVideo('/api/video/generate/async');
+}
+
+export function useSubmitDigitalHuman() {
+  return useSubmitAsyncVideo('/api/video/digital-human/async');
+}
+
+export function useSubmitI2V() {
+  return useSubmitAsyncVideo('/api/video/i2v/async');
+}
+
+export function useSubmitActionTransfer() {
+  return useSubmitAsyncVideo('/api/video/action-transfer/async');
+}
+
+export function useSubmitCustom() {
+  return useSubmitAsyncVideo('/api/video/custom/async');
 }
 
 export function useTaskPolling(taskId: string | undefined, isEnabled = true) {

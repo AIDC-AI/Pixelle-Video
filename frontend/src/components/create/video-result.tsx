@@ -5,17 +5,26 @@ import { Download, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface VideoResultProps {
+  aspectRatio?: 'portrait' | 'landscape';
   videoUrl: string;
   duration?: number;
   fileSize?: number;
   onRegenerate: () => void;
 }
 
-export function VideoResult({ videoUrl, duration, fileSize, onRegenerate }: VideoResultProps) {
+export function VideoResult({
+  aspectRatio = 'portrait',
+  videoUrl,
+  duration,
+  fileSize,
+  onRegenerate,
+}: VideoResultProps) {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(videoUrl);
     toast.success('链接已复制到剪贴板');
   };
+
+  const aspectRatioClassName = aspectRatio === 'landscape' ? 'aspect-video' : 'aspect-[9/16]';
 
   return (
     <Card className="bg-card border-border shadow-none overflow-hidden">
@@ -23,7 +32,7 @@ export function VideoResult({ videoUrl, duration, fileSize, onRegenerate }: Vide
         <CardTitle className="text-lg font-medium">生成结果</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="aspect-[9/16] bg-black relative max-h-[60vh] mx-auto flex items-center justify-center">
+        <div className={`${aspectRatioClassName} bg-black relative max-h-[60vh] mx-auto flex items-center justify-center`}>
           <video 
             src={videoUrl} 
             controls 
