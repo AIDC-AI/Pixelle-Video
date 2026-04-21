@@ -17,8 +17,8 @@ Business logic for history management (UI-agnostic).
 Provides high-level operations on top of PersistenceService.
 """
 
-from typing import List, Dict, Optional, Any
-from pathlib import Path
+from typing import Any, Dict, Optional
+
 from loguru import logger
 
 from pixelle_video.services.persistence import PersistenceService
@@ -174,11 +174,13 @@ class HistoryManager:
     async def list_video_items(
         self,
         project_id: Optional[str] = None,
+        unassigned_only: bool = False,
         cursor: Optional[str] = None,
         limit: int = 20,
     ) -> Dict[str, Any]:
         return await self.persistence.list_video_items(
             project_id=project_id,
+            unassigned_only=unassigned_only,
             cursor=cursor,
             limit=limit,
         )

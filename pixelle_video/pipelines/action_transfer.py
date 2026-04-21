@@ -32,7 +32,7 @@ async def run(
     *,
     driver_video: str,
     target_image: str,
-    pose_workflow: Optional[str] = None,
+    pose_workflow: str,
     project_id: Optional[str] = None,
     motion_prompt: str = "",
     duration: int = 0,
@@ -61,7 +61,7 @@ async def run(
         progress_callback("progress.generation", 10)
 
     task_dir, task_id = create_task_output_dir()
-    workflow_path = Path("workflows") / (pose_workflow or "")
+    workflow_path = Path("workflows") / pose_workflow
     with open(workflow_path, "r", encoding="utf-8") as f:
         workflow_config = json.load(f)
 

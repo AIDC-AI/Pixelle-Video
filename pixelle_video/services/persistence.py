@@ -17,13 +17,21 @@ Handles task metadata and storyboard persistence to filesystem.
 """
 
 import json
+import os
+import threading
 import uuid
-from pathlib import Path
-from typing import List, Optional, Dict, Any
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from loguru import logger
 
-from pixelle_video.models.storyboard import Storyboard, StoryboardFrame, StoryboardConfig, ContentMetadata
+from pixelle_video.models.storyboard import (
+    ContentMetadata,
+    Storyboard,
+    StoryboardConfig,
+    StoryboardFrame,
+)
 
 
 class PersistenceService:
@@ -71,6 +79,7 @@ class PersistenceService:
         # Index files for fast listing
         self.index_file = self.output_dir / ".index.json"
         self.projects_file = self.output_dir / ".projects.json"
+        self._state_lock = threading.RLock()
         self._ensure_index()
         self._ensure_projects_index()
     
@@ -320,25 +329,6 @@ class PersistenceService:
         """Check if task exists"""
         return self.get_task_dir(task_id).exists()
     
-    async def delete_task(self, task_id: str):
-        """
-        Delete task directory and all files
-        
-        Args:
-            task_id: Task ID
-        """
-        try:
-            task_dir = self.get_task_dir(task_id)
-            
-            if task_dir.exists():
-                import shutil
-                shutil.rmtree(task_dir)
-                logger.info(f"Deleted task: {task_id}")
-            
-        except Exception as e:
-            logger.error(f"Failed to delete task {task_id}: {e}")
-            raise
-    
     # ========================================================================
     # Serialization Helpers
     # ========================================================================
@@ -475,46 +465,64 @@ class PersistenceService:
     
     def _ensure_index(self):
         """Ensure index file exists, create if not"""
-        if not self.index_file.exists():
-            self._save_index({"version": "1.0", "tasks": []})
+        with self._state_lock:
+            if not self.index_file.exists():
+                self._save_index({"version": "1.0", "tasks": []})
 
     def _ensure_projects_index(self):
-        if not self.projects_file.exists():
-            self._save_projects_index({"version": "1.0", "projects": []})
+        with self._state_lock:
+            if not self.projects_file.exists():
+                self._save_projects_index({"version": "1.0", "projects": []})
+
+    def _atomic_write_json(self, target_path: Path, payload: Dict[str, Any]):
+        tmp_path = target_path.with_name(
+            f"{target_path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
+        )
+        try:
+            with tmp_path.open("w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, target_path)
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink(missing_ok=True)
     
     def _load_index(self) -> Dict[str, Any]:
         """Load index from file"""
-        try:
-            with open(self.index_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Failed to load index: {e}")
-            return {"version": "1.0", "tasks": []}
+        with self._state_lock:
+            try:
+                with open(self.index_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Failed to load index: {e}")
+                return {"version": "1.0", "tasks": []}
     
     def _save_index(self, index_data: Dict[str, Any]):
         """Save index to file"""
-        try:
-            index_data["last_updated"] = datetime.now().isoformat()
-            with open(self.index_file, "w", encoding="utf-8") as f:
-                json.dump(index_data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"Failed to save index: {e}")
+        with self._state_lock:
+            try:
+                index_data["last_updated"] = datetime.now().isoformat()
+                self._atomic_write_json(self.index_file, index_data)
+            except Exception as e:
+                logger.error(f"Failed to save index: {e}")
 
     def _load_projects_index(self) -> Dict[str, Any]:
-        try:
-            with open(self.projects_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Failed to load projects index: {e}")
-            return {"version": "1.0", "projects": []}
+        with self._state_lock:
+            try:
+                with open(self.projects_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Failed to load projects index: {e}")
+                return {"version": "1.0", "projects": []}
 
     def _save_projects_index(self, projects_data: Dict[str, Any]):
-        try:
-            projects_data["last_updated"] = datetime.now().isoformat()
-            with open(self.projects_file, "w", encoding="utf-8") as f:
-                json.dump(projects_data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"Failed to save projects index: {e}")
+        with self._state_lock:
+            try:
+                projects_data["last_updated"] = datetime.now().isoformat()
+                self._atomic_write_json(self.projects_file, projects_data)
+            except Exception as e:
+                logger.error(f"Failed to save projects index: {e}")
 
     async def create_project(
         self,
@@ -534,9 +542,10 @@ class PersistenceService:
             "last_task_id": None,
             "deleted_at": None,
         }
-        data = self._load_projects_index()
-        data.setdefault("projects", []).append(project)
-        self._save_projects_index(data)
+        with self._state_lock:
+            data = self._load_projects_index()
+            data.setdefault("projects", []).append(project)
+            self._save_projects_index(data)
         return project
 
     async def list_projects(self, include_deleted: bool = False) -> List[Dict[str, Any]]:
@@ -551,102 +560,119 @@ class PersistenceService:
         return next((item for item in projects if item["id"] == project_id), None)
 
     async def update_project(self, project_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        data = self._load_projects_index()
-        for project in data.get("projects", []):
-            if project["id"] != project_id:
-                continue
-            for key, value in updates.items():
-                if value is not None:
-                    project[key] = value
-            project["updated_at"] = datetime.now().isoformat()
-            self._save_projects_index(data)
-            return project
+        with self._state_lock:
+            data = self._load_projects_index()
+            for project in data.get("projects", []):
+                if project["id"] != project_id:
+                    continue
+                for key, value in updates.items():
+                    if value is not None:
+                        project[key] = value
+                project["updated_at"] = datetime.now().isoformat()
+                self._save_projects_index(data)
+                return project
         return None
 
     async def delete_project(self, project_id: str, cascade: bool = False) -> Optional[Dict[str, Any]]:
-        data = self._load_projects_index()
-        for project in data.get("projects", []):
-            if project["id"] != project_id:
-                continue
-            project["deleted_at"] = datetime.now().isoformat()
-            project["updated_at"] = project["deleted_at"]
-            self._save_projects_index(data)
-            if cascade:
-                index = self._load_index()
-                for task in list(index.get("tasks", [])):
-                    if task.get("project_id") == project_id:
-                        await self.delete_task(task["task_id"])
-            return project
-        return None
+        cascade_task_ids: List[str] = []
+        with self._state_lock:
+            data = self._load_projects_index()
+            for project in data.get("projects", []):
+                if project["id"] != project_id:
+                    continue
+                project["deleted_at"] = datetime.now().isoformat()
+                project["updated_at"] = project["deleted_at"]
+                self._save_projects_index(data)
+                if cascade:
+                    index = self._load_index()
+                    cascade_task_ids = [
+                        task["task_id"]
+                        for task in list(index.get("tasks", []))
+                        if task.get("project_id") == project_id
+                    ]
+                deleted_project = dict(project)
+                break
+            else:
+                return None
+
+        for task_id in cascade_task_ids:
+            await self.delete_task(task_id)
+
+        return deleted_project
 
     async def _sync_project_from_metadata(self, task_id: str, metadata: Dict[str, Any]):
         project_id = metadata.get("input", {}).get("project_id")
         if not project_id:
             return
 
-        data = self._load_projects_index()
-        linked_tasks = [
-            item for item in self._load_index().get("tasks", [])
-            if item.get("project_id") == project_id and item.get("status") == "completed"
-        ]
+        with self._state_lock:
+            data = self._load_projects_index()
+            linked_tasks = [
+                item for item in self._load_index().get("tasks", [])
+                if item.get("project_id") == project_id and item.get("status") == "completed"
+            ]
 
-        for project in data.get("projects", []):
-            if project["id"] != project_id:
-                continue
-            project["task_count"] = len(linked_tasks)
-            project["last_task_id"] = task_id
-            project["updated_at"] = datetime.now().isoformat()
-            break
-        else:
-            return
+            for project in data.get("projects", []):
+                if project["id"] != project_id:
+                    continue
+                project["task_count"] = len(linked_tasks)
+                project["last_task_id"] = task_id
+                project["updated_at"] = datetime.now().isoformat()
+                break
+            else:
+                return
 
-        self._save_projects_index(data)
+            self._save_projects_index(data)
     
     async def _update_index_for_task(self, task_id: str, metadata: Dict[str, Any]):
         """Update index entry for a specific task"""
-        index = self._load_index()
-        
-        # Try to get title from multiple sources
+        storyboard = None
         title = metadata.get("input", {}).get("title")
         if not title or title == "":
-            # Try to get title from storyboard if input title is empty
             storyboard = await self.load_storyboard(task_id)
-            if storyboard and storyboard.title:
-                title = storyboard.title
-            else:
-                # Fall back to using input text preview
-                input_text = metadata.get("input", {}).get("text", "")
-                if input_text:
-                    # Use first 30 characters of input text as title
-                    title = input_text[:30] + ("..." if len(input_text) > 30 else "")
+
+        with self._state_lock:
+            index = self._load_index()
+            
+            # Try to get title from multiple sources
+            if not title or title == "":
+                # Try to get title from storyboard if input title is empty
+                if storyboard and storyboard.title:
+                    title = storyboard.title
                 else:
-                    title = "Untitled"
-        
-        # Extract key info for index
-        index_entry = {
-            "task_id": task_id,
-            "created_at": metadata.get("created_at"),
-            "completed_at": metadata.get("completed_at"),
-            "status": metadata.get("status", "unknown"),
-            "title": title,
-            "duration": metadata.get("result", {}).get("duration", 0),
-            "n_frames": metadata.get("result", {}).get("n_frames", 0),
-            "file_size": metadata.get("result", {}).get("file_size", 0),
-            "video_path": metadata.get("result", {}).get("video_path"),
-            "project_id": metadata.get("input", {}).get("project_id"),
-        }
-        
-        # Update or append
-        tasks = index.get("tasks", [])
-        existing_idx = next((i for i, t in enumerate(tasks) if t["task_id"] == task_id), None)
-        
-        if existing_idx is not None:
-            tasks[existing_idx] = index_entry
-        else:
-            tasks.append(index_entry)
-        
-        index["tasks"] = tasks
-        self._save_index(index)
+                    # Fall back to using input text preview
+                    input_text = metadata.get("input", {}).get("text", "")
+                    if input_text:
+                        # Use first 30 characters of input text as title
+                        title = input_text[:30] + ("..." if len(input_text) > 30 else "")
+                    else:
+                        title = "Untitled"
+            
+            # Extract key info for index
+            index_entry = {
+                "task_id": task_id,
+                "created_at": metadata.get("created_at"),
+                "completed_at": metadata.get("completed_at"),
+                "status": metadata.get("status", "unknown"),
+                "title": title,
+                "duration": metadata.get("result", {}).get("duration", 0),
+                "n_frames": metadata.get("result", {}).get("n_frames", 0),
+                "file_size": metadata.get("result", {}).get("file_size", 0),
+                "video_path": metadata.get("result", {}).get("video_path"),
+                "project_id": metadata.get("input", {}).get("project_id"),
+            }
+            
+            # Update or append
+            tasks = index.get("tasks", [])
+            existing_idx = next((i for i, t in enumerate(tasks) if t["task_id"] == task_id), None)
+            
+            if existing_idx is not None:
+                tasks[existing_idx] = index_entry
+            else:
+                tasks.append(index_entry)
+            
+            index["tasks"] = tasks
+            self._save_index(index)
     
     async def rebuild_index(self):
         """Rebuild index by scanning all task directories"""
@@ -761,13 +787,16 @@ class PersistenceService:
     async def list_video_items(
         self,
         project_id: Optional[str] = None,
+        unassigned_only: bool = False,
         cursor: Optional[str] = None,
         limit: int = 20,
     ) -> Dict[str, Any]:
         index = self._load_index()
         items = list(index.get("tasks", []))
 
-        if project_id is not None:
+        if unassigned_only:
+            items = [item for item in items if item.get("project_id") is None]
+        elif project_id is not None:
             items = [item for item in items if item.get("project_id") == project_id]
 
         items.sort(key=lambda item: item.get("created_at") or "", reverse=True)

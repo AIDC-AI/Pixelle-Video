@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from typing import Optional
+
+from fastapi import APIRouter, Query
 
 from api.routers._helpers import not_implemented
 from api.schemas.batch import Batch, BatchCreateRequest, BatchListResponse
@@ -14,7 +16,9 @@ async def create_batch(request_body: BatchCreateRequest):
 
 
 @router.get("", response_model=BatchListResponse)
-async def list_batches():
+async def list_batches(
+    project_id: Optional[str] = Query(None, description="Filter by project ID"),
+):
     raise not_implemented("Batch listing is not implemented yet")
 
 

@@ -6,7 +6,11 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from loguru import logger
 
 from api.dependencies import PixelleVideoDep
-from api.routers._helpers import not_implemented, path_to_url
+from api.routers._helpers import (
+    normalize_project_filter_query,
+    not_implemented,
+    path_to_url,
+)
 from api.schemas.library import PlaceholderListResponse, VideoItem, VideoListResponse
 
 router = APIRouter(prefix="/library", tags=["Library"])
@@ -26,8 +30,10 @@ async def list_videos(
         if history is None:
             raise RuntimeError("History manager is not initialized")
 
+        normalized_project_id, unassigned_only = normalize_project_filter_query(project_id)
         payload = await history.list_video_items(
-            project_id=project_id,
+            project_id=normalized_project_id,
+            unassigned_only=unassigned_only,
             cursor=cursor,
             limit=limit,
         )
@@ -61,20 +67,36 @@ async def get_video_detail(video_id: str):
 
 
 @router.get("/images", response_model=PlaceholderListResponse)
-async def list_images():
+async def list_images(
+    project_id: Optional[str] = Query(None, description="Filter by project ID"),
+    cursor: Optional[str] = Query(None, description="Pagination cursor"),
+    limit: int = Query(20, ge=1, le=100, description="Page size"),
+):
     raise not_implemented("Library images listing is not implemented yet")
 
 
 @router.get("/voices", response_model=PlaceholderListResponse)
-async def list_voices():
+async def list_voices(
+    project_id: Optional[str] = Query(None, description="Filter by project ID"),
+    cursor: Optional[str] = Query(None, description="Pagination cursor"),
+    limit: int = Query(20, ge=1, le=100, description="Page size"),
+):
     raise not_implemented("Library voices listing is not implemented yet")
 
 
 @router.get("/bgm", response_model=PlaceholderListResponse)
-async def list_library_bgm():
+async def list_library_bgm(
+    project_id: Optional[str] = Query(None, description="Filter by project ID"),
+    cursor: Optional[str] = Query(None, description="Pagination cursor"),
+    limit: int = Query(20, ge=1, le=100, description="Page size"),
+):
     raise not_implemented("Library BGM listing is not implemented yet")
 
 
 @router.get("/scripts", response_model=PlaceholderListResponse)
-async def list_scripts():
+async def list_scripts(
+    project_id: Optional[str] = Query(None, description="Filter by project ID"),
+    cursor: Optional[str] = Query(None, description="Pagination cursor"),
+    limit: int = Query(20, ge=1, le=100, description="Page size"),
+):
     raise not_implemented("Library scripts listing is not implemented yet")

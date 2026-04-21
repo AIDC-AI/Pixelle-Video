@@ -17,10 +17,12 @@ Endpoints for managing async tasks (checking status, canceling, etc.)
 """
 
 from typing import List, Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
-from api.tasks import task_manager, Task, TaskStatus
+from api.routers._helpers import normalize_project_filter_query
+from api.tasks import Task, TaskStatus, task_manager
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -42,7 +44,13 @@ async def list_tasks(
     Returns list of tasks sorted by creation time (newest first).
     """
     try:
-        tasks = task_manager.list_tasks(status=status, project_id=project_id, limit=limit)
+        normalized_project_id, unassigned_only = normalize_project_filter_query(project_id)
+        tasks = task_manager.list_tasks(
+            status=status,
+            project_id=normalized_project_id,
+            unassigned_only=unassigned_only,
+            limit=limit,
+        )
         return tasks
         
     except Exception as e:

@@ -19,11 +19,12 @@ In-memory task management for video generation jobs.
 import asyncio
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Callable
+from typing import Callable, Dict, List, Optional
+
 from loguru import logger
 
-from api.tasks.models import Task, TaskStatus, TaskType, TaskProgress
 from api.config import api_config
+from api.tasks.models import Task, TaskProgress, TaskStatus, TaskType
 
 
 class TaskManager:
@@ -159,6 +160,7 @@ class TaskManager:
         self,
         status: Optional[TaskStatus] = None,
         project_id: Optional[str] = None,
+        unassigned_only: bool = False,
         limit: int = 100
     ) -> List[Task]:
         """
@@ -175,7 +177,9 @@ class TaskManager:
         
         if status:
             tasks = [t for t in tasks if t.status == status]
-        if project_id is not None:
+        if unassigned_only:
+            tasks = [t for t in tasks if t.project_id is None]
+        elif project_id is not None:
             tasks = [t for t in tasks if t.project_id == project_id]
         
         # Sort by created_at descending

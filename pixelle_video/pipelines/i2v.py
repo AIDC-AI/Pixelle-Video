@@ -32,7 +32,7 @@ async def run(
     *,
     source_image: str,
     motion_prompt: str,
-    media_workflow: Optional[str] = None,
+    media_workflow: str,
     project_id: Optional[str] = None,
     progress_callback: ProgressCallback = None,
     **_: Any,
@@ -57,7 +57,7 @@ async def run(
         progress_callback("progress.generation", 10)
 
     task_dir, task_id = create_task_output_dir()
-    workflow_path = Path("workflows") / (media_workflow or "")
+    workflow_path = Path("workflows") / media_workflow
     with open(workflow_path, "r", encoding="utf-8") as f:
         workflow_config = json.load(f)
 

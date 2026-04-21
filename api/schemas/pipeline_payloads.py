@@ -23,14 +23,14 @@ class DigitalHumanAsyncRequest(BaseModel):
 class I2VAsyncRequest(BaseModel):
     source_image: str = Field(..., description="Source image path")
     motion_prompt: str = Field(..., description="Motion prompt")
-    media_workflow: Optional[str] = Field(None, description="Media workflow key")
+    media_workflow: str = Field(..., description="Media workflow key")
     project_id: Optional[str] = Field(None, description="Project ID")
 
 
 class ActionTransferAsyncRequest(BaseModel):
     driver_video: str = Field(..., description="Driver video path")
     target_image: str = Field(..., description="Target image path")
-    pose_workflow: Optional[str] = Field(None, description="Pose workflow key")
+    pose_workflow: str = Field(..., description="Pose workflow key")
     project_id: Optional[str] = Field(None, description="Project ID")
 
 
