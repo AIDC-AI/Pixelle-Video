@@ -18,17 +18,31 @@ describe('Sidebar', () => {
   it('renders 5 groups', () => {
     vi.mocked(usePathname).mockReturnValue('/');
     render(<Sidebar />);
-    expect(screen.getByRole('heading', { name: 'Create' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Batch' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Library' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Advanced' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'System' })).toBeInTheDocument();
+    expect(screen.getByText('Quick')).toBeInTheDocument();
+    expect(screen.getByText('All Batches')).toBeInTheDocument();
+    expect(screen.getByText('Videos')).toBeInTheDocument();
+    expect(screen.getByText('Workflows')).toBeInTheDocument();
+    expect(screen.getByText('API Keys')).toBeInTheDocument();
   });
 
-  it('highlights active link', () => {
+  it('highlights active link exactly', () => {
     vi.mocked(usePathname).mockReturnValue('/create/quick');
     render(<Sidebar />);
     const activeLink = screen.getByText('Quick').closest('a');
+    expect(activeLink?.className).toContain('bg-accent');
+  });
+
+  it('highlights active link by longest prefix (batch)', () => {
+    vi.mocked(usePathname).mockReturnValue('/batch/abc123');
+    render(<Sidebar />);
+    const activeLink = screen.getByText('Batches').closest('a');
+    expect(activeLink?.className).toContain('bg-accent');
+  });
+
+  it('highlights active link by longest prefix (library)', () => {
+    vi.mocked(usePathname).mockReturnValue('/library/videos/xyz');
+    render(<Sidebar />);
+    const activeLink = screen.getByText('Videos').closest('a');
     expect(activeLink?.className).toContain('bg-accent');
   });
 

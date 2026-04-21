@@ -37,21 +37,21 @@ const MENU_GROUPS = [
   {
     label: 'Create',
     items: [
-      { href: '/create', icon: Sparkles, label: 'Create' },
+      { href: '/create', icon: Sparkles, label: 'Overview' },
       { href: '/create/quick', icon: Zap, label: 'Quick' },
       { href: '/create/digital-human', icon: User, label: 'Digital Human' },
-      { href: '/create/i2v', icon: ImageIcon, label: 'I2V' },
+      { href: '/create/i2v', icon: ImageIcon, label: 'Image → Video' },
       { href: '/create/action-transfer', icon: Activity, label: 'Action Transfer' },
-      { href: '/create/custom', icon: PenTool, label: 'Custom' },
+      { href: '/create/custom', icon: PenTool, label: 'Custom Asset' },
     ],
   },
   {
     label: 'Batch',
     items: [
       { href: '/batch', icon: LayoutDashboard, label: 'Batches' },
-      { href: '/batch/list', icon: ListOrdered, label: 'List' },
-      { href: '/batch/new', icon: PlusCircle, label: 'New' },
-      { href: '/batch/queue', icon: List, label: 'Queue' },
+      { href: '/batch/list', icon: ListOrdered, label: 'All Batches' },
+      { href: '/batch/new', icon: PlusCircle, label: 'New Batch' },
+      { href: '/batch/queue', icon: List, label: 'Task Queue' },
     ],
   },
   {
@@ -71,13 +71,13 @@ const MENU_GROUPS = [
       { href: '/workflows/self-host', icon: Server, label: 'Self-host' },
       { href: '/workflows/runninghub', icon: Cloud, label: 'RunningHub' },
       { href: '/templates', icon: LayoutTemplate, label: 'Templates' },
-      { href: '/presets', icon: Box, label: 'Presets' },
+      { href: '/presets', icon: Box, label: 'Model Presets' },
     ],
   },
   {
     label: 'System',
     items: [
-      { href: '/settings', icon: Settings, label: 'Settings' },
+      { href: '/settings', icon: Settings, label: 'Overview' },
       { href: '/settings/keys', icon: Key, label: 'API Keys' },
       { href: '/settings/appearance', icon: Palette, label: 'Appearance' },
       { href: '/settings/storage', icon: HardDrive, label: 'Storage' },
@@ -104,6 +104,11 @@ export function Sidebar() {
     localStorage.setItem('sidebar-collapsed', String(nextState));
   };
 
+  const allItems = MENU_GROUPS.flatMap(g => g.items);
+  const activeHref = allItems
+    .filter(item => pathname === item.href || pathname.startsWith(item.href + '/'))
+    .reduce((longest, current) => current.href.length > longest.href.length ? current : longest, { href: '' }).href;
+
   return (
     <aside
       className={cn(
@@ -121,7 +126,7 @@ export function Sidebar() {
             )}
             <nav className="flex flex-col gap-1">
               {group.items.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = item.href === activeHref;
                 return (
                   <Link
                     key={item.href}

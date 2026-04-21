@@ -21,12 +21,20 @@ export function Topbar() {
   const { currentProject, setCurrentProject } = useCurrentProjectStore();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
+    const unsub = useCurrentProjectStore.persist.onFinishHydration(() => setIsHydrated(true));
+    if (useCurrentProjectStore.persist.hasHydrated()) {
+      setIsHydrated(true);
+    } else {
+      useCurrentProjectStore.persist.rehydrate();
+    }
+    return () => unsub();
   }, []);
 
   const { data: projectsData } = useProjects();
@@ -63,7 +71,9 @@ export function Topbar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 gap-2 text-xs font-normal")}>
-            {currentProject ? currentProject.name : 'Select Project'}
+            {!isHydrated ? (
+              <span className="w-24 h-4 bg-muted animate-pulse rounded-md" />
+            ) : currentProject ? currentProject.name : 'Select Project'}
             <ChevronDown className="w-3 h-3 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">

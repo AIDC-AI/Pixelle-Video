@@ -21,6 +21,7 @@ export const useCurrentProjectStore = create<CurrentProjectStore>()(
     }),
     {
       name: 'current-project-storage',
+      skipHydration: true,
     }
   )
 );

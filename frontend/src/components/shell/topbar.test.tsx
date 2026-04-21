@@ -36,11 +36,19 @@ describe('Topbar', () => {
 
   beforeEach(() => {
     queryClient = new QueryClient();
-    vi.mocked(useCurrentProjectStore).mockReturnValue({
+    const mockStore: any = {
       currentProject: { id: '1', name: 'My Project' },
       setCurrentProject: vi.fn(),
       reset: vi.fn(),
-    } as any);
+    };
+    mockStore.persist = {
+      rehydrate: vi.fn(),
+      hasHydrated: vi.fn().mockReturnValue(true),
+      onFinishHydration: vi.fn().mockReturnValue(vi.fn()),
+    };
+    
+    vi.mocked(useCurrentProjectStore).mockReturnValue(mockStore);
+    (useCurrentProjectStore as any).persist = mockStore.persist;
 
     vi.mocked(useTheme).mockReturnValue({
       theme: 'dark',
@@ -104,6 +112,41 @@ describe('Topbar', () => {
     
     expect(useCurrentProjectStore().setCurrentProject).toHaveBeenCalledWith({ id: '99', name: 'New Test Project' });
     expect(toast.success).toHaveBeenCalledWith('Project created successfully');
+  });
+
+  it('renders skeleton initially and hydrates', () => {
+    const mockStoreEmpty: any = {
+      currentProject: null,
+      setCurrentProject: vi.fn(),
+      reset: vi.fn(),
+    };
+    mockStoreEmpty.persist = {
+      rehydrate: vi.fn(),
+      hasHydrated: vi.fn().mockReturnValue(false),
+      onFinishHydration: vi.fn().mockReturnValue(vi.fn()),
+    };
+    vi.mocked(useCurrentProjectStore).mockReturnValue(mockStoreEmpty);
+    (useCurrentProjectStore as any).persist = mockStoreEmpty.persist;
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <Topbar />
+      </QueryClientProvider>
+    );
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+  });
+
+  it('can cancel dialog', async () => {
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Topbar />
+      </QueryClientProvider>
+    );
+    await user.click(screen.getByRole('button', { name: /My Project/i }));
+    await user.click(await screen.findByText('New Project'));
+    await user.click(await screen.findByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByPlaceholderText('Project Name')).not.toBeInTheDocument();
   });
 
   it('handles empty input when creating project', async () => {
