@@ -1,0 +1,12 @@
+{
+  "unet_name": "WanT2V_MasterModel.safetensors",
+  "workflow_type": "video_generation",
+  "version": "1.0",
+  "parameters": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "duration": 5
+  }
+}
+```
