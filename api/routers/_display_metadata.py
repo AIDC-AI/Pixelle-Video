@@ -14,7 +14,7 @@ _DISPLAY_METADATA_PATHS = (
 )
 _STYLE_OPTIONS_PATH = Path(get_root_path("styles", "style-options.json"))
 _TOKEN_MAP = {
-    "af": "动作迁移",
+    "af": "舞蹈复刻",
     "banana": "Banana",
     "cartoon": "卡通",
     "chinese": "中文",
@@ -46,7 +46,7 @@ _TOKEN_MAP = {
     "z": "Z",
 }
 _PIPELINE_LABELS_ZH = {
-    "action-transfer": "动作迁移",
+    "action-transfer": "舞蹈复刻",
     "custom": "自定义资产",
     "digital-human": "数字人",
     "i2v": "图片转视频",

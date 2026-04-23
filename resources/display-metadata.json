@@ -113,18 +113,18 @@
       "display_tags": ["图片转视频", "动态镜头"]
     },
     "af_scail.json": {
-      "display_name_zh": "Scail 动作迁移方案",
-      "description_zh": "适合动作迁移和驱动视频重定向场景。",
+      "display_name_zh": "Scail 舞蹈复刻方案",
+      "description_zh": "适合舞蹈复刻和驱动视频重定向场景。",
       "display_category": "media",
       "display_category_zh": "画面方案",
-      "display_tags": ["动作迁移", "驱动视频"]
+      "display_tags": ["舞蹈复刻", "驱动视频"]
     },
     "af_mock.json": {
-      "display_name_zh": "动作迁移测试方案",
-      "description_zh": "适合本地调试或验证动作迁移流程。",
+      "display_name_zh": "舞蹈复刻测试方案",
+      "description_zh": "适合本地调试或验证舞蹈复刻流程。",
       "display_category": "media",
       "display_category_zh": "画面方案",
-      "display_tags": ["本地测试", "动作迁移"]
+      "display_tags": ["本地测试", "舞蹈复刻"]
     }
   }
 }
