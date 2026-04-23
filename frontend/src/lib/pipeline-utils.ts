@@ -1,26 +1,34 @@
 import type { components } from '@/types/api';
 
 type Task = components['schemas']['Task'];
+type BatchStatus = components['schemas']['BatchStatus'];
 type TaskStatus = components['schemas']['TaskStatus'];
 
 type PipelineSlug = 'quick' | 'digital-human' | 'i2v' | 'action-transfer' | 'custom';
 
-type PipelineDescriptor = {
+export type PipelineDescriptor = {
   label: string;
   slug: PipelineSlug;
 };
 
 type RequestParamsRecord = Record<string, unknown>;
 
-const PIPELINES: Record<PipelineSlug, PipelineDescriptor> = {
-  quick: { slug: 'quick', label: '快速创作' },
-  'digital-human': { slug: 'digital-human', label: '数字人' },
-  i2v: { slug: 'i2v', label: '图片转视频' },
-  'action-transfer': { slug: 'action-transfer', label: '动作迁移' },
-  custom: { slug: 'custom', label: '自定义资产' },
-};
-
 const TERMINAL_TASK_STATUSES: readonly TaskStatus[] = ['completed', 'failed', 'cancelled'];
+
+function getPipelineDescriptor(slug: PipelineSlug): PipelineDescriptor {
+  switch (slug) {
+    case 'quick':
+      return { slug, label: '快速创作' };
+    case 'digital-human':
+      return { slug, label: '数字人' };
+    case 'i2v':
+      return { slug, label: '图片转视频' };
+    case 'action-transfer':
+      return { slug, label: '舞蹈复刻' };
+    case 'custom':
+      return { slug, label: '自定义资产' };
+  }
+}
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -130,7 +138,7 @@ export function formatFileSize(value?: number | null): string {
   return `${size.toFixed(size >= 10 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
-export function statusBadgeClassName(status: TaskStatus | 'unknown'): string {
+export function statusBadgeClassName(status: TaskStatus | BatchStatus | 'unknown'): string {
   switch (status) {
     case 'pending':
       return 'border-transparent bg-[hsl(220,10%,38%)] text-white';
@@ -142,12 +150,14 @@ export function statusBadgeClassName(status: TaskStatus | 'unknown'): string {
       return 'border-transparent bg-[hsl(3,80%,56%)] text-white';
     case 'cancelled':
       return 'border-transparent bg-[hsl(32,85%,52%)] text-white';
+    case 'partial':
+      return 'border-transparent bg-[hsl(38,92%,50%)] text-[hsl(38,92%,15%)]';
     default:
       return 'border-border bg-muted text-foreground';
   }
 }
 
-export function statusLabel(status: TaskStatus | 'unknown'): string {
+export function statusLabel(status: TaskStatus | BatchStatus | 'unknown'): string {
   switch (status) {
     case 'pending':
       return '排队中';
@@ -159,6 +169,8 @@ export function statusLabel(status: TaskStatus | 'unknown'): string {
       return '失败';
     case 'cancelled':
       return '已取消';
+    case 'partial':
+      return '部分完成';
     default:
       return '未知';
   }
@@ -173,20 +185,20 @@ export function inferPipeline(task: Pick<Task, 'request_params'> | null | undefi
 
   if (params) {
     if (Array.isArray(params.scenes)) {
-      return PIPELINES.custom;
+      return getPipelineDescriptor('custom');
     }
     if (typeof params.portrait_url === 'string' && typeof params.narration === 'string') {
-      return PIPELINES['digital-human'];
+      return getPipelineDescriptor('digital-human');
     }
     if (typeof params.driver_video === 'string' && typeof params.target_image === 'string') {
-      return PIPELINES['action-transfer'];
+      return getPipelineDescriptor('action-transfer');
     }
     if (typeof params.source_image === 'string' && typeof params.motion_prompt === 'string') {
-      return PIPELINES.i2v;
+      return getPipelineDescriptor('i2v');
     }
   }
 
-  return PIPELINES.quick;
+  return getPipelineDescriptor('quick');
 }
 
 function appendOptionalSearchParam(
@@ -275,4 +287,3 @@ export function getTaskResult(task: Pick<Task, 'result'> | null | undefined): Vi
     video_path: typeof result.video_path === 'string' ? result.video_path : undefined,
   };
 }
-

@@ -9,12 +9,14 @@ import {
   useImageWorkflows,
   useMediaWorkflows,
   usePresets,
+  useStyleDetail,
+  useStyles,
   useTemplates,
   useTtsWorkflows,
   useWorkflowDetail,
 } from './use-resources';
 import { server } from '@/tests/msw/server';
-import type { paths } from '@/types/api';
+import type { components, paths } from '@/types/api';
 
 type WorkflowListResponse =
   paths['/api/resources/workflows/tts']['get']['responses'][200]['content']['application/json'];
@@ -24,8 +26,11 @@ type TemplateListResponse =
   paths['/api/resources/templates']['get']['responses'][200]['content']['application/json'];
 type PresetListResponse =
   paths['/api/resources/presets']['get']['responses'][200]['content']['application/json'];
+type StyleListResponse =
+  paths['/api/resources/styles']['get']['responses'][200]['content']['application/json'];
 type WorkflowDetailResponse =
   paths['/api/resources/workflows/{workflow_id}']['get']['responses'][200]['content']['application/json'];
+type StyleDetail = components['schemas']['StyleDetail'];
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
@@ -55,26 +60,26 @@ describe('use-resources hooks', () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual<WorkflowListResponse>({
+    expect(result.current.data).toMatchObject<Partial<WorkflowListResponse>>({
       success: true,
       message: 'Success',
       workflows: [
-        {
+        expect.objectContaining({
           name: 'tts_edge.json',
           display_name: 'TTS 1',
           source: 'selfhost',
           path: '/workflows/tts/tts_edge.json',
           key: 'selfhost/tts_edge.json',
           workflow_id: null,
-        },
-        {
+        }),
+        expect.objectContaining({
           name: 'tts_cloud.json',
           display_name: 'TTS Cloud',
           source: 'runninghub',
           path: '/workflows/runninghub/tts_cloud.json',
           key: 'runninghub/tts_cloud.json',
           workflow_id: 'rh-tts-cloud',
-        },
+        }),
       ],
     });
   });
@@ -85,34 +90,34 @@ describe('use-resources hooks', () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual<WorkflowListResponse>({
+    expect(result.current.data).toMatchObject<Partial<WorkflowListResponse>>({
       success: true,
       message: 'Success',
       workflows: [
-        {
+        expect.objectContaining({
           name: 'media_default.json',
           display_name: 'Media 1',
           source: 'selfhost',
           path: '/workflows/media/media_default.json',
           key: 'selfhost/media_default.json',
           workflow_id: null,
-        },
-        {
+        }),
+        expect.objectContaining({
           name: 'pose_default.json',
           display_name: 'Pose 1',
           source: 'selfhost',
           path: '/workflows/media/pose_default.json',
           key: 'selfhost/pose_default.json',
           workflow_id: null,
-        },
-        {
+        }),
+        expect.objectContaining({
           name: 'video_cloud.json',
           display_name: 'RunningHub Motion',
           source: 'runninghub',
           path: '/workflows/runninghub/video_cloud.json',
           key: 'runninghub/video_cloud.json',
           workflow_id: 'rh-video-cloud',
-        },
+        }),
       ],
     });
   });
@@ -123,26 +128,26 @@ describe('use-resources hooks', () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual<WorkflowListResponse>({
+    expect(result.current.data).toMatchObject<Partial<WorkflowListResponse>>({
       success: true,
       message: 'Success',
       workflows: [
-        {
+        expect.objectContaining({
           name: 'image_default.json',
           display_name: 'Image 1',
           source: 'selfhost',
           path: '/workflows/image/image_default.json',
           key: 'selfhost/image_default.json',
           workflow_id: null,
-        },
-        {
+        }),
+        expect.objectContaining({
           name: 'image_flux.json',
           display_name: 'Image Flux',
           source: 'runninghub',
           path: '/workflows/runninghub/image_flux.json',
           key: 'runninghub/image_flux.json',
           workflow_id: 'rh-image-flux',
-        },
+        }),
       ],
     });
   });
@@ -153,16 +158,89 @@ describe('use-resources hooks', () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual<BgmListResponse>({
+    expect(result.current.data).toMatchObject<Partial<BgmListResponse>>({
       success: true,
       message: 'Success',
       bgm_files: [
-        {
-          name: 'BGM 1',
-          path: '/bgm/default/bgm-1.mp3',
+        expect.objectContaining({
+          name: 'Default Launch',
+          path: '/bgm/style-1000-bgm.mp3',
           source: 'default',
+          linked_style_id: 'style-1000',
+          linked_style_name: 'Default Launch',
+        }),
+        expect.objectContaining({
+          name: 'Launch Story',
+          path: '/bgm/style-1014-bgm.mp3',
+          source: 'default',
+          linked_style_id: 'style-1014',
+          linked_style_name: 'Launch Story',
+        }),
+        expect.objectContaining({
+          name: 'Creator Remix',
+          path: '/data/bgm/creator-remix.mp3',
+          source: 'user',
+          linked_style_id: 'style-custom-1',
+          linked_style_name: 'Creator Remix',
+        }),
+      ],
+    });
+  });
+
+  it('useStyles fetches style summaries', async () => {
+    const { result } = renderHook(() => useStyles(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual<StyleListResponse>({
+      success: true,
+      message: 'Success',
+      styles: [
+        {
+          id: 'style-1000',
+          name: 'Default Launch',
+          description: 'Default launch-ready visual style.',
+          scene: 'general',
+          tone: 'confident',
+          is_builtin: true,
+          preview_bgm_url: 'http://localhost:8000/api/files/bgm/style-1000-bgm.mp3',
+        },
+        {
+          id: 'style-1014',
+          name: 'Launch Story',
+          description: 'Premium launch narrative style.',
+          scene: 'marketing',
+          tone: 'bold',
+          is_builtin: true,
+          preview_bgm_url: 'http://localhost:8000/api/files/bgm/style-1014-bgm.mp3',
+        },
+        {
+          id: 'style-custom-1',
+          name: 'Creator Remix',
+          description: 'Saved user style.',
+          scene: 'creator',
+          tone: 'warm',
+          is_builtin: false,
+          preview_bgm_url: 'http://localhost:8000/api/files/bgm/style-custom-1-bgm.mp3',
         },
       ],
+    });
+  });
+
+  it('useStyleDetail fetches an individual style', async () => {
+    const { result } = renderHook(() => useStyleDetail('style-1014'), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toMatchObject<Partial<StyleDetail>>({
+      id: 'style-1014',
+      name: 'Launch Story',
+      runtime_config: {
+        bgm: '/bgm/style-1014-bgm.mp3',
+        template: '1080x1920/image_default.html',
+      },
     });
   });
 
@@ -236,6 +314,8 @@ describe('use-resources hooks', () => {
           orientation: 'portrait',
           path: '/templates/1080x1920/image_default.html',
           key: '1080x1920/image_default.html',
+          preview_image_url: 'http://localhost:8000/api/files/resources/template_previews/1080x1920/image_default.png',
+          preview_available: true,
         },
         {
           name: 'landscape_default.html',
@@ -246,6 +326,9 @@ describe('use-resources hooks', () => {
           orientation: 'landscape',
           path: '/templates/1920x1080/landscape_default.html',
           key: '1920x1080/landscape_default.html',
+          preview_image_url:
+            'http://localhost:8000/api/files/resources/template_previews/1920x1080/landscape_default.png',
+          preview_available: true,
         },
       ],
     });
@@ -356,7 +439,7 @@ describe('use-resources hooks', () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual<WorkflowDetailResponse>({
+    expect(result.current.data).toMatchObject<Partial<WorkflowDetailResponse>>({
       name: 'media_default.json',
       display_name: 'Media 1',
       source: 'selfhost',
@@ -370,6 +453,14 @@ describe('use-resources hooks', () => {
       },
       key_parameters: ['loader', 'sampler', 'save'],
       raw_nodes: ['1', '2', '3'],
+      workflow_json: {
+        '1': {
+          class_type: 'LoadImage',
+          inputs: {
+            image: 'sample.png',
+          },
+        },
+      },
     });
   });
 

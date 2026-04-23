@@ -24,13 +24,13 @@ const WORKFLOW_REFERENCE_LABELS_ZH: Record<string, string> = {
   'video_qwen_wan2.2.json': 'Qwen Wan 2.2 视频方案',
   'video_z_image_wan2.2.json': 'Z-Image Wan 2.2 视频方案',
   'i2v_ltx2.json': 'LTX 2 图片转视频方案',
-  'af_scail.json': 'Scail 动作迁移方案',
-  'af_mock.json': '动作迁移测试方案',
+  'af_scail.json': 'Scail 舞蹈复刻方案',
+  'af_mock.json': '舞蹈复刻测试方案',
 };
 
 const TOKEN_LABELS_ZH: Record<string, string> = {
   action: '动作',
-  af: '动作',
+  af: '舞蹈复刻',
   banana: 'Banana',
   cartoon: '卡通',
   chinese: '中文',
@@ -50,7 +50,7 @@ const TOKEN_LABELS_ZH: Record<string, string> = {
   ltx2: 'LTX 2',
   media: '画面',
   nano: 'Nano',
-  pose: '动作',
+  pose: '舞蹈动作',
   preset: '预设',
   qwen: 'Qwen',
   quick: '快速创作',
@@ -112,7 +112,7 @@ function workflowSuffixZh(reference: string): string {
     return '图片转视频方案';
   }
   if (lowered.startsWith('af_')) {
-    return '动作迁移方案';
+    return '舞蹈复刻方案';
   }
   return '生成方案';
 }
@@ -129,7 +129,7 @@ function pipelineLabelZh(pipeline: string | null | undefined): string {
       return '图片转视频';
     case 'action-transfer':
     case 'action_transfer':
-      return '动作迁移';
+      return '舞蹈复刻';
     case 'custom':
     case 'asset_based':
       return '自定义资产';
@@ -231,7 +231,7 @@ export function getWorkflowReferenceDescription(
     return '用于把单张图片转换为短视频动态镜头。';
   }
   if (lowered.startsWith('af_')) {
-    return '用于动作迁移、姿态驱动或镜头动作重定向。';
+    return '用于舞蹈复刻、姿态驱动或镜头动作重定向。';
   }
   return '用于像影 Pixelle 的生成流程。';
 }
@@ -328,7 +328,7 @@ export function getPresetDisplayName(
 
   const normalized = original
     .replace(/Image\s*(→|to)\s*Video/gi, '图片转视频')
-    .replace(/Action\s*Transfer/gi, '动作迁移')
+    .replace(/Action\s*Transfer/gi, '舞蹈复刻')
     .replace(/Digital\s*Human/gi, '数字人')
     .replace(/\bQuick\b/gi, '快速创作')
     .replace(/\bLaunch\b/gi, '发布')

@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { ConfigSummary } from '@/components/create/config-summary';
 import { TaskProgress } from '@/components/create/task-progress';
 import { VideoResult } from '@/components/create/video-result';
+import { useAppTranslations } from '@/lib/i18n';
+import type { ConfigSummaryItem } from '@/lib/resource-display';
 import type { components } from '@/types/api';
 
 type TaskStatus = components['schemas']['TaskStatus'];
@@ -20,7 +22,8 @@ type VideoTaskResult = {
 };
 
 interface PipelineStatusPanelProps {
-  config: Record<string, unknown>;
+  config?: Record<string, unknown>;
+  summaryItems?: ConfigSummaryItem[];
   taskId?: string;
   viewState: 'idle' | TaskStatus;
   activeTaskStatus: Extract<TaskStatus, 'pending' | 'running' | 'completed' | 'failed'>;
@@ -35,6 +38,7 @@ interface PipelineStatusPanelProps {
 
 export function PipelineStatusPanel({
   config,
+  summaryItems,
   taskId,
   viewState,
   activeTaskStatus,
@@ -46,9 +50,11 @@ export function PipelineStatusPanel({
   onReset,
   aspectRatio = 'landscape',
 }: PipelineStatusPanelProps) {
+  const t = useAppTranslations('createCommon');
+
   return (
     <div className="flex flex-col gap-4">
-      {viewState === 'idle' ? <ConfigSummary config={config} /> : null}
+      {viewState === 'idle' && config ? <ConfigSummary config={config} /> : null}
 
       {(viewState === 'pending' || viewState === 'running' || (viewState === 'completed' && !taskResult)) && taskId ? (
         <TaskProgress
@@ -73,14 +79,14 @@ export function PipelineStatusPanel({
       {viewState === 'failed' ? (
         <Card className="border-destructive bg-destructive/10 shadow-none">
           <CardContent className="flex flex-col items-center justify-center space-y-4 pt-6 text-center">
-            <div className="text-lg font-medium text-destructive">Generation Failed</div>
+            <div className="text-lg font-medium text-destructive">{t('generationFailed')}</div>
             <p className="text-sm text-destructive/80">{statusMessage}</p>
             <Button
               variant="outline"
               className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
               onClick={onReset}
             >
-              Reconfigure
+              {t('reconfigure')}
             </Button>
           </CardContent>
         </Card>
@@ -92,10 +98,12 @@ export function PipelineStatusPanel({
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
               <Ban className="h-6 w-6 text-muted-foreground" />
             </div>
-            <div className="text-lg font-medium text-foreground">Task Cancelled</div>
-            <p className="text-sm text-muted-foreground">{statusMessage || 'The generation task has been stopped.'}</p>
+            <div className="text-lg font-medium text-foreground">{t('taskCancelled')}</div>
+            <p className="text-sm text-muted-foreground">
+              {statusMessage || t('taskCancelledDescription')}
+            </p>
             <Button variant="outline" className="w-full" onClick={onReset}>
-              Start Over
+              {t('startOver')}
             </Button>
           </CardContent>
         </Card>

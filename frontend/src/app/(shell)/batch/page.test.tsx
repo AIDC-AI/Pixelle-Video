@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 
 import Page from './page';
@@ -6,11 +6,15 @@ import { buildBatch, setBatches } from '@/tests/msw/handlers';
 import { renderWithQueryClient } from '@/tests/pipeline-page-test-utils';
 
 describe('Batch Dashboard Page', () => {
+  beforeEach(() => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
+  });
+
   it('renders batch KPIs and the recent batch list', async () => {
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('heading', { name: 'Batch Overview' })).toBeInTheDocument();
-    expect(screen.getByText('Total Batches')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '批处理总览' })).toBeInTheDocument();
+    expect(screen.getByText('批处理总数')).toBeInTheDocument();
     expect(await screen.findByText('Launch Batch')).toBeInTheDocument();
   });
 
@@ -19,8 +23,8 @@ describe('Batch Dashboard Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByText('No batches yet')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Create Batch' })).toHaveAttribute('href', '/batch/new');
+    expect(await screen.findByText('还没有批处理')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '创建批处理' })).toHaveAttribute('href', '/batch/new');
   });
 
   it('links to batch creation and the full batch list', async () => {
@@ -34,7 +38,7 @@ describe('Batch Dashboard Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('link', { name: 'New Batch' })).toHaveAttribute('href', '/batch/new');
-    expect(screen.getByRole('link', { name: 'View All' })).toHaveAttribute('href', '/batch/list');
+    expect(await screen.findByRole('link', { name: '新建批处理' })).toHaveAttribute('href', '/batch/new');
+    expect(screen.getByRole('link', { name: '查看全部' })).toHaveAttribute('href', '/batch/list');
   });
 });

@@ -33,16 +33,16 @@ describe('pipeline-utils', () => {
     expect(normalizeProjectFilterValue(null, null)).toBe('all');
     expect(toProjectFilterQuery('all')).toBeUndefined();
     expect(toProjectFilterQuery('__unassigned__')).toBe('__unassigned__');
-    expect(projectFilterLabel('all', [])).toBe('All Projects');
-    expect(projectFilterLabel('__unassigned__', [])).toBe('Unassigned');
+    expect(projectFilterLabel('all', [])).toBe('全部项目');
+    expect(projectFilterLabel('__unassigned__', [])).toBe('未分配');
     expect(projectFilterLabel('project-1', [{ id: 'project-1', name: 'Launch Campaign' }])).toBe('Launch Campaign');
   });
 
   it('formats relative time, duration, and file size', () => {
-    expect(formatRelativeTime('2026-04-22T11:59:30Z')).toBe('Just now');
-    expect(formatRelativeTime('2026-04-22T11:30:00Z')).toBe('30m ago');
-    expect(formatRelativeTime('2026-04-22T09:00:00Z')).toBe('3h ago');
-    expect(formatRelativeTime(undefined)).toBe('Unknown time');
+    expect(formatRelativeTime('2026-04-22T11:59:30Z')).toBe('刚刚');
+    expect(formatRelativeTime('2026-04-22T11:30:00Z')).toBe('30 分钟前');
+    expect(formatRelativeTime('2026-04-22T09:00:00Z')).toBe('3 小时前');
+    expect(formatRelativeTime(undefined)).toBe('未知时间');
     expect(formatDurationClock(15)).toBe('00:15');
     expect(formatDurationClock(90)).toBe('01:30');
     expect(formatDurationClock(undefined)).toBe('00:00');
@@ -52,12 +52,12 @@ describe('pipeline-utils', () => {
   });
 
   it('maps status labels, badge classes, and terminal states', () => {
-    expect(statusLabel('pending')).toBe('Pending');
-    expect(statusLabel('running')).toBe('Running');
-    expect(statusLabel('completed')).toBe('Completed');
-    expect(statusLabel('failed')).toBe('Failed');
-    expect(statusLabel('cancelled')).toBe('Cancelled');
-    expect(statusLabel('unknown')).toBe('Unknown');
+    expect(statusLabel('pending')).toBe('排队中');
+    expect(statusLabel('running')).toBe('生成中');
+    expect(statusLabel('completed')).toBe('已完成');
+    expect(statusLabel('failed')).toBe('失败');
+    expect(statusLabel('cancelled')).toBe('已取消');
+    expect(statusLabel('unknown')).toBe('未知');
     expect(statusBadgeClassName('pending')).toContain('bg-[hsl(220,10%,38%)]');
     expect(statusBadgeClassName('running')).toContain('bg-[hsl(215,95%,55%)]');
     expect(statusBadgeClassName('completed')).toContain('bg-[hsl(145,70%,40%)]');
@@ -108,7 +108,7 @@ describe('pipeline-utils', () => {
       },
     });
 
-    expect(inferPipeline(quickTask)).toMatchObject({ slug: 'quick', label: 'Quick' });
+    expect(inferPipeline(quickTask)).toMatchObject({ slug: 'quick', label: '快速创作' });
     expect(inferPipeline(digitalHumanTask)).toMatchObject({ slug: 'digital-human' });
     expect(inferPipeline(i2vTask)).toMatchObject({ slug: 'i2v' });
     expect(inferPipeline(actionTransferTask)).toMatchObject({ slug: 'action-transfer' });

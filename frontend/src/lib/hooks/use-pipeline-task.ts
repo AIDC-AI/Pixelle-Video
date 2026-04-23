@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { useCancelTask, useTaskPolling } from '@/lib/hooks/use-create-video';
+import { useCurrentProjectHydration } from '@/lib/hooks/use-current-project';
 import { useCurrentProjectStore } from '@/stores/current-project';
 import type { components } from '@/types/api';
 
@@ -34,7 +35,7 @@ interface UsePipelineTaskOptions {
 interface PipelineTaskResult<TRequest> {
   activeTaskStatus: Extract<TaskStatus, 'pending' | 'running' | 'completed' | 'failed'>;
   cancel: () => Promise<void>;
-  currentProject: ReturnType<typeof useCurrentProjectStore.getState>['currentProject'];
+  currentProject: ReturnType<typeof useCurrentProjectHydration>['currentProject'];
   currentStep: string;
   isHydrated: boolean;
   isSubmitting: boolean;
@@ -82,11 +83,10 @@ export function usePipelineTask<TRequest, TResponse extends SubmitResponse>(
   const [localState, setLocalState] = useState<'idle' | 'failed' | 'cancelled'>('idle');
   const [localMessage, setLocalMessage] = useState('');
   const [showProjectDialog, setShowProjectDialog] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(useCurrentProjectStore.persist.hasHydrated());
   const [isPollingEnabled, setIsPollingEnabled] = useState(false);
   const [consumedInitialTaskId, setConsumedInitialTaskId] = useState<string | null>(null);
 
-  const currentProject = useCurrentProjectStore((state) => state.currentProject);
+  const { currentProject, isHydrated } = useCurrentProjectHydration();
   const cancelTask = useCancelTask();
   const polling = useTaskPolling(taskId, isPollingEnabled && localState === 'idle');
   const task = polling.data;
@@ -119,19 +119,6 @@ export function usePipelineTask<TRequest, TResponse extends SubmitResponse>(
           : remoteState === 'cancelled'
             ? 'Task cancelled'
             : task?.progress?.message ?? '';
-
-  useEffect(() => {
-    const persistApi = useCurrentProjectStore.persist;
-    const unsubscribe = persistApi.onFinishHydration(() => {
-      setIsHydrated(true);
-    });
-
-    if (!persistApi.hasHydrated()) {
-      void persistApi.rehydrate();
-    }
-
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     if (!options.initialTaskId) {

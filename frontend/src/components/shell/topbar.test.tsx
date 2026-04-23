@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -17,9 +18,18 @@ vi.mock('next-themes', () => ({
 }));
 
 function renderTopbar() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
   return render(
     <AppIntlProvider>
-      <Topbar />
+      <QueryClientProvider client={queryClient}>
+        <Topbar />
+      </QueryClientProvider>
     </AppIntlProvider>
   );
 }
@@ -54,10 +64,11 @@ describe('Topbar', () => {
     expect(mockSetTheme).toHaveBeenCalledWith('light');
   });
 
-  it('renders the notification button', () => {
+  it('renders the notification button with unread badge', async () => {
     renderTopbar();
 
     expect(screen.getByRole('button', { name: '通知' })).toBeInTheDocument();
+    expect(await screen.findByText('2')).toBeInTheDocument();
   });
 
   it('renders the user menu button', () => {

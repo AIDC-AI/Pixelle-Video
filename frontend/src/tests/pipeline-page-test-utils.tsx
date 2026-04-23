@@ -2,9 +2,10 @@ import React from 'react';
 import { act, render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import { AppIntlProvider } from '@/lib/i18n';
 import { useCurrentProjectStore } from '@/stores/current-project';
 
-type PersistedProject = ReturnType<typeof useCurrentProjectStore.getState>['currentProject'];
+type PersistedProject = { id: string; name?: string } | null;
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
@@ -21,7 +22,11 @@ export function createQueryClient(): QueryClient {
 }
 
 export function renderWithQueryClient(element: React.ReactElement) {
-  return render(<QueryClientProvider client={createQueryClient()}>{element}</QueryClientProvider>);
+  return render(
+    <AppIntlProvider>
+      <QueryClientProvider client={createQueryClient()}>{element}</QueryClientProvider>
+    </AppIntlProvider>
+  );
 }
 
 export async function seedCurrentProject(project: PersistedProject): Promise<void> {
@@ -29,7 +34,7 @@ export async function seedCurrentProject(project: PersistedProject): Promise<voi
     localStorage.setItem(
       'current-project-storage',
       JSON.stringify({
-        state: { currentProject: project },
+        state: { currentProjectId: project.id },
         version: 0,
       })
     );
@@ -37,7 +42,7 @@ export async function seedCurrentProject(project: PersistedProject): Promise<voi
     localStorage.removeItem('current-project-storage');
   }
 
-  useCurrentProjectStore.setState({ currentProject: project });
+  useCurrentProjectStore.setState({ currentProjectId: project?.id ?? null });
 
   await act(async () => {
     await useCurrentProjectStore.persist.rehydrate();

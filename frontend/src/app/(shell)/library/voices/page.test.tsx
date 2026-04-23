@@ -19,6 +19,7 @@ vi.mock('next/navigation', () => ({
 
 describe('Library Voices Page', () => {
   beforeEach(async () => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
     mockSearchParams = new URLSearchParams('');
     mockReplace.mockReset();
     await seedCurrentProject({ id: 'project-1', name: 'Launch Campaign' });
@@ -27,8 +28,8 @@ describe('Library Voices Page', () => {
   it('renders voice rows and keeps the current project filter in the URL', async () => {
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('heading', { name: 'Voices' })).toBeInTheDocument();
-    expect(await screen.findByText('selfhost/tts_edge.json')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '语音' })).toBeInTheDocument();
+    expect(await screen.findByText('Edge 配音方案')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/library/voices?project_id=project-1', { scroll: false });
@@ -45,7 +46,7 @@ describe('Library Voices Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    const reuseLink = await screen.findByRole('link', { name: 'Reuse' });
+    const reuseLink = await screen.findByRole('link', { name: '复用' });
     expect(reuseLink).toHaveAttribute(
       'href',
       '/create/digital-human?narration=Narration+from+voice+history.&voice_workflow=selfhost%2Ftts_voice.json'
@@ -62,7 +63,7 @@ describe('Library Voices Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByText('This project has no voice assets yet.')).toBeInTheDocument();
+    expect(await screen.findByText('这个项目还没有语音资产')).toBeInTheDocument();
   });
 
   it('loads the next page of voice history when available', async () => {
@@ -83,7 +84,7 @@ describe('Library Voices Page', () => {
     expect(await screen.findByText('Voice history 16')).toBeInTheDocument();
     expect(screen.queryByText('Voice history 0')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Load More' }));
+    await user.click(screen.getByRole('button', { name: '加载更多' }));
 
     expect(await screen.findByText('Voice history 0')).toBeInTheDocument();
   });
@@ -92,8 +93,8 @@ describe('Library Voices Page', () => {
     const user = userEvent.setup();
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('combobox', { name: 'Project' }));
-    await user.click(await screen.findByRole('option', { name: 'Unassigned' }));
+    await user.click(await screen.findByRole('combobox', { name: '项目' }));
+    await user.click(await screen.findByRole('option', { name: '未分配' }));
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/library/voices?project_id=__unassigned__', { scroll: false });
@@ -112,15 +113,15 @@ describe('Library Voices Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('combobox', { name: 'Project' }));
+    await user.click(await screen.findByRole('combobox', { name: '项目' }));
     await user.click(await screen.findByRole('option', { name: 'Unreleased Experiments' }));
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/library/voices?project_id=project-2', { scroll: false });
     });
 
-    expect(await screen.findByText('Unknown voice')).toBeInTheDocument();
-    expect(screen.getByText('No transcript snapshot')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Reuse' })).toHaveAttribute('href', '/create/digital-human');
+    expect(await screen.findByText('未命名配音方案')).toBeInTheDocument();
+    expect(screen.getByText('没有文本快照')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '复用' })).toHaveAttribute('href', '/create/digital-human');
   });
 });

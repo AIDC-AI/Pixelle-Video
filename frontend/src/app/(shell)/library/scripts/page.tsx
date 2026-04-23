@@ -6,8 +6,14 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Copy, FileText, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { BulkActionBar } from '@/components/library/bulk-action-bar';
+import { CompareView, type CompareAsset } from '@/components/library/compare-view';
 import { LibraryFilterBar } from '@/components/library/library-filter-bar';
 import { LibraryTable } from '@/components/library/library-table';
+import { MarkdownPreview } from '@/components/library/markdown-preview';
+import { StarButton, useStarredAsset } from '@/components/library/star-button';
+import { TagFilter } from '@/components/library/tag-filter';
+import { readLibraryView, ViewToggle, writeLibraryView, type LibraryView } from '@/components/library/view-toggle';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -16,11 +22,19 @@ import { useCurrentProjectHydration } from '@/lib/hooks/use-current-project';
 import { useLibraryScripts } from '@/lib/hooks/use-library-assets';
 import { useProjects } from '@/lib/hooks/use-projects';
 import { useTasksForLibrary } from '@/lib/hooks/use-library-videos';
+import { useMultiSelect } from '@/lib/hooks/use-multi-select';
+import { useAppTranslations } from '@/lib/i18n';
 import {
   formatRelativeTime,
   inferPipeline,
   normalizeProjectFilterValue,
 } from '@/lib/pipeline-utils';
+import {
+  getScriptPipelineLabel,
+  getScriptPromptLabel,
+  getScriptSummaryLabel,
+  getScriptTypeLabel,
+} from '@/lib/resource-display';
 import type { components } from '@/types/api';
 
 type ScriptItem = components['schemas']['ScriptItem'];
@@ -34,23 +48,44 @@ function buildReuseHref(item: ScriptItem): string {
 }
 
 function ScriptRow({
+  index,
   item,
+  onSelect,
   pipelineLabel,
+  selected,
 }: {
+  index: number;
   item: ScriptItem;
+  onSelect: (id: string, index: number, shiftKey: boolean) => void;
   pipelineLabel: string;
+  selected: boolean;
 }) {
+  const t = useAppTranslations('library');
   const [isExpanded, setIsExpanded] = useState(false);
+  const { starred, toggleStarred } = useStarredAsset('scripts', item.id);
 
   return (
     <div className="border-b border-border/60 last:border-none">
       <div className={`${TABLE_GRID_CLASS} items-start gap-4 px-4 py-4`}>
         <div className="space-y-1">
-          <p className="line-clamp-2 text-sm font-medium text-foreground">{item.text}</p>
-          {item.prompt_used ? <p className="line-clamp-1 text-xs text-muted-foreground">{item.prompt_used}</p> : null}
+          <div className="flex items-center gap-2">
+            <input
+              aria-label={`Select ${getScriptSummaryLabel(item)}`}
+              type="checkbox"
+              checked={selected}
+              onClick={(event) => onSelect(item.id, index, event.shiftKey)}
+              onChange={() => undefined}
+            />
+            <StarButton size="sm" starred={starred} onToggle={toggleStarred} />
+            <p className="line-clamp-1 text-sm font-medium text-foreground">{getScriptSummaryLabel(item)}</p>
+          </div>
+          <p className="line-clamp-2 text-xs text-muted-foreground">{item.text}</p>
+          {item.prompt_used ? (
+            <p className="line-clamp-1 text-xs text-muted-foreground">{getScriptPromptLabel(item.prompt_used)}</p>
+          ) : null}
         </div>
         <div>
-          <Badge variant="outline">{item.script_type}</Badge>
+          <Badge variant="outline">{getScriptTypeLabel(item)}</Badge>
         </div>
         <div className="text-sm text-muted-foreground">{formatRelativeTime(item.created_at)}</div>
         <div className="text-sm text-muted-foreground">{pipelineLabel}</div>
@@ -65,42 +100,49 @@ function ScriptRow({
               }
 
               await navigator.clipboard.writeText(item.text);
-              toast.success('Script copied.');
+              toast.success(t('scripts.scriptCopied'));
             }}
           >
             <Copy className="size-4" />
-            Copy
+            {t('actions.copy')}
           </Button>
           <Link href={buildReuseHref(item)} className={buttonVariants({ size: 'sm' })}>
             <Sparkles className="size-4" />
-            Reuse
+            {t('actions.reuse')}
           </Link>
         </div>
       </div>
 
       <div className="px-4 pb-4">
         <Button type="button" variant="ghost" size="sm" onClick={() => setIsExpanded((value) => !value)}>
-          {isExpanded ? 'Hide full script' : 'View full script'}
+          {isExpanded ? t('scripts.hideFullScript') : t('scripts.viewFullScript')}
         </Button>
       </div>
 
       {isExpanded ? (
         <div className="px-4 pb-4">
-          <div className="rounded-2xl border border-border/70 bg-muted/10 p-4 text-sm leading-6 text-foreground">
-            {item.text}
-          </div>
+          <MarkdownPreview markdown={item.text} readOnly />
         </div>
       ) : null}
     </div>
   );
 }
 
+function scriptTags(item: ScriptItem): string[] {
+  return [item.script_type, item.pipeline, item.project_id ? 'project' : 'unassigned']
+    .filter((tag): tag is string => Boolean(tag));
+}
+
 function LibraryScriptsPageContent() {
+  const t = useAppTranslations('library');
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentProject, isHydrated, setCurrentProject } = useCurrentProjectHydration();
   const { data: projectsData } = useProjects();
+  const [view, setView] = useState<LibraryView>(() => readLibraryView('scripts', 'list'));
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const limitParam = Number.parseInt(searchParams.get('limit') ?? `${DEFAULT_LIMIT}`, 10);
   const limit = Number.isFinite(limitParam) && limitParam > 0 ? limitParam : DEFAULT_LIMIT;
@@ -115,6 +157,27 @@ function LibraryScriptsPageContent() {
   const tasksQuery = useTasksForLibrary(projectFilter);
   const items = useMemo(() => (scriptsQuery.data?.pages ?? []).flatMap((page) => page.items ?? []), [scriptsQuery.data]);
   const projects = projectsData?.items ?? [];
+  const tags = useMemo(() => Array.from(new Set(items.flatMap(scriptTags))), [items]);
+  const visibleItems = useMemo(
+    () =>
+      selectedTags.length === 0
+        ? items
+        : items.filter((item) => selectedTags.every((tag) => scriptTags(item).includes(tag))),
+    [items, selectedTags]
+  );
+  const multiSelect = useMultiSelect(visibleItems.map((item) => ({ id: item.id, item })));
+  const selectedScriptItems = visibleItems.filter((item) => multiSelect.isSelected(item.id));
+  const compareItems: CompareAsset[] = selectedScriptItems.map((item) => ({
+    id: item.id,
+    kind: 'image',
+    metadata: {
+      pipeline: item.pipeline,
+      type: item.script_type,
+      words: item.text.length,
+    },
+    title: getScriptSummaryLabel(item),
+    url: null,
+  }));
   const taskMap = useMemo(
     () => new Map((tasksQuery.data ?? []).map((task) => [task.task_id, task])),
     [tasksQuery.data]
@@ -167,28 +230,43 @@ function LibraryScriptsPageContent() {
   };
 
   const isInitialLoading = scriptsQuery.isLoading || tasksQuery.isLoading || !isHydrated;
-  const isEmpty = !isInitialLoading && items.length === 0;
+  const isEmpty = !isInitialLoading && visibleItems.length === 0;
 
   return (
     <div className="space-y-6 p-4 md:p-6">
       <LibraryFilterBar
-        title="Scripts"
-        description="Keep every narration and prompt draft in one place, then reopen Quick with the exact script content prefilled."
+        title={t('scripts.title')}
+        description={t('scripts.description')}
         projectFilter={projectFilter}
         projects={projects}
+        projectLabel={t('filters.project')}
+        allProjectsLabel={t('filters.allProjects')}
         selectId="library-scripts-project-filter"
+        unassignedLabel={t('filters.unassigned')}
         onProjectFilterChange={handleProjectFilterChange}
-      />
+      >
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-foreground">View</span>
+          <ViewToggle
+            view={view}
+            onViewChange={(nextView) => {
+              setView(nextView);
+              writeLibraryView('scripts', nextView);
+            }}
+          />
+        </div>
+        <TagFilter tags={tags} selected={selectedTags} onChange={setSelectedTags} />
+      </LibraryFilterBar>
 
       {isInitialLoading ? <SkeletonTable cellCount={5} gridClassName={TABLE_GRID_CLASS} /> : null}
 
       {isEmpty ? (
         <EmptyState
           icon={FileText}
-          title={projectFilter !== 'all' ? 'This project has no script history yet.' : 'No script history indexed yet.'}
-          description="Narration and prompt history will appear here after generation or assistive writing flows complete."
+          title={projectFilter !== 'all' ? t('scripts.emptyProjectTitle') : t('scripts.emptyTitle')}
+          description={t('scripts.emptyDescription')}
           actionHref="/create"
-          actionLabel="Go to Create"
+          actionLabel={t('actions.goToCreate')}
         />
       ) : null}
 
@@ -196,18 +274,28 @@ function LibraryScriptsPageContent() {
         <>
           <LibraryTable
             gridClassName={TABLE_GRID_CLASS}
-            columns={['Summary', 'Type', 'Created', 'Pipeline', 'Actions']}
+            columns={[
+              t('scripts.columns.summary'),
+              t('scripts.columns.type'),
+              t('scripts.columns.created'),
+              t('scripts.columns.pipeline'),
+              t('scripts.columns.actions'),
+            ]}
             body={
               <>
-                {items.map((item) => (
+                {visibleItems.map((item, index) => (
                   <ScriptRow
                     key={item.id}
+                    index={index}
                     item={item}
-                    pipelineLabel={
+                    selected={multiSelect.isSelected(item.id)}
+                    onSelect={(id, itemIndex, shiftKey) => multiSelect.toggle(id, { index: itemIndex, shiftKey })}
+                    pipelineLabel={getScriptPipelineLabel(
+                      item,
                       item.task_id && taskMap.has(item.task_id)
                         ? inferPipeline(taskMap.get(item.task_id)).label
-                        : 'Unknown'
-                    }
+                        : t('shared.unknown')
+                    )}
                   />
                 ))}
               </>
@@ -223,19 +311,42 @@ function LibraryScriptsPageContent() {
                 }}
                 disabled={scriptsQuery.isFetchingNextPage}
               >
-                {scriptsQuery.isFetchingNextPage ? 'Loading…' : 'Load More'}
+                {scriptsQuery.isFetchingNextPage ? t('actions.loadingMore') : t('actions.loadMore')}
               </Button>
             </div>
           ) : null}
         </>
       ) : null}
+      {selectedScriptItems.length >= 2 && selectedScriptItems.length <= 4 ? (
+        <div className="flex justify-end">
+          <Button type="button" variant="outline" onClick={() => setCompareOpen(true)}>
+            Compare
+          </Button>
+        </div>
+      ) : null}
+      <BulkActionBar
+        selectedCount={selectedScriptItems.length}
+        onClearSelection={multiSelect.clear}
+        onDelete={() => {
+          toast.info('Delete will be available when the library bulk API ships.');
+          multiSelect.clear();
+        }}
+        onDownload={() => {
+          selectedScriptItems.forEach((item) => {
+            const blob = new Blob([item.text], { type: 'text/markdown' });
+            window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
+          });
+        }}
+      />
+      <CompareView open={compareOpen} onOpenChange={setCompareOpen} items={compareItems} />
     </div>
   );
 }
 
 export default function LibraryScriptsPage() {
+  const t = useAppTranslations('library');
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading scripts…</div>}>
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">{t('fallback.loadingScripts')}</div>}>
       <LibraryScriptsPageContent />
     </Suspense>
   );

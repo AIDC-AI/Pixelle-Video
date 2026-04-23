@@ -1,10 +1,50 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+
+@theme inline {
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto)); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto)); }
+    to { height: 0; }
+  }
+}
+
+@custom-variant data-open {
+  &:where([data-state="open"]), &:where([data-open]:not([data-open="false"])) { @slot; }
+}
+@custom-variant data-closed {
+  &:where([data-state="closed"]), &:where([data-closed]:not([data-closed="false"])) { @slot; }
+}
+@custom-variant data-checked {
+  &:where([data-state="checked"]), &:where([data-checked]:not([data-checked="false"])) { @slot; }
+}
+@custom-variant data-unchecked {
+  &:where([data-state="unchecked"]), &:where([data-unchecked]:not([data-unchecked="false"])) { @slot; }
+}
+@custom-variant data-selected { &:where([data-selected="true"]) { @slot; } }
+@custom-variant data-disabled {
+  &:where([data-disabled="true"]), &:where([data-disabled]:not([data-disabled="false"])) { @slot; }
+}
+@custom-variant data-active {
+  &:where([data-state="active"]), &:where([data-active]:not([data-active="false"])) { @slot; }
+}
+@custom-variant data-horizontal { &:where([data-orientation="horizontal"]) { @slot; } }
+@custom-variant data-vertical { &:where([data-orientation="vertical"]) { @slot; } }
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: var(--font-inter), var(--font-noto-sans-sc), ui-sans-serif, system-ui, sans-serif;
+
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -28,6 +68,10 @@
   --color-running: hsl(var(--running));
   --color-success: hsl(var(--success));
   --color-failed: hsl(var(--destructive));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -36,56 +80,126 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+
+  --duration-instant: 100ms;
+  --duration-fast: 200ms;
+  --duration-base: 300ms;
+  --duration-slow: 500ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 :root {
-  --background: 0 0% 98%;
-  --foreground: 240 10% 15%;
+  --background: 210 20% 98%;
+  --foreground: 220 10% 15%;
   --card: 0 0% 100%;
   --popover: 0 0% 100%;
-  --primary: 240 5% 15%;
+  --primary: 245 60% 45%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 240 5% 96%;
-  --muted: 0 0% 92%;
-  --muted-foreground: 0 0% 45%;
-  --accent: 240 5% 92%;
-  --border: 0 0% 90%;
-  --input: 0 0% 88%;
-  --ring: 240 5% 20%;
-  --radius: 0.5rem;
+  --secondary: 220 10% 94%;
+  --muted: 220 10% 96%;
+  --muted-foreground: 220 10% 45%;
+  --accent: 220 10% 92%;
+  --border: 220 10% 90%;
+  --input: 220 10% 88%;
+  --ring: 245 60% 45%;
+  --radius: 0.25rem;
 
-  --pending: 0 0% 60%;
-  --running: 210 100% 60%;
-  --success: 142 70% 45%;
+  --pending: 220 10% 60%;
+  --running: 245 60% 45%;
+  --success: 142 70% 40%;
   --destructive: 0 80% 60%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 38 92% 15%;
+  --info: 210 80% 52%;
+  --info-foreground: 210 80% 15%;
 }
 
 .dark {
-  --background: 240 10% 8%;
+  --background: 220 10% 6%;
   --foreground: 0 0% 95%;
-  --card: 240 10% 10%;
-  --popover: 240 10% 12%;
-  --primary: 0 0% 95%;
-  --primary-foreground: 240 10% 10%;
-  --secondary: 240 5% 15%;
-  --muted: 240 5% 15%;
-  --muted-foreground: 0 0% 60%;
-  --accent: 240 5% 20%;
-  --border: 240 5% 20%;
-  --input: 240 5% 22%;
-  --ring: 0 0% 80%;
+  --card: 220 10% 9%;
+  --popover: 220 10% 11%;
+  --primary: 245 60% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 10% 15%;
+  --muted: 220 10% 15%;
+  --muted-foreground: 220 10% 65%;
+  --accent: 220 10% 18%;
+  --border: 220 10% 16%;
+  --input: 220 10% 20%;
+  --ring: 245 60% 65%;
 
-  --pending: 0 0% 60%;
-  --running: 210 100% 60%;
+  --pending: 220 10% 60%;
+  --running: 245 60% 65%;
   --success: 142 70% 45%;
   --destructive: 0 80% 60%;
+  --warning: 38 92% 60%;
+  --warning-foreground: 38 92% 95%;
+  --info: 210 80% 65%;
+  --info-foreground: 210 80% 95%;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased selection:bg-primary/20;
+  }
+}
+
+@keyframes highlight-fade {
+  0% { background-color: hsl(var(--accent)); }
+  100% { background-color: transparent; }
+}
+
+.animate-highlight {
+  animation: highlight-fade 1.5s ease-out forwards;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted) / 0.55) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer var(--duration-slow) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

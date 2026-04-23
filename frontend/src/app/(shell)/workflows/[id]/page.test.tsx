@@ -16,22 +16,25 @@ vi.mock('next/navigation', () => ({
 
 describe('Workflow Detail Page', () => {
   beforeEach(() => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
     mockParams.mockReturnValue({ id: encodeURIComponent('selfhost/media_default.json') });
   });
 
   it('renders workflow detail metadata', async () => {
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('heading', { name: 'Media 1' })).toBeInTheDocument();
-    expect(screen.getByText('Key Parameters')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '基础画面方案' })).toBeInTheDocument();
+    expect(screen.getByText('关键参数')).toBeInTheDocument();
     expect(screen.getByText('loader')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Preview' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Read-only workflow graph preview' })).toBeInTheDocument();
   });
 
   it('shows an empty state for a missing workflow', async () => {
     mockParams.mockReturnValue({ id: encodeURIComponent('missing-workflow') });
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByText('Workflow not found')).toBeInTheDocument();
+    expect(await screen.findByText('未找到工作流')).toBeInTheDocument();
   });
 
   it('shows the edit affordance for editable workflows and downloads JSON', async () => {
@@ -41,7 +44,8 @@ describe('Workflow Detail Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('button', { name: 'Edit (P4+)' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: '保存技术配置' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save as Template' })).toBeInTheDocument();
 
     const click = vi.fn();
     const originalCreateElement = document.createElement.bind(document);
@@ -57,7 +61,7 @@ describe('Workflow Detail Page', () => {
       return originalCreateElement(tagName);
     });
 
-    await user.click(screen.getByRole('button', { name: 'Download JSON' }));
+    await user.click(screen.getByRole('button', { name: '下载技术配置' }));
 
     expect(click).toHaveBeenCalled();
     expect(createObjectURL).toHaveBeenCalled();
@@ -83,14 +87,15 @@ describe('Workflow Detail Page', () => {
           metadata: {},
           key_parameters: [],
           raw_nodes: [],
+          workflow_json: {},
         })
       )
     );
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByText('RunningHub')).toBeInTheDocument();
-    expect(screen.getByText('No key parameters were exposed by the backend for this workflow.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit (P4+)' })).not.toBeInTheDocument();
+    expect((await screen.findAllByText('RunningHub')).length).toBeGreaterThan(0);
+    expect(screen.getByText('当前没有可展示的关键参数。')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '保存技术配置' })).not.toBeInTheDocument();
   });
 });

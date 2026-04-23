@@ -2,7 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import ActionTransferPage, { ACTION_TRANSFER_REQUEST_KEYS } from './page';
+import ActionTransferPage from './page';
+import { ACTION_TRANSFER_REQUEST_KEYS } from '../request-keys';
 import { renderWithQueryClient, seedCurrentProject } from '@/tests/pipeline-page-test-utils';
 import {
   buildTask,
@@ -35,10 +36,10 @@ describe('ActionTransferPage', () => {
 
     renderWithQueryClient(<ActionTransferPage />);
 
-    await screen.findByRole('heading', { name: 'Action Transfer' });
-    await user.click(screen.getByRole('combobox', { name: 'Pose workflow' }));
-    await user.click(await screen.findByText('Pose 1'));
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '舞蹈复刻' });
+    await user.click(screen.getByRole('combobox', { name: '舞蹈复刻方案' }));
+    await user.click(await screen.findByText('舞蹈复刻方案'));
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     expect(await screen.findByText('生成结果')).toBeInTheDocument();
   });
@@ -50,10 +51,10 @@ describe('ActionTransferPage', () => {
 
     renderWithQueryClient(<ActionTransferPage />);
 
-    await screen.findByRole('heading', { name: 'Action Transfer' });
-    await user.click(screen.getByRole('combobox', { name: 'Pose workflow' }));
-    await user.click(await screen.findByText('Pose 1'));
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '舞蹈复刻' });
+    await user.click(screen.getByRole('combobox', { name: '舞蹈复刻方案' }));
+    await user.click(await screen.findByText('舞蹈复刻方案'));
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     await waitFor(() => {
       expect(getLastActionTransferPayload()).not.toBeNull();
@@ -86,10 +87,10 @@ describe('ActionTransferPage', () => {
 
     renderWithQueryClient(<ActionTransferPage />);
 
-    await screen.findByRole('heading', { name: 'Action Transfer' });
-    await user.click(screen.getByRole('combobox', { name: 'Pose workflow' }));
-    await user.click(await screen.findByText('Pose 1'));
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '舞蹈复刻' });
+    await user.click(screen.getByRole('combobox', { name: '舞蹈复刻方案' }));
+    await user.click(await screen.findByText('舞蹈复刻方案'));
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     expect(await screen.findByText('排队中')).toBeInTheDocument();
 
@@ -99,7 +100,7 @@ describe('ActionTransferPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '取消任务' }));
 
-    expect(await screen.findByRole('button', { name: 'Start Over' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '重新开始' })).toBeInTheDocument();
     const pollCountAfterCancel = getTaskPollCount('task-action-transfer-cancelled');
 
     await new Promise((resolve) => window.setTimeout(resolve, 120));

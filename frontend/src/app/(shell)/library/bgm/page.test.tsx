@@ -20,6 +20,7 @@ vi.mock('next/navigation', () => ({
 
 describe('Library BGM Page', () => {
   beforeEach(async () => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
     mockSearchParams = new URLSearchParams('');
     mockReplace.mockReset();
     await seedCurrentProject({ id: 'project-1', name: 'Launch Campaign' });
@@ -29,8 +30,8 @@ describe('Library BGM Page', () => {
     mockSearchParams = new URLSearchParams('project_id=all');
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('heading', { name: 'BGM' })).toBeInTheDocument();
-    expect(await screen.findByText('BGM bgm-built-in-1')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '背景音乐' })).toBeInTheDocument();
+    expect((await screen.findAllByText('发布故事默认背景音乐')).length).toBeGreaterThan(0);
   });
 
   it('switches to personal history and reuses a track in Quick', async () => {
@@ -46,12 +47,12 @@ describe('Library BGM Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('button', { name: 'My Library' }));
+    await user.click(await screen.findByRole('button', { name: '我的资源库' }));
 
-    expect(await screen.findByText('BGM bgm-history-hero')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Use in Quick' })).toHaveAttribute(
+    expect(await screen.findByText('背景音乐 bgm-history-hero')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '用于 Quick' })).toHaveAttribute(
       'href',
-      '/create/quick?bgm_path=%2Fdata%2Fbgm%2Fhistory-hero.mp3'
+      '/create/quick?bgm_mode=custom&bgm_path=%2Fdata%2Fbgm%2Fhistory-hero.mp3'
     );
   });
 
@@ -65,9 +66,24 @@ describe('Library BGM Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('button', { name: 'My Library' }));
+    await user.click(await screen.findByRole('button', { name: '我的资源库' }));
 
-    expect(await screen.findByText('No personal BGM history yet.')).toBeInTheDocument();
+    expect(await screen.findByText('还没有个人 BGM 历史。')).toBeInTheDocument();
+  });
+
+  it('shows linked style actions for built-in tracks', async () => {
+    mockSearchParams = new URLSearchParams('project_id=all');
+    renderWithQueryClient(<Page />);
+
+    expect((await screen.findAllByText('发布故事默认背景音乐')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: '打开关联风格' })).toHaveAttribute(
+      'href',
+      '/library/styles?style_id=style-1014'
+    );
+    expect(screen.getByRole('link', { name: '用于 Quick' })).toHaveAttribute(
+      'href',
+      '/create/quick?style_id=style-1014&bgm_mode=default'
+    );
   });
 
   it('loads more built-in tracks when another cursor page exists', async () => {
@@ -78,6 +94,8 @@ describe('Library BGM Page', () => {
         buildLibraryBgmItem(`bgm-${index}`, {
           source: 'builtin',
           name: `Built-in ${index}`,
+          display_name_zh: `内建曲目 ${index}`,
+          technical_name: `Built-in ${index}`,
           created_at: `2026-04-22T${String(index).padStart(2, '0')}:00:00Z`,
         })
       )
@@ -85,20 +103,20 @@ describe('Library BGM Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByText('Built-in 20')).toBeInTheDocument();
-    expect(screen.queryByText('Built-in 0')).not.toBeInTheDocument();
+    expect(await screen.findByText('内建曲目 20')).toBeInTheDocument();
+    expect(screen.queryByText('内建曲目 0')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Load More' }));
+    await user.click(screen.getByRole('button', { name: '加载更多' }));
 
-    expect(await screen.findByText('Built-in 0')).toBeInTheDocument();
+    expect(await screen.findByText('内建曲目 0')).toBeInTheDocument();
   });
 
   it('updates the URL when switching the project filter to Unassigned', async () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('combobox', { name: 'Project' }));
-    await user.click(await screen.findByRole('option', { name: 'Unassigned' }));
+    await user.click(await screen.findByRole('combobox', { name: '项目' }));
+    await user.click(await screen.findByRole('option', { name: '未分配' }));
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/library/bgm?project_id=__unassigned__', { scroll: false });
@@ -109,7 +127,7 @@ describe('Library BGM Page', () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('combobox', { name: 'Project' }));
+    await user.click(await screen.findByRole('combobox', { name: '项目' }));
     await user.click(await screen.findByRole('option', { name: 'Unreleased Experiments' }));
 
     await waitFor(() => {

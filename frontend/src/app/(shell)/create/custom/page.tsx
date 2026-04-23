@@ -1,30 +1,47 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PenTool, Plus, Trash2 } from 'lucide-react';
+import { History, PenTool, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
+import { useDraft } from '@/lib/hooks/use-draft';
+import { useBgmList } from '@/lib/hooks/use-resources';
 import { useSubmitCustom } from '@/lib/hooks/use-create-video';
 import { usePipelineTask } from '@/lib/hooks/use-pipeline-task';
+import { useSettings } from '@/lib/hooks/use-settings';
+import { useAppTranslations } from '@/lib/i18n';
+import type { ConfigSummaryItem } from '@/lib/resource-display';
+import { getBgmDescription, getBgmDisplayName, getBgmModeLabel } from '@/lib/resource-display';
 import type { components } from '@/types/api';
 import { CreatePipelineLayout } from '@/components/create/create-pipeline-layout';
 import { FieldLabel } from '@/components/create/field-label';
+import { ParamHintPopover } from '@/components/create/param-hint-popover';
+import { ParamHistoryDrawer } from '@/components/create/param-history-drawer';
 import { PipelineStatusPanel } from '@/components/create/pipeline-status-panel';
+import { PreflightCheck } from '@/components/create/preflight-check';
+import { PresetSelector } from '@/components/create/preset-selector';
 import { ProjectRequiredDialog } from '@/components/create/project-required-dialog';
+import { SubmitSuccessToast } from '@/components/create/submit-success-toast';
+import { AiFeatureGates } from '@/components/create/ai-feature-gates';
 import { MediaUploader } from '@/components/shared/media-uploader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 type CustomRequest = Omit<components['schemas']['CustomAsyncRequest'], 'project_id'>;
 type CustomScene = components['schemas']['CustomScene'];
 
 const CUSTOM_REQUEST_KEYS = [
+  'bgm_mode',
+  'bgm_path',
+  'bgm_volume',
   'project_id',
   'scenes',
 ] as const satisfies readonly (keyof components['schemas']['CustomAsyncRequest'])[];
@@ -35,17 +52,15 @@ const CUSTOM_SCENE_KEYS = [
   'narration',
 ] as const satisfies readonly (keyof CustomScene)[];
 
-const sceneSchema = z.object({
-  duration: z.number().min(1, 'Duration must be at least 1 second.'),
-  media: z.string().trim().min(1, 'Scene media is required.'),
-  narration: z.string().trim().min(1, 'Scene narration is required.'),
-});
-
-const formSchema = z.object({
-  scenes: z.array(sceneSchema).min(1, 'At least one scene is required.'),
-});
-
-type CustomFormValues = z.infer<typeof formSchema>;
+type CustomFormValues = {
+  bgm_mode: 'default' | 'custom' | 'none';
+  bgm_path: string;
+  scenes: Array<{
+    duration: number;
+    media: string;
+    narration: string;
+  }>;
+};
 
 const EMPTY_SCENE: CustomFormValues['scenes'][number] = {
   duration: 5,
@@ -87,6 +102,9 @@ function parseScenes(searchParam: string | null): CustomFormValues['scenes'] {
 
 function buildCustomPayload(values: CustomFormValues): CustomRequest {
   return {
+    bgm_mode: values.bgm_mode,
+    bgm_path: values.bgm_mode === 'custom' ? values.bgm_path || null : null,
+    bgm_volume: 0.3,
     scenes: values.scenes.map((scene) => ({
       duration: scene.duration,
       media: scene.media,
@@ -95,16 +113,61 @@ function buildCustomPayload(values: CustomFormValues): CustomRequest {
   };
 }
 
+function toCustomFormValues(payload: Record<string, unknown>): Partial<CustomFormValues> {
+  const scenes = Array.isArray(payload.scenes)
+    ? payload.scenes.flatMap((scene) => {
+        if (!scene || typeof scene !== 'object') {
+          return [];
+        }
+
+        const candidate = scene as Record<string, unknown>;
+        return [
+          {
+            duration: typeof candidate.duration === 'number' ? candidate.duration : Number(candidate.duration) || 5,
+            media: typeof candidate.media === 'string' ? candidate.media : '',
+            narration: typeof candidate.narration === 'string' ? candidate.narration : '',
+          },
+        ];
+      })
+    : [EMPTY_SCENE];
+
+  return {
+    bgm_mode: payload.bgm_mode === 'custom' ? 'custom' : 'none',
+    bgm_path: typeof payload.bgm_path === 'string' ? payload.bgm_path : '',
+    scenes: scenes.length > 0 ? scenes : [EMPTY_SCENE],
+  };
+}
+
 function CustomPageContent() {
+  const t = useAppTranslations('createRoutes');
+  const quickT = useAppTranslations('quick');
   const searchParams = useSearchParams();
+  const { data: bgmData } = useBgmList();
   const submitCustom = useSubmitCustom();
+  useSettings();
   const pipelineTask = usePipelineTask(submitCustom, {
     initialTaskId: searchParams.get('task_id'),
+  });
+  const [highlightedFields, setHighlightedFields] = useState<string[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  const sceneSchema = z.object({
+    duration: z.number().min(1, t('custom.validation.duration')),
+    media: z.string().trim().min(1, t('custom.validation.media')),
+    narration: z.string().trim().min(1, t('custom.validation.narration')),
+  });
+
+  const formSchema = z.object({
+    bgm_mode: z.enum(['default', 'custom', 'none']),
+    bgm_path: z.string(),
+    scenes: z.array(sceneSchema).min(1, t('custom.validation.scenes')),
   });
 
   const form = useForm<CustomFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      bgm_mode: searchParams.get('bgm_mode') === 'custom' ? 'custom' : 'none',
+      bgm_path: searchParams.get('bgm_path') ?? '',
       scenes: parseScenes(searchParams.get('scenes')),
     },
   });
@@ -114,21 +177,94 @@ function CustomPageContent() {
     name: 'scenes',
   });
   const configValues = useWatch({ control: form.control });
+  const shouldEnableDraft = searchParams.toString().length === 0;
+  const selectedBgmMode = useWatch({ control: form.control, name: 'bgm_mode' });
+  const selectedBgmInfo = bgmData?.bgm_files.find((bgm) => bgm.path === configValues.bgm_path);
+  const summaryItems = React.useMemo<ConfigSummaryItem[]>(() => {
+    const sceneCount = configValues.scenes?.length ?? 0;
+    return [
+      {
+        key: 'scenes',
+        label: t('custom.sections.sceneBuilder'),
+        value: t('custom.summary.sceneCount', { count: sceneCount }),
+        detail: t('custom.summary.sceneDetail', { count: sceneCount }),
+      },
+      {
+        key: 'bgm_mode',
+        label: quickT('bgmModeLabel'),
+        value: getBgmModeLabel(selectedBgmMode),
+        detail:
+          selectedBgmMode === 'custom'
+            ? (selectedBgmInfo ? getBgmDescription(selectedBgmInfo) : quickT('bgmHelpCustom'))
+            : quickT('bgmHelpNone'),
+      },
+      {
+        key: 'bgm_path',
+        label: quickT('bgmLabel'),
+        value:
+          selectedBgmMode === 'custom'
+            ? (selectedBgmInfo ? getBgmDisplayName(selectedBgmInfo) : quickT('summary.notSelected'))
+            : quickT('summary.bgmNone'),
+      },
+    ];
+  }, [configValues.scenes, quickT, selectedBgmInfo, selectedBgmMode, t]);
+
+  useEffect(() => {
+    if (highlightedFields.length === 0) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setHighlightedFields([]), 1500);
+    return () => window.clearTimeout(timeoutId);
+  }, [highlightedFields]);
+
+  const { clearDraft } = useDraft('custom', pipelineTask.currentProject?.id, {
+    enabled: shouldEnableDraft && pipelineTask.isHydrated && !searchParams.get('task_id'),
+    onRestore: (draft) => {
+      form.reset({
+        ...form.getValues(),
+        ...(draft as Partial<CustomFormValues>),
+      });
+    },
+    params: (configValues ?? form.getValues()) as CustomFormValues,
+  });
+
+  const fieldHighlightClass = (keys: string[]) =>
+    keys.some((key) => highlightedFields.includes(key)) ? 'animate-highlight rounded-xl' : '';
+
+  const applyCustomParams = (params: Partial<CustomFormValues>, changedKeys?: string[]) => {
+    form.reset({
+      ...form.getValues(),
+      ...params,
+    });
+    setHighlightedFields(changedKeys ?? Object.keys(params));
+  };
 
   const handleSubmit = form.handleSubmit(async (values) => {
-    await pipelineTask.submit(buildCustomPayload(values));
+    const submitted = await pipelineTask.submit(buildCustomPayload(values));
+    if (!submitted) {
+      return;
+    }
+
+    await clearDraft();
+    toast.success(
+      <SubmitSuccessToast
+        taskName={values.scenes[0]?.narration.trim().slice(0, 48) || `Custom scenes (${values.scenes.length})`}
+      />
+    );
   });
 
   return (
     <>
-      <CreatePipelineLayout
-        title="Custom Asset"
-        description="Build a multi-scene asset run with independent media, narration, and duration for each scene."
+        <CreatePipelineLayout
+        title={t('custom.title')}
+        description={t('custom.description')}
         statusPanel={
           <PipelineStatusPanel
             config={{
               scenes: configValues.scenes ?? [],
             }}
+            summaryItems={summaryItems}
             taskId={pipelineTask.taskId}
             viewState={pipelineTask.viewState}
             activeTaskStatus={pipelineTask.activeTaskStatus}
@@ -142,8 +278,26 @@ function CustomPageContent() {
           />
         }
       >
+        <AiFeatureGates />
         <Form {...form}>
           <form className="space-y-6 pb-8" onSubmit={handleSubmit}>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex-1">
+                <PresetSelector
+                  pipeline="custom"
+                  currentParams={(configValues ?? form.getValues()) as Record<string, unknown>}
+                  savePayload={buildCustomPayload(form.getValues())}
+                  mapPresetToParams={toCustomFormValues}
+                  onApply={(params, changedKeys) => applyCustomParams(params as Partial<CustomFormValues>, changedKeys)}
+                  disabled={pipelineTask.isSubmitting}
+                />
+              </div>
+              <Button type="button" variant="outline" onClick={() => setHistoryOpen(true)}>
+                <History className="size-4" />
+                历史记录
+              </Button>
+            </div>
+
             <Card className="border-border shadow-none">
               <CardHeader className="border-b">
                 <div className="flex items-center justify-between gap-3">
@@ -151,7 +305,7 @@ function CustomPageContent() {
                     <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                       <PenTool className="size-8" />
                     </div>
-                    Scene Builder
+                    {t('custom.sections.sceneBuilder')}
                   </CardTitle>
                   <Button
                     type="button"
@@ -159,7 +313,7 @@ function CustomPageContent() {
                     onClick={() => append({ ...EMPTY_SCENE })}
                   >
                     <Plus className="size-4" />
-                    Add Scene
+                    {t('custom.actions.addScene')}
                   </Button>
                 </div>
               </CardHeader>
@@ -168,9 +322,11 @@ function CustomPageContent() {
                   <div key={field.id} className="space-y-4 rounded-xl border border-border/70 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <h2 className="text-base font-medium text-foreground">Scene {index + 1}</h2>
+                        <h2 className="text-base font-medium text-foreground">
+                          {t('custom.sceneLabel', { index: index + 1 })}
+                        </h2>
                         <p className="text-sm text-muted-foreground">
-                          Upload media, add narration, and set the duration for this scene.
+                          {t('custom.sceneDescription')}
                         </p>
                       </div>
                       <Button
@@ -181,7 +337,7 @@ function CustomPageContent() {
                         disabled={fields.length === 1}
                       >
                         <Trash2 className="size-4" />
-                        Remove
+                        {t('custom.actions.removeScene')}
                       </Button>
                     </div>
 
@@ -189,18 +345,20 @@ function CustomPageContent() {
                       control={form.control}
                       name={`scenes.${index}.media`}
                       render={({ field: mediaField }) => (
-                        <FormItem>
+                        <ParamHintPopover paramKey="custom.scene_media">
+                          <FormItem className={fieldHighlightClass([`scenes.${index}.media`])}>
                           <FormLabel>
-                            <FieldLabel label="Scene Media" required />
+                            <FieldLabel label={t('custom.fields.sceneMedia')} required />
                           </FormLabel>
                           <MediaUploader
                             accept="image/*,video/*"
-                            inputLabel={`Scene ${index + 1} media`}
+                            inputLabel={t('custom.sceneMediaLabel', { index: index + 1 })}
                             value={mediaField.value}
                             onChange={mediaField.onChange}
                           />
                           <FormMessage />
-                        </FormItem>
+                          </FormItem>
+                        </ParamHintPopover>
                       )}
                     />
 
@@ -208,19 +366,21 @@ function CustomPageContent() {
                       control={form.control}
                       name={`scenes.${index}.narration`}
                       render={({ field: narrationField }) => (
-                        <FormItem>
+                        <ParamHintPopover paramKey="custom.scene_narration">
+                          <FormItem className={fieldHighlightClass([`scenes.${index}.narration`])}>
                           <FormLabel>
-                            <FieldLabel label="Scene Narration" required />
+                            <FieldLabel label={t('custom.fields.sceneNarration')} required />
                           </FormLabel>
                           <FormControl>
                             <Textarea
                               {...narrationField}
-                              placeholder="Describe the narration or voiceover for this scene."
+                              placeholder={t('custom.placeholders.sceneNarration')}
                               className="min-h-28"
                             />
                           </FormControl>
                           <FormMessage />
-                        </FormItem>
+                          </FormItem>
+                        </ParamHintPopover>
                       )}
                     />
 
@@ -228,9 +388,10 @@ function CustomPageContent() {
                       control={form.control}
                       name={`scenes.${index}.duration`}
                       render={({ field: durationField }) => (
-                        <FormItem>
+                        <ParamHintPopover paramKey="custom.scene_duration">
+                          <FormItem className={fieldHighlightClass([`scenes.${index}.duration`])}>
                           <FormLabel>
-                            <FieldLabel label="Duration (seconds)" required />
+                            <FieldLabel label={t('custom.fields.durationSeconds')} required />
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -244,7 +405,8 @@ function CustomPageContent() {
                             />
                           </FormControl>
                           <FormMessage />
-                        </FormItem>
+                          </FormItem>
+                        </ParamHintPopover>
                       )}
                     />
                   </div>
@@ -252,10 +414,101 @@ function CustomPageContent() {
               </CardContent>
             </Card>
 
+            <Card className="border-border shadow-none">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">{quickT('bgmLabel')}</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 pt-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="bgm_mode"
+                  render={({ field }) => (
+                    <ParamHintPopover paramKey="custom.bgm_mode">
+                      <FormItem className={fieldHighlightClass(['bgm_mode'])}>
+                      <FormLabel>{quickT('bgmModeLabel')}</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger aria-label={quickT('bgmModeLabel')}>
+                            <SelectValue placeholder={quickT('bgmModeLabel')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">{quickT('bgmModes.none')}</SelectItem>
+                          <SelectItem value="custom">{quickT('bgmModes.custom')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      </FormItem>
+                    </ParamHintPopover>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="bgm_path"
+                  render={({ field }) => (
+                    <ParamHintPopover paramKey="custom.bgm_path">
+                      <FormItem className={fieldHighlightClass(['bgm_path'])}>
+                      <FormLabel>{quickT('bgmLabel')}</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={selectedBgmMode !== 'custom'}
+                      >
+                        <FormControl>
+                          <SelectTrigger aria-label={quickT('bgmLabel')}>
+                            <SelectValue placeholder={quickT('bgmPlaceholder')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {(bgmData?.bgm_files ?? []).map((bgm) => (
+                            <SelectItem key={bgm.path} value={bgm.path}>
+                              {getBgmDisplayName(bgm)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      </FormItem>
+                    </ParamHintPopover>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
             <div className="flex justify-end">
-              <Button type="submit" disabled={!pipelineTask.isHydrated || pipelineTask.isSubmitting}>
-                Generate Video
-              </Button>
+              <PreflightCheck
+                pipeline="custom"
+                disabled={!pipelineTask.isHydrated || pipelineTask.isSubmitting}
+                requiredFields={[
+                  {
+                    key: 'scenes',
+                    label: t('custom.sections.sceneBuilder'),
+                    value: form.getValues('scenes').every(
+                      (scene) => scene.media.trim() && scene.narration.trim() && scene.duration > 0
+                    )
+                      ? 'ok'
+                      : '',
+                  },
+                ]}
+                onPass={() => form.handleSubmit(async (values) => {
+                  const submitted = await pipelineTask.submit(buildCustomPayload(values));
+                  if (!submitted) {
+                    return;
+                  }
+
+                  await clearDraft();
+                  toast.success(
+                    <SubmitSuccessToast
+                      taskName={
+                        values.scenes[0]?.narration.trim().slice(0, 48) || `Custom scenes (${values.scenes.length})`
+                      }
+                    />
+                  );
+                })()}
+              >
+                {t('shared.generateVideo')}
+              </PreflightCheck>
             </div>
           </form>
         </Form>
@@ -265,15 +518,23 @@ function CustomPageContent() {
         open={pipelineTask.showProjectDialog}
         onOpenChange={pipelineTask.setShowProjectDialog}
       />
+
+      <ParamHistoryDrawer
+        pipeline="custom"
+        projectId={pipelineTask.currentProject?.id}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        mapTaskToParams={(task) => toCustomFormValues((task.request_params ?? {}) as Record<string, unknown>)}
+        onApply={(params) => applyCustomParams(params as Partial<CustomFormValues>)}
+      />
     </>
   );
 }
 
-export { CUSTOM_REQUEST_KEYS, CUSTOM_SCENE_KEYS };
-
 export default function CustomPage() {
+  const common = useAppTranslations('common');
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading Custom Asset...</div>}>
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">{common('loading')}</div>}>
       <CustomPageContent />
     </Suspense>
   );

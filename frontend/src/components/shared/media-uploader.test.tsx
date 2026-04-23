@@ -74,11 +74,19 @@ function Harness({
 
 describe('MediaUploader', () => {
   beforeAll(() => {
-    globalThis.XMLHttpRequest = MockXMLHttpRequest as unknown as typeof XMLHttpRequest;
+    Object.defineProperty(globalThis, 'XMLHttpRequest', {
+      configurable: true,
+      writable: true,
+      value: MockXMLHttpRequest as unknown as typeof XMLHttpRequest,
+    });
   });
 
   afterAll(() => {
-    globalThis.XMLHttpRequest = originalXMLHttpRequest;
+    Object.defineProperty(globalThis, 'XMLHttpRequest', {
+      configurable: true,
+      writable: true,
+      value: originalXMLHttpRequest,
+    });
   });
 
   beforeEach(() => {

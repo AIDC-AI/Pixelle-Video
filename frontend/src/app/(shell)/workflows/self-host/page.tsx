@@ -7,6 +7,7 @@ import { WorkflowCard } from '@/components/advanced/workflow-card';
 import { EmptyState } from '@/components/shared/empty-state';
 import { LibraryGrid } from '@/components/library/library-grid';
 import { useImageWorkflows, useMediaWorkflows, useTtsWorkflows } from '@/lib/hooks/use-resources';
+import { useAppTranslations } from '@/lib/i18n';
 import type { components } from '@/types/api';
 
 type WorkflowInfo = components['schemas']['WorkflowInfo'];
@@ -16,6 +17,7 @@ function dedupeWorkflows(items: WorkflowInfo[]): WorkflowInfo[] {
 }
 
 export default function SelfHostedWorkflowsPage() {
+  const t = useAppTranslations('workflows');
   const ttsQuery = useTtsWorkflows();
   const mediaQuery = useMediaWorkflows();
   const imageQuery = useImageWorkflows();
@@ -35,8 +37,8 @@ export default function SelfHostedWorkflowsPage() {
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-foreground">Self-host Workflows</h1>
-        <p className="text-sm text-muted-foreground">Local ComfyUI services hosted inside your own runtime stack.</p>
+        <h1 className="text-2xl font-bold text-foreground">{t('selfHost.title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('selfHost.description')}</p>
       </div>
 
       {isLoading ? (
@@ -50,8 +52,8 @@ export default function SelfHostedWorkflowsPage() {
       {!isLoading && items.length === 0 ? (
         <EmptyState
           icon={ServerCog}
-          title="No self-host workflows available"
-          description="Connect a local workflow source to populate this catalog."
+          title={t('selfHost.emptyTitle')}
+          description={t('selfHost.emptyDescription')}
         />
       ) : null}
 

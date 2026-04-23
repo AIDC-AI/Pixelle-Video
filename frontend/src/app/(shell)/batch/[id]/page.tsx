@@ -24,6 +24,7 @@ import {
 import { Progress, ProgressIndicator, ProgressTrack } from '@/components/ui/progress';
 import { apiClient, type ApiError } from '@/lib/api-client';
 import { useBatchDetail, useDeleteBatch } from '@/lib/hooks/use-batches';
+import { useAppTranslations } from '@/lib/i18n';
 import { batchPipelineLabel, getBatchChildProgressPercent, getBatchChildProgressMessage, isTerminalBatchStatus } from '@/lib/batch-utils';
 import { buildResumeHref, formatRelativeTime, statusBadgeClassName, statusLabel } from '@/lib/pipeline-utils';
 import type { components, paths } from '@/types/api';
@@ -57,6 +58,8 @@ function getTaskVideoUrl(task: Task): string | undefined {
 }
 
 function BatchDetailPageContent() {
+  const t = useAppTranslations('batch');
+  const common = useAppTranslations('common');
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -73,7 +76,7 @@ function BatchDetailPageContent() {
         { method: 'DELETE' }
       ),
     onSuccess: async () => {
-      toast.success('Task cancelled.');
+      toast.success(t('toasts.taskCancelled'));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['batches'] }),
         queryClient.invalidateQueries({ queryKey: ['batches', 'detail', batchId] }),
@@ -103,10 +106,10 @@ function BatchDetailPageContent() {
       <div className="p-4">
         <EmptyState
           icon={FolderArchive}
-          title="Batch not found"
-          description="The requested batch could not be found or has already been removed."
+          title={t('detail.notFoundTitle')}
+          description={t('detail.notFoundDescription')}
           actionHref="/batch/list"
-          actionLabel="Back to All Batches"
+          actionLabel={t('actions.backToAllBatches')}
         />
       </div>
     );
@@ -124,7 +127,9 @@ function BatchDetailPageContent() {
           </div>
           <div className="space-y-1">
             <h1 className="text-3xl font-bold text-foreground">{batch.name ?? batch.id}</h1>
-            <p className="text-sm text-muted-foreground">Created {formatRelativeTime(batch.created_at)}</p>
+            <p className="text-sm text-muted-foreground">
+              {t('detail.createdLabel')} {formatRelativeTime(batch.created_at)}
+            </p>
           </div>
           <div className="max-w-2xl">
             <BatchProgressBar
@@ -140,7 +145,7 @@ function BatchDetailPageContent() {
           {completedChildren.length > 0 ? (
             <a href="#successful-outputs" className={cn(buttonVariants({ variant: 'outline' }))}>
               <Download className="size-4" />
-              Download Outputs
+              {t('detail.downloadOutputs')}
             </a>
           ) : null}
 
@@ -151,7 +156,7 @@ function BatchDetailPageContent() {
               onClick={() => setDialogMode('cancel')}
             >
               <XCircle className="size-4" />
-              Cancel Batch
+              {t('actions.cancelBatch')}
             </Button>
           ) : (
             <Button
@@ -160,7 +165,7 @@ function BatchDetailPageContent() {
               onClick={() => setDialogMode('delete')}
             >
               <Trash2 className="size-4" />
-              Delete Batch
+              {t('actions.deleteBatch')}
             </Button>
           )}
         </div>
@@ -168,11 +173,11 @@ function BatchDetailPageContent() {
 
       <div className="overflow-hidden rounded-2xl border border-border/70 bg-card">
         <div className={`${BATCH_DETAIL_GRID_CLASS} gap-4 border-b border-border/70 bg-muted/20 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground`}>
-          <span>Task ID</span>
-          <span>Status</span>
-          <span>Progress</span>
-          <span>Runtime</span>
-          <span className="text-right">Actions</span>
+          <span>{t('detail.columns.taskId')}</span>
+          <span>{t('detail.columns.status')}</span>
+          <span>{t('detail.columns.progress')}</span>
+          <span>{t('detail.columns.runtime')}</span>
+          <span className="text-right">{t('detail.columns.actions')}</span>
         </div>
 
         {children.map((task) => (
@@ -208,7 +213,7 @@ function BatchDetailPageContent() {
                   )
                 }
               >
-                View
+                {t('actions.view')}
               </Button>
               {(task.status === 'pending' || task.status === 'running') && (
                 <Button
@@ -219,7 +224,7 @@ function BatchDetailPageContent() {
                     void cancelTask.mutateAsync(task.task_id);
                   }}
                 >
-                  Cancel
+                  {t('actions.cancel')}
                 </Button>
               )}
             </div>
@@ -230,19 +235,19 @@ function BatchDetailPageContent() {
       {children.length === 0 ? (
         <EmptyState
           icon={FolderArchive}
-          title="No child tasks yet"
-          description="This batch does not currently have any visible child tasks to monitor."
+          title={t('detail.emptyTitle')}
+          description={t('detail.emptyDescription')}
           actionHref="/batch/list"
-          actionLabel="Back to All Batches"
+          actionLabel={t('actions.backToAllBatches')}
         />
       ) : null}
 
       {completedChildren.length > 0 ? (
         <Card id="successful-outputs" className="border-border/70 bg-card shadow-none">
           <CardHeader>
-            <CardTitle>Successful Outputs</CardTitle>
+            <CardTitle>{t('detail.outputsTitle')}</CardTitle>
             <CardDescription>
-              Direct download links for completed tasks. ZIP bundling is deferred to a later phase.
+              {t('detail.outputsDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -253,7 +258,9 @@ function BatchDetailPageContent() {
                 <div key={`download-${task.task_id}`} className="flex flex-col gap-3 rounded-2xl border border-border/70 p-4 md:flex-row md:items-center md:justify-between">
                   <div className="space-y-1">
                     <p className="font-medium text-foreground">{task.task_id}</p>
-                    <p className="text-sm text-muted-foreground">Completed {formatRelativeTime(task.completed_at ?? task.created_at)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t('detail.completedLabel')} {formatRelativeTime(task.completed_at ?? task.created_at)}
+                    </p>
                   </div>
                   {videoUrl ? (
                     <a
@@ -264,7 +271,7 @@ function BatchDetailPageContent() {
                       className={cn(buttonVariants({ variant: 'outline' }))}
                     >
                       <Download className="size-4" />
-                      Download
+                      {t('actions.download')}
                     </a>
                   ) : null}
                 </div>
@@ -277,16 +284,18 @@ function BatchDetailPageContent() {
       <Dialog open={dialogMode !== null} onOpenChange={(open) => !open && setDialogMode(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{dialogMode === 'cancel' ? 'Cancel this batch?' : 'Delete this batch?'}</DialogTitle>
+            <DialogTitle>
+              {dialogMode === 'cancel' ? t('detail.cancelDialogTitle') : t('detail.deleteDialogTitle')}
+            </DialogTitle>
             <DialogDescription>
               {dialogMode === 'cancel'
-                ? 'This will cancel unfinished child tasks and remove the batch from the active list.'
-                : 'This will soft-delete the batch record. Child tasks are left untouched because the batch is already terminal.'}
+                ? t('detail.cancelDialogDescription')
+                : t('detail.deleteDialogDescription')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogMode(null)}>
-              Keep
+              {t('actions.keep')}
             </Button>
             <Button
               variant="destructive"
@@ -295,7 +304,7 @@ function BatchDetailPageContent() {
                   { batchId, cascade: dialogMode === 'cancel' },
                   {
                     onSuccess: () => {
-                      toast.success(dialogMode === 'cancel' ? 'Batch cancelled.' : 'Batch deleted.');
+                      toast.success(dialogMode === 'cancel' ? t('toasts.batchCancelled') : t('toasts.batchDeleted'));
                       setDialogMode(null);
                       router.push('/batch/list');
                     },
@@ -306,7 +315,7 @@ function BatchDetailPageContent() {
                 );
               }}
             >
-              Confirm
+              {common('confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -316,8 +325,9 @@ function BatchDetailPageContent() {
 }
 
 export default function BatchDetailPage() {
+  const t = useAppTranslations('batch');
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading batch detail…</div>}>
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">{t('fallback.loadingBatchDetail')}</div>}>
       <BatchDetailPageContent />
     </Suspense>
   );

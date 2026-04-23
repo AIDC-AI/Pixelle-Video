@@ -3,7 +3,7 @@
 import { Activity, Image as ImageIcon, PenTool, Sparkles, User } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
-import { PIPELINE_METADATA, type BatchPipeline } from '@/lib/batch-utils';
+import { getPipelineMetadata, type BatchPipeline } from '@/lib/batch-utils';
 import { cn } from '@/lib/utils';
 
 const PIPELINE_ICONS = {
@@ -32,7 +32,7 @@ export function PipelineSelector({
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
       {PIPELINE_ORDER.map((pipeline) => {
-        const metadata = PIPELINE_METADATA[pipeline];
+        const metadata = getPipelineMetadata(pipeline);
         const Icon = PIPELINE_ICONS[pipeline];
         const isActive = pipeline === value;
 

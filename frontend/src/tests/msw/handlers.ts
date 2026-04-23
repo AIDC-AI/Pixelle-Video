@@ -1,5 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import type { components, paths } from '@/types/api';
+import { notificationHandlers, resetMockNotifications } from './notification-handlers';
+import { usageHandlers } from './usage-handlers';
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
@@ -19,6 +21,10 @@ type BatchCreateRequest = paths['/api/batch']['post']['requestBody']['content'][
 type BatchCreateResponse = paths['/api/batch']['post']['responses'][201]['content']['application/json'];
 type BatchDeleteResponse = paths['/api/batch/{batch_id}']['delete']['responses'][200]['content']['application/json'];
 type ProjectListResponse = paths['/api/projects']['get']['responses'][200]['content']['application/json'];
+type ProjectCreateRequest = paths['/api/projects']['post']['requestBody']['content']['application/json'];
+type ProjectUpdateRequest = paths['/api/projects/{project_id}']['patch']['requestBody']['content']['application/json'];
+type ProjectOverviewResponse =
+  paths['/api/projects/{project_id}/overview']['get']['responses'][200]['content']['application/json'];
 type VideoItem = components['schemas']['VideoItem'];
 type VideoListResponse = paths['/api/library/videos']['get']['responses'][200]['content']['application/json'];
 type ImageItem = components['schemas']['ImageItem'];
@@ -40,6 +46,9 @@ type TemplateListResponse =
 type PresetItem = components['schemas']['PresetItem'];
 type PresetListResponse =
   paths['/api/resources/presets']['get']['responses'][200]['content']['application/json'];
+type StyleDetail = components['schemas']['StyleDetail'];
+type StyleListResponse =
+  paths['/api/resources/styles']['get']['responses'][200]['content']['application/json'];
 type WorkflowInfo = components['schemas']['WorkflowInfo'];
 type BgmListResponse =
   paths['/api/resources/bgm']['get']['responses'][200]['content']['application/json'];
@@ -50,6 +59,38 @@ type BatchPipeline = components['schemas']['BatchPipeline'];
 type BatchStatus = components['schemas']['BatchStatus'];
 type SettingsPayload = components['schemas']['SettingsPayload'];
 type SettingsUpdatePayload = components['schemas']['SettingsUpdatePayload'];
+type MediaGenerateRequest =
+  paths['/api/media/generate']['post']['requestBody']['content']['application/json'];
+type MediaGenerateResponse =
+  paths['/api/media/generate']['post']['responses'][200]['content']['application/json'];
+type TTSSynthesizeRequest =
+  paths['/api/tts/synthesize']['post']['requestBody']['content']['application/json'];
+type TTSSynthesizeResponse =
+  paths['/api/tts/synthesize']['post']['responses'][200]['content']['application/json'];
+type ComfyUICheckRequest =
+  paths['/api/settings/comfyui/check']['post']['requestBody']['content']['application/json'];
+type ComfyUICheckResponse =
+  paths['/api/settings/comfyui/check']['post']['responses'][200]['content']['application/json'];
+type LLMCheckRequest =
+  paths['/api/settings/llm/check']['post']['requestBody']['content']['application/json'];
+type LLMCheckResponse =
+  paths['/api/settings/llm/check']['post']['responses'][200]['content']['application/json'];
+type RunningHubCheckRequest =
+  paths['/api/settings/runninghub/check']['post']['requestBody']['content']['application/json'];
+type RunningHubCheckResponse =
+  paths['/api/settings/runninghub/check']['post']['responses'][200]['content']['application/json'];
+type StorageStatsResponse =
+  paths['/api/settings/storage/stats']['get']['responses'][200]['content']['application/json'];
+type StorageCleanupRequest =
+  paths['/api/settings/storage/cleanup']['post']['requestBody']['content']['application/json'];
+type StorageCleanupResponse =
+  paths['/api/settings/storage/cleanup']['post']['responses'][200]['content']['application/json'];
+type TemplateParamsResponse =
+  paths['/api/frame/template/params']['get']['responses'][200]['content']['application/json'];
+type FrameRenderRequest =
+  paths['/api/frame/render']['post']['requestBody']['content']['application/json'];
+type FrameRenderResponse =
+  paths['/api/frame/render']['post']['responses'][200]['content']['application/json'];
 
 type SubmitRequestByEndpoint = {
   '/api/video/generate/async': paths['/api/video/generate/async']['post']['requestBody']['content']['application/json'];
@@ -134,6 +175,7 @@ let libraryScripts: ScriptItem[] = [];
 let batches: StoredBatch[] = [];
 let templates: TemplateInfo[] = [];
 let presets: PresetItem[] = [];
+let styles: StyleDetail[] = [];
 let settingsPayload: SettingsPayload = {
   project_name: 'Demo Project',
   llm: {
@@ -164,6 +206,13 @@ const ttsWorkflowResponse: WorkflowListResponse = {
     {
       name: 'tts_edge.json',
       display_name: 'TTS 1',
+      display_name_zh: 'Edge 配音方案',
+      description_zh: '适合快速生成中文或多语言旁白的本地配音方案。',
+      display_category: 'tts',
+      display_category_zh: '配音方案',
+      display_tags: ['本地', '配音方案'],
+      technical_name: 'tts_edge.json',
+      technical_path: '/workflows/tts/tts_edge.json',
       source: 'selfhost',
       path: '/workflows/tts/tts_edge.json',
       key: 'selfhost/tts_edge.json',
@@ -172,6 +221,13 @@ const ttsWorkflowResponse: WorkflowListResponse = {
     {
       name: 'tts_cloud.json',
       display_name: 'TTS Cloud',
+      display_name_zh: '云端配音方案',
+      description_zh: '适合需要云端音色或远程配音能力的 RunningHub 配音方案。',
+      display_category: 'tts',
+      display_category_zh: '配音方案',
+      display_tags: ['RunningHub', '配音方案'],
+      technical_name: 'tts_cloud.json',
+      technical_path: '/workflows/runninghub/tts_cloud.json',
       source: 'runninghub',
       path: '/workflows/runninghub/tts_cloud.json',
       key: 'runninghub/tts_cloud.json',
@@ -187,6 +243,13 @@ const mediaWorkflowResponse: WorkflowListResponse = {
     {
       name: 'media_default.json',
       display_name: 'Media 1',
+      display_name_zh: '基础画面方案',
+      description_zh: '适合标准画面或短视频镜头生成的本地方案。',
+      display_category: 'media',
+      display_category_zh: '画面方案',
+      display_tags: ['本地', '画面方案'],
+      technical_name: 'media_default.json',
+      technical_path: '/workflows/media/media_default.json',
       source: 'selfhost',
       path: '/workflows/media/media_default.json',
       key: 'selfhost/media_default.json',
@@ -195,6 +258,13 @@ const mediaWorkflowResponse: WorkflowListResponse = {
     {
       name: 'pose_default.json',
       display_name: 'Pose 1',
+      display_name_zh: '舞蹈复刻方案',
+      description_zh: '适合舞蹈视频和目标图像的动作复刻处理。',
+      display_category: 'media',
+      display_category_zh: '画面方案',
+      display_tags: ['本地', '舞蹈复刻'],
+      technical_name: 'pose_default.json',
+      technical_path: '/workflows/media/pose_default.json',
       source: 'selfhost',
       path: '/workflows/media/pose_default.json',
       key: 'selfhost/pose_default.json',
@@ -203,6 +273,13 @@ const mediaWorkflowResponse: WorkflowListResponse = {
     {
       name: 'video_cloud.json',
       display_name: 'RunningHub Motion',
+      display_name_zh: '云端动态画面方案',
+      description_zh: '适合需要 RunningHub 云端算力的短视频镜头生成。',
+      display_category: 'media',
+      display_category_zh: '画面方案',
+      display_tags: ['RunningHub', '画面方案'],
+      technical_name: 'video_cloud.json',
+      technical_path: '/workflows/runninghub/video_cloud.json',
       source: 'runninghub',
       path: '/workflows/runninghub/video_cloud.json',
       key: 'runninghub/video_cloud.json',
@@ -218,6 +295,13 @@ const imageWorkflowResponse: WorkflowListResponse = {
     {
       name: 'image_default.json',
       display_name: 'Image 1',
+      display_name_zh: '基础图像方案',
+      description_zh: '适合静态画面、封面图和图像草图生成。',
+      display_category: 'image',
+      display_category_zh: '图像处理',
+      display_tags: ['本地', '图像处理'],
+      technical_name: 'image_default.json',
+      technical_path: '/workflows/image/image_default.json',
       source: 'selfhost',
       path: '/workflows/image/image_default.json',
       key: 'selfhost/image_default.json',
@@ -226,6 +310,13 @@ const imageWorkflowResponse: WorkflowListResponse = {
     {
       name: 'image_flux.json',
       display_name: 'Image Flux',
+      display_name_zh: 'Flux 图像方案',
+      description_zh: '适合高质量静态画面和风格化封面生成的云端方案。',
+      display_category: 'image',
+      display_category_zh: '图像处理',
+      display_tags: ['RunningHub', '图像处理'],
+      technical_name: 'image_flux.json',
+      technical_path: '/workflows/runninghub/image_flux.json',
       source: 'runninghub',
       path: '/workflows/runninghub/image_flux.json',
       key: 'runninghub/image_flux.json',
@@ -239,9 +330,40 @@ const bgmListResponse: BgmListResponse = {
   message: 'Success',
   bgm_files: [
     {
-      name: 'BGM 1',
-      path: '/bgm/default/bgm-1.mp3',
+      name: 'Default Launch',
+      path: '/bgm/style-1000-bgm.mp3',
       source: 'default',
+      display_name_zh: '默认发布风格背景音乐',
+      description_zh: '跟随“默认发布风格”一起使用的默认曲目。',
+      source_label: '内建资源',
+      technical_name: 'Default Launch',
+      linked_style_display_name_zh: '默认发布风格',
+      linked_style_id: 'style-1000',
+      linked_style_name: 'Default Launch',
+    },
+    {
+      name: 'Launch Story',
+      path: '/bgm/style-1014-bgm.mp3',
+      source: 'default',
+      display_name_zh: '发布故事默认背景音乐',
+      description_zh: '跟随“发布故事”风格一起使用的默认曲目。',
+      source_label: '内建资源',
+      technical_name: 'Launch Story',
+      linked_style_display_name_zh: '发布故事',
+      linked_style_id: 'style-1014',
+      linked_style_name: 'Launch Story',
+    },
+    {
+      name: 'Creator Remix',
+      path: '/data/bgm/creator-remix.mp3',
+      source: 'user',
+      display_name_zh: '创作者混音背景音乐',
+      description_zh: '来自个人资源库，可直接带回快速创作。',
+      source_label: '我的资源',
+      technical_name: 'Creator Remix',
+      linked_style_display_name_zh: '创作者混剪',
+      linked_style_id: 'style-custom-1',
+      linked_style_name: 'Creator Remix',
     },
   ],
 };
@@ -401,6 +523,8 @@ function buildProject(id: string, name: string, overrides: Partial<Project> = {}
     pipeline_hint: null,
     task_count: 1,
     last_task_id: null,
+    preview_url: null,
+    preview_kind: null,
     deleted_at: null,
     ...overrides,
   };
@@ -460,6 +584,10 @@ function buildLibraryBgmItem(id: string, overrides: Partial<LibraryBGMItem> = {}
   return {
     id,
     name: `BGM ${id}`,
+    display_name_zh: `背景音乐 ${id}`,
+    description_zh: '可直接用于创建流程的背景音乐资源。',
+    source_label: '内建资源',
+    technical_name: `BGM ${id}`,
     audio_path: `/bgm/${id}.mp3`,
     audio_url: `${baseURL}/api/files/bgm/${id}.mp3`,
     created_at: DEFAULT_TIME,
@@ -468,6 +596,9 @@ function buildLibraryBgmItem(id: string, overrides: Partial<LibraryBGMItem> = {}
     source: 'builtin',
     project_id: null,
     batch_id: null,
+    linked_style_id: null,
+    linked_style_name: null,
+    linked_style_display_name_zh: null,
     ...overrides,
   };
 }
@@ -479,23 +610,32 @@ function buildScriptItem(id: string, overrides: Partial<ScriptItem> = {}): Scrip
     created_at: DEFAULT_TIME,
     project_id: 'project-1',
     batch_id: null,
+    pipeline: 'quick',
     text: 'Small habits compound into major creative momentum over time.',
     script_type: 'narration',
     prompt_used: 'Narration generated from the launch concept.',
+    type_label_zh: '旁白草稿',
+    pipeline_label_zh: '快速创作',
+    summary_zh: '旁白草稿 · 快速创作',
     ...overrides,
   };
 }
 
 function buildTemplateInfo(key: string, overrides: Partial<TemplateInfo> = {}): TemplateInfo {
+  const normalizedName = key.split('/').pop() ?? key;
+  const previewPath = key.replace('.html', '.png');
+
   return {
-    name: key.split('/').pop() ?? key,
-    display_name: key.split('/').pop() ?? key,
+    name: normalizedName,
+    display_name: normalizedName,
     size: '1080x1920',
     width: 1080,
     height: 1920,
     orientation: 'portrait',
     path: `/templates/${key}`,
     key,
+    preview_image_url: `${baseURL}/api/files/resources/template_previews/${previewPath}`,
+    preview_available: true,
     ...overrides,
   };
 }
@@ -525,10 +665,40 @@ function buildPresetItem(name: string, overrides: Partial<PresetItem> = {}): Pre
   };
 }
 
+function buildStyleDetail(id: string, overrides: Partial<StyleDetail> = {}): StyleDetail {
+  return {
+    id,
+    name: id === 'style-1014' ? 'Launch Story' : `Style ${id}`,
+    display_name_zh: id === 'style-1014' ? '发布故事' : `风格 ${id}`,
+    short_description_zh: '适合短视频叙事和统一视觉氛围的风格方案。',
+    description: 'Reusable Quick pipeline style.',
+    scene: 'launch',
+    tone: 'cinematic',
+    is_builtin: true,
+    preview_bgm_url: `${baseURL}/api/files/bgm/${id}-bgm.mp3`,
+    analysis_creative_layer: 'Keep the story concise and visually clear.',
+    audio_sync_creative_layer: 'Keep the narration crisp and energetic.',
+    reference_config: {},
+    runtime_config: {
+      bgm: `/bgm/${id}-bgm.mp3`,
+      prompt_prefix: 'Cinematic launch visuals with clean foreground focus',
+      template: '1080x1920/image_default.html',
+    },
+    ...overrides,
+  };
+}
+
 function buildWorkflowInfo(key: string, overrides: Partial<WorkflowInfo> = {}): WorkflowInfo {
   return {
     name: key.split('/').pop() ?? key,
     display_name: key,
+    display_name_zh: key.startsWith('runninghub/') ? '云端生成方案' : '本地生成方案',
+    description_zh: '用于创建流程的可复用生成方案。',
+    display_category: key.includes('tts') ? 'tts' : key.includes('image') ? 'image' : 'media',
+    display_category_zh: key.includes('tts') ? '配音方案' : key.includes('image') ? '图像处理' : '画面方案',
+    display_tags: [key.startsWith('runninghub/') ? 'RunningHub' : '本地'],
+    technical_name: key.split('/').pop() ?? key,
+    technical_path: `/workflows/${key}`,
     source: key.startsWith('runninghub/') ? 'runninghub' : 'selfhost',
     path: `/workflows/${key}`,
     key,
@@ -547,6 +717,14 @@ function buildWorkflowDetail(workflow: WorkflowInfo, overrides: Partial<Workflow
     },
     key_parameters: ['loader', 'sampler', 'save'],
     raw_nodes: ['1', '2', '3'],
+    workflow_json: {
+      '1': {
+        class_type: 'LoadImage',
+        inputs: {
+          image: 'sample.png',
+        },
+      },
+    },
     ...overrides,
   };
 }
@@ -569,6 +747,18 @@ function buildLibraryVideoDetail(videoId: string, overrides: Record<string, unkn
       text: 'A generated library video',
       media_workflow: 'selfhost/media_default.json',
       tts_workflow: 'selfhost/tts_edge.json',
+    },
+    storyboard: {
+      frames: [
+        {
+          narration: 'Scene one narration',
+          image_prompt: 'A cinematic opening shot',
+          audio_path: `/output/${videoId}/scene-1.mp3`,
+          image_path: `/output/${videoId}/scene-1.png`,
+          frame_path: `/output/${videoId}/scene-1-frame.png`,
+          segment_duration: 3.2,
+        },
+      ],
     },
     ...overrides,
   };
@@ -631,9 +821,138 @@ function setDefaultTaskScenarios(): void {
 
 function setDefaultProjects(): void {
   projects = [
-    buildProject('project-1', 'Launch Campaign', { pipeline_hint: 'quick', last_task_id: DEFAULT_LIBRARY_VIDEO_ID }),
+    buildProject('project-1', 'Launch Campaign', {
+      pipeline_hint: 'quick',
+      last_task_id: DEFAULT_LIBRARY_VIDEO_ID,
+      preview_url: `${baseURL}/api/files/output/${DEFAULT_LIBRARY_VIDEO_ID}/thumb.jpg`,
+      preview_kind: 'image',
+    }),
     buildProject('project-2', 'Unreleased Experiments', { pipeline_hint: 'action-transfer', task_count: 0 }),
   ];
+}
+
+function getAllCurrentTasks(): Task[] {
+  return Array.from(taskScenarios.keys()).flatMap((taskId) => {
+    const task = getCurrentTaskState(taskId);
+    return task ? [task] : [];
+  });
+}
+
+function getProjectTasks(projectId: string): Task[] {
+  return getAllCurrentTasks()
+    .filter((task) => task.project_id === projectId)
+    .sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
+}
+
+function getProjectBatches(projectId: string): BatchDetailResponse[] {
+  return batches
+    .filter((batch) => batch.project_id === projectId && !batch.deleted_at)
+    .map(hydrateBatch)
+    .sort((left, right) => (right.updated_at ?? '').localeCompare(left.updated_at ?? ''));
+}
+
+function getProjectVideos(projectId: string): VideoItem[] {
+  return libraryVideos
+    .filter((item) => item.project_id === projectId)
+    .sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
+}
+
+function getProjectImages(projectId: string): ImageItem[] {
+  return libraryImages
+    .filter((item) => item.project_id === projectId)
+    .sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
+}
+
+function getProjectVoices(projectId: string): VoiceItem[] {
+  return libraryVoices
+    .filter((item) => item.project_id === projectId)
+    .sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
+}
+
+function getProjectBgm(projectId: string): LibraryBGMItem[] {
+  return libraryBgmItems
+    .filter((item) => item.project_id === projectId)
+    .sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
+}
+
+function getProjectScripts(projectId: string): ScriptItem[] {
+  return libraryScripts
+    .filter((item) => item.project_id === projectId)
+    .sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
+}
+
+function inferProjectPreview(projectId: string): Pick<Project, 'preview_url' | 'preview_kind'> {
+  const project = projects.find((item) => item.id === projectId);
+  if (project?.cover_url) {
+    return {
+      preview_url: project.cover_url,
+      preview_kind: 'image',
+    };
+  }
+
+  const latestVideo = getProjectVideos(projectId)[0];
+  if (latestVideo?.thumbnail_url) {
+    return {
+      preview_url: latestVideo.thumbnail_url,
+      preview_kind: 'image',
+    };
+  }
+
+  const latestImage = getProjectImages(projectId)[0];
+  if (latestImage?.thumbnail_url ?? latestImage?.image_url) {
+    return {
+      preview_url: latestImage.thumbnail_url ?? latestImage.image_url,
+      preview_kind: 'image',
+    };
+  }
+
+  return {
+    preview_url: null,
+    preview_kind: null,
+  };
+}
+
+function buildProjectOverview(project: Project): ProjectOverviewResponse {
+  const tasks = getProjectTasks(project.id);
+  const hydratedProject: Project = {
+    ...project,
+    task_count: tasks.length,
+    last_task_id: tasks[0]?.task_id ?? project.last_task_id ?? null,
+    ...inferProjectPreview(project.id),
+  };
+  const recentBatches = getProjectBatches(project.id).slice(0, 5);
+  const recentVideos = getProjectVideos(project.id).slice(0, 5);
+  const recentImages = getProjectImages(project.id).slice(0, 5);
+  const recentVoices = getProjectVoices(project.id).slice(0, 5);
+  const recentBgm = getProjectBgm(project.id).slice(0, 5);
+  const recentScripts = getProjectScripts(project.id).slice(0, 5);
+
+  return {
+    project: hydratedProject,
+    stats: {
+      batch_count: getProjectBatches(project.id).length,
+      task_count: tasks.length,
+      pending_task_count: tasks.filter((task) => task.status === 'pending').length,
+      running_task_count: tasks.filter((task) => task.status === 'running').length,
+      completed_task_count: tasks.filter((task) => task.status === 'completed').length,
+      failed_task_count: tasks.filter((task) => task.status === 'failed').length,
+      cancelled_task_count: tasks.filter((task) => task.status === 'cancelled').length,
+      video_count: getProjectVideos(project.id).length,
+      image_count: getProjectImages(project.id).length,
+      voice_count: getProjectVoices(project.id).length,
+      bgm_count: getProjectBgm(project.id).length,
+      script_count: getProjectScripts(project.id).length,
+    },
+    recent: {
+      batches: recentBatches,
+      tasks: tasks.slice(0, 5),
+      videos: recentVideos,
+      images: recentImages,
+      voices: recentVoices,
+      bgm: recentBgm,
+      scripts: recentScripts,
+    },
+  };
 }
 
 function setDefaultBatches(): void {
@@ -695,8 +1014,27 @@ function setDefaultLibraryAssets(): void {
     }),
   ];
   libraryBgmItems = [
-    buildLibraryBgmItem('bgm-built-in-1', { source: 'builtin', project_id: null }),
-    buildLibraryBgmItem('bgm-history-1', { source: 'history', project_id: 'project-1' }),
+    buildLibraryBgmItem('bgm-built-in-1', {
+      source: 'builtin',
+      source_label: '内建资源',
+      project_id: null,
+      linked_style_id: 'style-1014',
+      linked_style_name: 'Launch Story',
+      linked_style_display_name_zh: '发布故事',
+      audio_path: '/bgm/style-1014-bgm.mp3',
+      audio_url: `${baseURL}/api/files/bgm/style-1014-bgm.mp3`,
+      name: 'Launch Story',
+      display_name_zh: '发布故事默认背景音乐',
+      description_zh: '跟随“发布故事”风格一起使用的默认曲目。',
+      technical_name: 'Launch Story',
+    }),
+    buildLibraryBgmItem('bgm-history-1', {
+      source: 'history',
+      source_label: '我的资源',
+      project_id: 'project-1',
+      display_name_zh: '个人背景音乐',
+      description_zh: '来自你的资源库，可直接带回快速创作。',
+    }),
   ];
   libraryScripts = [
     buildScriptItem('script-project-1'),
@@ -704,9 +1042,13 @@ function setDefaultLibraryAssets(): void {
       id: 'script-project-2',
       task_id: 'task-batch-running',
       project_id: 'project-2',
+      pipeline: 'i2v',
       script_type: 'prompt',
       text: 'Animate the portrait with a slow cinematic push-in.',
       prompt_used: 'Image animation prompt',
+      type_label_zh: '提示词草稿',
+      pipeline_label_zh: '图片转视频',
+      summary_zh: '提示词草稿 · 图片转视频',
       created_at: '2026-04-21T06:00:00Z',
     }),
   ];
@@ -733,6 +1075,35 @@ function setDefaultAdvancedResources(): void {
           model: 'gpt-4.1-mini',
         },
       },
+    }),
+  ];
+  styles = [
+    buildStyleDetail('style-1000', {
+      name: 'Default Launch',
+      display_name_zh: '默认发布风格',
+      short_description_zh: '适合稳妥通用的发布类视频。',
+      description: 'Default launch-ready visual style.',
+      scene: 'general',
+      tone: 'confident',
+      is_builtin: true,
+    }),
+    buildStyleDetail('style-1014', {
+      name: 'Launch Story',
+      display_name_zh: '发布故事',
+      short_description_zh: '适合品牌发布、营销叙事和短视频复刻。',
+      description: 'Premium launch narrative style.',
+      scene: 'marketing',
+      tone: 'bold',
+      is_builtin: true,
+    }),
+    buildStyleDetail('style-custom-1', {
+      name: 'Creator Remix',
+      display_name_zh: '创作者混剪',
+      short_description_zh: '适合轻松、有生活感的创作者内容。',
+      description: 'Saved user style.',
+      scene: 'creator',
+      tone: 'warm',
+      is_builtin: false,
     }),
   ];
 
@@ -940,6 +1311,7 @@ function resetMockApiState(): void {
   };
   settingsWriteShouldFail = false;
   healthShouldFail = false;
+  resetMockNotifications();
 }
 
 function setSubmitScenario(scenario: SubmitScenario, taskId = DEFAULT_SUCCESS_TASK_ID): void {
@@ -1042,8 +1414,43 @@ function setPresets(items: PresetItem[]): void {
   presets = structuredClone(items);
 }
 
+function setStyles(items: StyleDetail[]): void {
+  styles = structuredClone(items);
+}
+
 function setLibraryVideoDetail(videoId: string, detailMode: LibraryVideoDetailMode): void {
   libraryVideoDetails.set(videoId, structuredClone(detailMode));
+}
+
+function buildStorageStatsResponse(): StorageStatsResponse {
+  return {
+    success: true,
+    message: 'Success',
+    total_size_bytes: 18 * 1024 * 1024,
+    paths: [
+      {
+        key: 'output',
+        path: 'output/',
+        exists: true,
+        file_count: 8,
+        total_size_bytes: 12 * 1024 * 1024,
+      },
+      {
+        key: 'temp',
+        path: 'temp/',
+        exists: true,
+        file_count: 3,
+        total_size_bytes: 4 * 1024 * 1024,
+      },
+      {
+        key: 'uploads',
+        path: 'output/uploads/',
+        exists: true,
+        file_count: 2,
+        total_size_bytes: 2 * 1024 * 1024,
+      },
+    ],
+  };
 }
 
 function applyProjectFilter<T extends { project_id?: string | null }>(items: T[], projectId: string | null): T[] {
@@ -1072,6 +1479,8 @@ function paginateItems<T>(items: T[], cursorParam: string | null, limitParam: st
 resetMockApiState();
 
 const handlers = [
+  ...notificationHandlers,
+  ...usageHandlers,
   http.get(`${baseURL}/health`, () => {
     if (healthShouldFail) {
       return HttpResponse.json<ApiErrorResponse>(
@@ -1099,6 +1508,71 @@ const handlers = [
       items: structuredClone(projects),
     };
     return HttpResponse.json(response);
+  }),
+
+  http.post(`${baseURL}/api/projects`, async ({ request }) => {
+    const body = (await request.json()) as ProjectCreateRequest;
+    const now = new Date().toISOString();
+    const project = buildProject(`project-${crypto.randomUUID()}`, body.name, {
+      created_at: now,
+      updated_at: now,
+      cover_url: body.cover_url ?? null,
+      pipeline_hint: body.pipeline_hint ?? null,
+      task_count: 0,
+      last_task_id: null,
+      preview_url: body.cover_url ?? null,
+      preview_kind: body.cover_url ? 'image' : null,
+    });
+
+    projects = [project, ...projects];
+    return HttpResponse.json(project, { status: 201 });
+  }),
+
+  http.get(`${baseURL}/api/projects/:projectId`, ({ params }) => {
+    const projectId = String(params.projectId);
+    const project = projects.find((item) => item.id === projectId);
+
+    if (!project) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    return HttpResponse.json(buildProjectOverview(project).project);
+  }),
+
+  http.get(`${baseURL}/api/projects/:projectId/overview`, ({ params }) => {
+    const projectId = String(params.projectId);
+    const project = projects.find((item) => item.id === projectId);
+
+    if (!project) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    return HttpResponse.json(buildProjectOverview(project));
+  }),
+
+  http.patch(`${baseURL}/api/projects/:projectId`, async ({ params, request }) => {
+    const projectId = String(params.projectId);
+    const projectIndex = projects.findIndex((item) => item.id === projectId);
+
+    if (projectIndex === -1) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    const body = (await request.json()) as ProjectUpdateRequest;
+    const nextProject: Project = {
+      ...projects[projectIndex],
+      ...(body.name === undefined || body.name === null ? {} : { name: body.name }),
+      ...(body.cover_url === undefined ? {} : { cover_url: body.cover_url }),
+      ...(body.pipeline_hint === undefined ? {} : { pipeline_hint: body.pipeline_hint }),
+      updated_at: new Date().toISOString(),
+    };
+    if (body.cover_url !== undefined) {
+      nextProject.preview_url = body.cover_url ?? inferProjectPreview(projectId).preview_url;
+      nextProject.preview_kind = body.cover_url ? 'image' : inferProjectPreview(projectId).preview_kind;
+    }
+
+    projects = projects.map((project, index) => (index === projectIndex ? nextProject : project));
+    return HttpResponse.json(nextProject);
   }),
 
   http.delete(`${baseURL}/api/projects/:projectId`, ({ params }) => {
@@ -1130,6 +1604,132 @@ const handlers = [
     const body = (await request.json()) as SettingsUpdatePayload;
     settingsPayload = mergeSettings(settingsPayload, body);
     return HttpResponse.json(structuredClone(settingsPayload));
+  }),
+
+  http.post(`${baseURL}/api/settings/comfyui/check`, async ({ request }) => {
+    const body = (await request.json()) as ComfyUICheckRequest;
+    const endpoint = body.comfyui_url ?? 'http://127.0.0.1:8188';
+    const reachable = Boolean(endpoint.startsWith('http://') || endpoint.startsWith('https://'));
+    const invalidAuth = String(body.comfyui_api_key ?? '').includes('invalid');
+    const response: ComfyUICheckResponse = {
+      provider: 'comfyui',
+      status: reachable && !invalidAuth ? 'success' : 'error',
+      success: reachable && !invalidAuth,
+      message: !reachable
+        ? 'ComfyUI endpoint is unreachable.'
+        : invalidAuth
+          ? 'ComfyUI endpoint rejected the supplied credentials.'
+          : 'ComfyUI endpoint responded.',
+      reachable,
+      authenticated: reachable && !invalidAuth,
+      endpoint,
+      status_code: reachable ? (invalidAuth ? 403 : 200) : null,
+      response_time_ms: reachable ? 84 : null,
+      diagnostics: {
+        error_code: !reachable ? 'NETWORK_UNREACHABLE' : invalidAuth ? 'AUTH_INVALID' : null,
+        model_count: null,
+        selected_model: null,
+        selected_model_available: null,
+        auth_applied: Boolean(body.comfyui_api_key),
+        auth_required: invalidAuth,
+        api_type: null,
+        current_task_nums: null,
+        remain_num: null,
+        remain_money: null,
+        currency: null,
+      },
+    };
+    return HttpResponse.json(response);
+  }),
+
+  http.post(`${baseURL}/api/settings/llm/check`, async ({ request }) => {
+    const body = (await request.json()) as LLMCheckRequest;
+    const baseUrl = body.base_url ?? 'https://api.openai.com/v1';
+    const model = body.model ?? 'gpt-5.4';
+    const models = ['gpt-5.4', 'gpt-4.1', 'gpt-4.1-mini'];
+    const invalidAuth = String(body.api_key ?? '').includes('invalid');
+    const reachable = baseUrl.startsWith('http://') || baseUrl.startsWith('https://');
+    const selectedModelAvailable = models.includes(model);
+    const status: LLMCheckResponse['status'] =
+      !reachable || invalidAuth ? 'error' : selectedModelAvailable ? 'success' : 'warning';
+    const response: LLMCheckResponse = {
+      provider: 'llm',
+      status,
+      success: status === 'success',
+      reachable,
+      authenticated: reachable && !invalidAuth,
+      message: !reachable
+        ? 'LLM provider is unreachable.'
+        : invalidAuth
+          ? 'LLM provider rejected the supplied API key.'
+          : selectedModelAvailable
+            ? 'LLM credentials verified.'
+            : `Configured model '${model}' is not available from the provider.`,
+      endpoint: baseUrl,
+      status_code: reachable ? (invalidAuth ? 401 : 200) : null,
+      response_time_ms: reachable ? 92 : null,
+      diagnostics: {
+        error_code: !reachable ? 'NETWORK_UNREACHABLE' : invalidAuth ? 'AUTH_INVALID' : selectedModelAvailable ? null : 'MODEL_NOT_FOUND',
+        model_count: reachable && !invalidAuth ? models.length : 0,
+        selected_model: model,
+        selected_model_available: reachable && !invalidAuth ? selectedModelAvailable : false,
+        auth_applied: null,
+        auth_required: null,
+        api_type: null,
+        current_task_nums: null,
+        remain_num: null,
+        remain_money: null,
+        currency: null,
+      },
+    };
+    return HttpResponse.json(response);
+  }),
+
+  http.post(`${baseURL}/api/settings/runninghub/check`, async ({ request }) => {
+    const body = (await request.json()) as RunningHubCheckRequest;
+    const invalidAuth = String(body.runninghub_api_key ?? '').includes('invalid');
+    const response: RunningHubCheckResponse = {
+      provider: 'runninghub',
+      status: invalidAuth ? 'error' : 'success',
+      success: !invalidAuth,
+      reachable: true,
+      authenticated: !invalidAuth,
+      message: invalidAuth ? 'RunningHub rejected the supplied API key.' : 'RunningHub credentials verified.',
+      endpoint: 'https://www.runninghub.cn/uc/openapi/accountStatus',
+      status_code: invalidAuth ? 200 : 200,
+      response_time_ms: 101,
+      diagnostics: {
+        error_code: invalidAuth ? 'RUNNINGHUB_401' : null,
+        model_count: null,
+        selected_model: null,
+        selected_model_available: null,
+        auth_applied: null,
+        auth_required: null,
+        api_type: invalidAuth ? null : 'NORMAL',
+        current_task_nums: invalidAuth ? null : 2,
+        remain_num: invalidAuth ? null : '18',
+        remain_money: invalidAuth ? null : '99.5',
+        currency: invalidAuth ? null : 'CNY',
+      },
+    };
+    return HttpResponse.json(response);
+  }),
+
+  http.get(`${baseURL}/api/settings/storage/stats`, () => {
+    return HttpResponse.json(buildStorageStatsResponse());
+  }),
+
+  http.post(`${baseURL}/api/settings/storage/cleanup`, async ({ request }) => {
+    const body = (await request.json()) as StorageCleanupRequest;
+    const response: StorageCleanupResponse = {
+      success: true,
+      message: body.target === 'temp' ? 'Temporary files cleaned.' : 'Cleanup completed.',
+      target: body.target,
+      deleted_files: body.target === 'temp' ? 3 : 0,
+      deleted_directories: body.target === 'temp' ? 1 : 0,
+      reclaimed_bytes: body.target === 'temp' ? 4 * 1024 * 1024 : 0,
+    };
+    return HttpResponse.json(response);
   }),
 
   http.get(`${baseURL}/api/batch`, ({ request }) => {
@@ -1370,9 +1970,10 @@ const handlers = [
 
   http.get(`${baseURL}/api/library/bgm`, ({ request }) => {
     const url = new URL(request.url);
-    const items = applyProjectFilter([...libraryBgmItems], url.searchParams.get('project_id')).sort((left, right) =>
-      (right.created_at ?? '').localeCompare(left.created_at ?? '')
-    );
+    const styleId = url.searchParams.get('style_id');
+    const items = applyProjectFilter([...libraryBgmItems], url.searchParams.get('project_id'))
+      .filter((item) => !styleId || item.linked_style_id === styleId)
+      .sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
     const { pageItems, nextCursor } = paginateItems(
       items,
       url.searchParams.get('cursor'),
@@ -1418,6 +2019,28 @@ const handlers = [
     }
 
     return HttpResponse.json(detailMode.payload as Record<string, unknown>);
+  }),
+
+  http.delete(`${baseURL}/api/library/videos/:videoId`, ({ params }) => {
+    const videoId = String(params.videoId);
+    const scenario = getScenario(videoId);
+    const currentState = scenario ? scenario.states[Math.min(scenario.index, scenario.states.length - 1)] : null;
+
+    if (currentState && (currentState.status === 'pending' || currentState.status === 'running')) {
+      return HttpResponse.json<ApiErrorResponse>(
+        { detail: { code: 'LIBRARY_VIDEO_DELETE_NOT_ALLOWED', message: 'Only terminal tasks can be deleted.' } },
+        { status: 409 }
+      );
+    }
+
+    libraryVideos = libraryVideos.filter((item) => item.task_id !== videoId);
+    libraryVideoDetails.delete(videoId);
+    taskScenarios.delete(videoId);
+
+    return HttpResponse.json({
+      success: true,
+      message: 'Video deleted.',
+    });
   }),
 
   http.get(`${baseURL}/api/tasks/:taskId`, ({ params }) => {
@@ -1490,6 +2113,70 @@ const handlers = [
     return HttpResponse.json(response, { status: 201 });
   }),
 
+  http.post(`${baseURL}/api/tts/synthesize`, async ({ request }) => {
+    const body = (await request.json()) as TTSSynthesizeRequest;
+    const response: TTSSynthesizeResponse = {
+      success: true,
+      message: 'Success',
+      audio_path: `/output/previews/${encodeURIComponent((body.workflow ?? 'tts').replace(/\//g, '-'))}.mp3`,
+      duration: 2.4,
+    };
+    return HttpResponse.json(response);
+  }),
+
+  http.post(`${baseURL}/api/media/generate`, async ({ request }) => {
+    const body = (await request.json()) as MediaGenerateRequest;
+    const extension = body.media_type === 'video' ? 'mp4' : 'png';
+    const path = `/output/previews/${body.media_type}-preview.${extension}`;
+    const response: MediaGenerateResponse = {
+      success: true,
+      message: 'Success',
+      media_type: body.media_type,
+      file_path: path,
+      file_url: `${baseURL}/api/files/${path.replace(/^\/+/, '')}`,
+      duration: body.media_type === 'video' ? body.duration ?? 3 : null,
+      file_size: body.media_type === 'video' ? 1.5 * 1024 * 1024 : 512 * 1024,
+    };
+    return HttpResponse.json(response);
+  }),
+
+  http.get(`${baseURL}/api/frame/template/params`, ({ request }) => {
+    const url = new URL(request.url);
+    const template = url.searchParams.get('template') ?? '1080x1920/image_default.html';
+    const response: TemplateParamsResponse = {
+      success: true,
+      message: 'Success',
+      template,
+      media_width: 1080,
+      media_height: 1920,
+      params: {
+        accent_color: {
+          type: 'color',
+          default: '#ff7a00',
+          label: 'Accent Color',
+        },
+        subtitle: {
+          type: 'text',
+          default: 'Mock subtitle',
+          label: 'Subtitle',
+        },
+      },
+    };
+    return HttpResponse.json(response);
+  }),
+
+  http.post(`${baseURL}/api/frame/render`, async ({ request }) => {
+    const body = (await request.json()) as FrameRenderRequest;
+    const response: FrameRenderResponse = {
+      success: true,
+      message: 'Success',
+      frame_path: `/output/template-previews/${encodeURIComponent(body.template.replace(/\//g, '-'))}.png`,
+      width: 1080,
+      height: 1920,
+    };
+    return HttpResponse.json(response);
+  }),
+
   http.get(`${baseURL}/api/resources/workflows/tts`, () => HttpResponse.json(ttsWorkflowResponse)),
   http.get(`${baseURL}/api/resources/workflows/media`, () => HttpResponse.json(mediaWorkflowResponse)),
   http.get(`${baseURL}/api/resources/workflows/image`, () => HttpResponse.json(imageWorkflowResponse)),
@@ -1502,6 +2189,32 @@ const handlers = [
     }
 
     return HttpResponse.json(workflow);
+  }),
+  http.put(`${baseURL}/api/resources/workflows/:workflowId`, async ({ params, request }) => {
+    const workflowId = decodeURIComponent(String(params.workflowId));
+    const workflow = workflowDetails.get(workflowId);
+
+    if (!workflow) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    if (!workflow.editable) {
+      return HttpResponse.json<ApiErrorResponse>(
+        { detail: { code: 'WORKFLOW_READ_ONLY', message: 'This workflow is read-only.' } },
+        { status: 403 }
+      );
+    }
+
+    const body = (await request.json()) as Record<string, unknown>;
+    const updatedWorkflow: WorkflowDetailResponse = {
+      ...workflow,
+      workflow_json: structuredClone(body),
+    };
+    workflowDetails.set(workflowId, updatedWorkflow);
+    if (workflow.workflow_id) {
+      workflowDetails.set(workflow.workflow_id, updatedWorkflow);
+    }
+    return HttpResponse.json(updatedWorkflow);
   }),
   http.get(`${baseURL}/api/resources/templates`, () => {
     const response: TemplateListResponse = {
@@ -1519,6 +2232,161 @@ const handlers = [
     };
     return HttpResponse.json(response);
   }),
+  http.get(`${baseURL}/api/resources/styles`, () => {
+    const response: StyleListResponse = {
+      success: true,
+      message: 'Success',
+      styles: structuredClone(styles).map((style) => ({
+        id: style.id,
+        name: style.name,
+        description: style.description ?? null,
+        scene: style.scene ?? null,
+        tone: style.tone ?? null,
+        is_builtin: style.is_builtin,
+        preview_bgm_url: style.preview_bgm_url ?? null,
+      })),
+    };
+    return HttpResponse.json(response);
+  }),
+  http.post(`${baseURL}/api/resources/styles`, async ({ request }) => {
+    const body = (await request.json()) as components['schemas']['StyleUpsertRequest'];
+    const createdStyle = buildStyleDetail(body.id, {
+      id: body.id,
+      name: body.name,
+      description: body.description ?? null,
+      scene: body.scene ?? null,
+      tone: body.tone ?? null,
+      is_builtin: false,
+      analysis_creative_layer: body.analysis_creative_layer,
+      audio_sync_creative_layer: body.audio_sync_creative_layer,
+      reference_config: body.reference_config ?? {},
+      runtime_config: body.runtime_config ?? {},
+    });
+    styles = [createdStyle, ...styles.filter((style) => style.id !== body.id)];
+    return HttpResponse.json(createdStyle);
+  }),
+  http.get(`${baseURL}/api/resources/styles/:styleId`, ({ params }) => {
+    const styleId = decodeURIComponent(String(params.styleId));
+    const style = styles.find((item) => item.id === styleId);
+
+    if (!style) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    return HttpResponse.json(structuredClone(style));
+  }),
+  http.put(`${baseURL}/api/resources/styles/:styleId`, async ({ params, request }) => {
+    const styleId = decodeURIComponent(String(params.styleId));
+    const body = (await request.json()) as components['schemas']['StyleUpsertRequest'];
+    const currentStyle = styles.find((style) => style.id === styleId);
+
+    if (!currentStyle) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    if (currentStyle.is_builtin) {
+      return HttpResponse.json<ApiErrorResponse>(
+        { detail: { code: 'STYLE_READ_ONLY', message: 'Built-in styles are read-only.' } },
+        { status: 403 }
+      );
+    }
+
+    const updatedStyle = buildStyleDetail(body.id, {
+      ...currentStyle,
+      id: body.id,
+      name: body.name,
+      description: body.description ?? null,
+      scene: body.scene ?? null,
+      tone: body.tone ?? null,
+      analysis_creative_layer: body.analysis_creative_layer,
+      audio_sync_creative_layer: body.audio_sync_creative_layer,
+      reference_config: body.reference_config ?? {},
+      runtime_config: body.runtime_config ?? {},
+    });
+    styles = styles.map((style) => (style.id === styleId ? updatedStyle : style));
+    return HttpResponse.json(updatedStyle);
+  }),
+  http.delete(`${baseURL}/api/resources/styles/:styleId`, ({ params }) => {
+    const styleId = decodeURIComponent(String(params.styleId));
+    const targetStyle = styles.find((style) => style.id === styleId);
+
+    if (!targetStyle) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    if (targetStyle.is_builtin) {
+      return HttpResponse.json<ApiErrorResponse>(
+        { detail: { code: 'STYLE_READ_ONLY', message: 'Built-in styles are read-only.' } },
+        { status: 403 }
+      );
+    }
+
+    styles = styles.filter((style) => style.id !== styleId);
+    return HttpResponse.json({
+      success: true,
+      message: 'Style deleted.',
+    });
+  }),
+  http.post(`${baseURL}/api/resources/presets`, async ({ request }) => {
+    const body = (await request.json()) as components['schemas']['PresetUpsertRequest'];
+    const createdPreset = buildPresetItem(body.name, {
+      name: body.name,
+      description: body.description ?? null,
+      pipeline: body.pipeline,
+      payload_template: body.payload_template ?? {},
+      source: 'user',
+      created_at: new Date().toISOString(),
+    });
+    presets = [createdPreset, ...presets.filter((preset) => preset.name !== body.name)];
+    return HttpResponse.json(createdPreset);
+  }),
+  http.put(`${baseURL}/api/resources/presets/:presetName`, async ({ params, request }) => {
+    const presetName = decodeURIComponent(String(params.presetName));
+    const body = (await request.json()) as components['schemas']['PresetUpsertRequest'];
+    const currentPreset = presets.find((preset) => preset.name === presetName);
+
+    if (!currentPreset) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    if (currentPreset.source !== 'user') {
+      return HttpResponse.json<ApiErrorResponse>(
+        { detail: { code: 'PRESET_READ_ONLY', message: 'Built-in presets are read-only.' } },
+        { status: 403 }
+      );
+    }
+
+    const updatedPreset = buildPresetItem(body.name, {
+      ...currentPreset,
+      name: body.name,
+      description: body.description ?? null,
+      pipeline: body.pipeline,
+      payload_template: body.payload_template ?? {},
+    });
+    presets = presets.map((preset) => (preset.name === presetName ? updatedPreset : preset));
+    return HttpResponse.json(updatedPreset);
+  }),
+  http.delete(`${baseURL}/api/resources/presets/:presetName`, ({ params }) => {
+    const presetName = decodeURIComponent(String(params.presetName));
+    const targetPreset = presets.find((preset) => preset.name === presetName);
+
+    if (!targetPreset) {
+      return HttpResponse.json<ApiErrorResponse>({ detail: 'Not found' }, { status: 404 });
+    }
+
+    if (targetPreset.source !== 'user') {
+      return HttpResponse.json<ApiErrorResponse>(
+        { detail: { code: 'PRESET_READ_ONLY', message: 'Built-in presets are read-only.' } },
+        { status: 403 }
+      );
+    }
+
+    presets = presets.filter((preset) => preset.name !== presetName);
+    return HttpResponse.json({
+      success: true,
+      message: 'Preset deleted.',
+    });
+  }),
   http.get(`${baseURL}/api/resources/bgm`, () => HttpResponse.json(bgmListResponse)),
 ];
 
@@ -1530,6 +2398,7 @@ export {
   buildProject,
   buildPresetItem,
   buildScriptItem,
+  buildStyleDetail,
   buildTask,
   buildTemplateInfo,
   buildVideoItem,
@@ -1557,6 +2426,7 @@ export {
   setPresets,
   setProjects,
   setSettings,
+  setStyles,
   setSettingsWriteShouldFail,
   setAsyncSubmitScenario,
   setHealthShouldFail,

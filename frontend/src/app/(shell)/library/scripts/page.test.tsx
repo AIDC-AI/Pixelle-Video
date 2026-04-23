@@ -19,6 +19,7 @@ vi.mock('next/navigation', () => ({
 
 describe('Library Scripts Page', () => {
   beforeEach(async () => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
     mockSearchParams = new URLSearchParams('');
     mockReplace.mockReset();
     await seedCurrentProject({ id: 'project-1', name: 'Launch Campaign' });
@@ -27,7 +28,7 @@ describe('Library Scripts Page', () => {
   it('renders scripts and binds the current project filter into the URL', async () => {
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('heading', { name: 'Scripts' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '脚本' })).toBeInTheDocument();
     expect(await screen.findByText('Small habits compound into major creative momentum over time.')).toBeInTheDocument();
 
     await waitFor(() => {
@@ -44,7 +45,7 @@ describe('Library Scripts Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('link', { name: 'Reuse' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '复用' })).toHaveAttribute(
       'href',
       '/create/quick?narration=Quick+narration+from+script+history.'
     );
@@ -55,19 +56,22 @@ describe('Library Scripts Page', () => {
     setLibraryScripts([
       buildScriptItem('script-no-task', {
         task_id: 'missing-task',
+        pipeline: null,
+        pipeline_label_zh: null,
+        summary_zh: '旁白草稿',
         text: 'Script with no matching task record.',
       }),
     ]);
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByText('Unknown')).toBeInTheDocument();
+    expect(await screen.findByText('未知')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'View full script' }));
+    await user.click(screen.getByRole('button', { name: '查看完整内容' }));
     expect((await screen.findAllByText('Script with no matching task record.')).length).toBe(2);
 
-    await user.click(screen.getByRole('button', { name: 'Hide full script' }));
-    expect(screen.queryByRole('button', { name: 'Hide full script' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '收起完整内容' }));
+    expect(screen.queryByRole('button', { name: '收起完整内容' })).not.toBeInTheDocument();
   });
 
   it('shows the empty state when the current project has no script history', async () => {
@@ -80,15 +84,15 @@ describe('Library Scripts Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByText('This project has no script history yet.')).toBeInTheDocument();
+    expect(await screen.findByText('这个项目还没有脚本历史')).toBeInTheDocument();
   });
 
   it('updates the URL when switching the project filter to All Projects', async () => {
     const user = userEvent.setup();
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('combobox', { name: 'Project' }));
-    await user.click(await screen.findByRole('option', { name: 'All Projects' }));
+    await user.click(await screen.findByRole('combobox', { name: '项目' }));
+    await user.click(await screen.findByRole('option', { name: '全部项目' }));
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/library/scripts', { scroll: false });
@@ -107,7 +111,7 @@ describe('Library Scripts Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('combobox', { name: 'Project' }));
+    await user.click(await screen.findByRole('combobox', { name: '项目' }));
     await user.click(await screen.findByRole('option', { name: 'Unreleased Experiments' }));
 
     await waitFor(() => {

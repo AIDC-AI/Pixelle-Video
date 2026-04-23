@@ -25,6 +25,7 @@ import { useProjects } from '@/lib/hooks/use-projects';
 import { batchPipelineLabel, batchStatusLabel, isTerminalBatchStatus } from '@/lib/batch-utils';
 import { formatRelativeTime, normalizeProjectFilterValue, projectFilterLabel } from '@/lib/pipeline-utils';
 import { cn } from '@/lib/utils';
+import { useAppTranslations } from '@/lib/i18n';
 
 const STATUS_OPTIONS = ['all', 'pending', 'running', 'completed', 'failed', 'cancelled', 'partial'] as const;
 const BATCH_LIST_GRID_CLASS =
@@ -55,6 +56,8 @@ function isWithinDateRange(value: string, from: string | null, to: string | null
 }
 
 function BatchListPageContent() {
+  const t = useAppTranslations('batch');
+  const common = useAppTranslations('common');
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -113,20 +116,18 @@ function BatchListPageContent() {
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">All Batches</h1>
-          <p className="text-sm text-muted-foreground">
-            Review every batch, filter by status or project, and jump directly into the monitor view.
-          </p>
+          <h1 className="text-3xl font-bold text-foreground">{t('list.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('list.description')}</p>
         </div>
         <Link href="/batch/new" className={buttonVariants()}>
-          New Batch
+          {t('actions.newBatch')}
         </Link>
       </div>
 
       <div className="grid gap-3 rounded-2xl border border-border/70 bg-card p-4 md:grid-cols-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground" htmlFor="batch-list-project-filter">
-            Project
+            {t('shared.filters.project')}
           </label>
           <Select
             value={projectFilter}
@@ -138,14 +139,14 @@ function BatchListPageContent() {
               updateSearchParams({ project_id: value });
             }}
           >
-            <SelectTrigger id="batch-list-project-filter" aria-label="Project filter">
+            <SelectTrigger id="batch-list-project-filter" aria-label={t('shared.filters.project')}>
               <span data-slot="select-value" className="flex flex-1 text-left">
                 {projectFilterLabel(projectFilter, projectOptions)}
               </span>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Projects</SelectItem>
-              <SelectItem value="__unassigned__">Unassigned</SelectItem>
+              <SelectItem value="all">{t('shared.filters.allProjects')}</SelectItem>
+              <SelectItem value="__unassigned__">{t('shared.filters.unassigned')}</SelectItem>
               {projectOptions.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.name}
@@ -157,16 +158,16 @@ function BatchListPageContent() {
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground" htmlFor="batch-list-status-filter">
-            Status
+            {t('shared.filters.status')}
           </label>
           <Select value={statusFilter} onValueChange={(value) => updateSearchParams({ status: value })}>
-            <SelectTrigger id="batch-list-status-filter" aria-label="Status filter">
-              <SelectValue placeholder="All statuses" />
+            <SelectTrigger id="batch-list-status-filter" aria-label={t('shared.filters.status')}>
+              <SelectValue placeholder={t('shared.filters.allStatuses')} />
             </SelectTrigger>
             <SelectContent>
               {STATUS_OPTIONS.map((status) => (
                 <SelectItem key={status} value={status}>
-                  {status === 'all' ? 'All Statuses' : batchStatusLabel(status)}
+                  {status === 'all' ? t('shared.filters.allStatuses') : batchStatusLabel(status)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -175,11 +176,11 @@ function BatchListPageContent() {
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground" htmlFor="batch-list-from-date">
-            From
+            {t('shared.filters.from')}
           </label>
           <Input
             id="batch-list-from-date"
-            aria-label="From date"
+            aria-label={t('shared.filters.from')}
             type="date"
             value={toDateInput(fromDate)}
             onChange={(event) => updateSearchParams({ from: event.target.value || null })}
@@ -188,11 +189,11 @@ function BatchListPageContent() {
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground" htmlFor="batch-list-to-date">
-            To
+            {t('shared.filters.to')}
           </label>
           <Input
             id="batch-list-to-date"
-            aria-label="To date"
+            aria-label={t('shared.filters.to')}
             type="date"
             value={toDateInput(toDate)}
             onChange={(event) => updateSearchParams({ to: event.target.value || null })}
@@ -207,25 +208,28 @@ function BatchListPageContent() {
       {!isLoading && items.length === 0 ? (
         <EmptyState
           icon={fromDate || toDate ? CalendarRange : Layers3}
-          title="No batches match these filters"
-          description={`No batches are currently visible for ${projectFilterLabel(projectFilter, projectsData?.items ?? [])}.`}
-          actionHref="/batch/new"
-          actionLabel="Create Batch"
+          title={t('list.emptyTitle')}
+          description={`${t('list.emptyDescription', { project: projectFilterLabel(projectFilter, projectsData?.items ?? []) })}`}
+          action={{
+            href: '/batch/new',
+            label: t('actions.createBatch'),
+            role: 'button',
+          }}
         />
       ) : null}
 
       {!isLoading && items.length > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-border/70 bg-card">
           <div className={`${BATCH_LIST_GRID_CLASS} gap-4 border-b border-border/70 bg-muted/20 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground`}>
-            <span>Name</span>
-            <span>Pipeline</span>
-            <span>Total</span>
-            <span>Succeeded</span>
-            <span>Failed</span>
-            <span>Cancelled</span>
-            <span>Status</span>
-            <span>Created</span>
-            <span className="text-right">Actions</span>
+            <span>{t('list.columns.name')}</span>
+            <span>{t('list.columns.pipeline')}</span>
+            <span>{t('list.columns.total')}</span>
+            <span>{t('list.columns.succeeded')}</span>
+            <span>{t('list.columns.failed')}</span>
+            <span>{t('list.columns.cancelled')}</span>
+            <span>{t('list.columns.status')}</span>
+            <span>{t('list.columns.created')}</span>
+            <span className="text-right">{t('list.columns.actions')}</span>
           </div>
 
           {items.map((batch) => (
@@ -257,7 +261,7 @@ function BatchListPageContent() {
                   href={`/batch/${batch.id}`}
                   className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
                 >
-                  View
+                  {t('actions.view')}
                 </Link>
                 {!isTerminalBatchStatus(batch.status) ? (
                   <Button
@@ -269,13 +273,13 @@ function BatchListPageContent() {
                         { batchId: batch.id, cascade: true },
                         {
                           onSuccess: () => {
-                            toast.success('Batch cancelled.');
+                            toast.success(t('toasts.batchCancelled'));
                           },
                         }
                       );
                     }}
                   >
-                    Cancel
+                    {t('actions.cancel')}
                   </Button>
                 ) : null}
               </div>
@@ -293,7 +297,7 @@ function BatchListPageContent() {
             }}
             disabled={batchesQuery.isFetchingNextPage}
           >
-            {batchesQuery.isFetchingNextPage ? 'Loading…' : 'Load More'}
+            {batchesQuery.isFetchingNextPage ? common('loading') : 'Load More'}
           </Button>
         </div>
       ) : null}
@@ -302,8 +306,10 @@ function BatchListPageContent() {
 }
 
 export default function BatchListPage() {
+  const t = useAppTranslations('batch');
+
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading batches…</div>}>
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">{t('fallback.loadingBatches')}</div>}>
       <BatchListPageContent />
     </Suspense>
   );

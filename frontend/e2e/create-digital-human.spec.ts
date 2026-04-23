@@ -26,15 +26,15 @@ async function openPipelineFromCreate(page: Page, label: string): Promise<void> 
 }
 
 async function waitForTaskProgress(page: Page): Promise<void> {
-  await expect(page.getByText("任务进度")).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator("[data-slot='badge']").filter({ hasText: /排队中|生成中/ }).first()).toBeVisible({
+  await expect(page.getByText(/Task Progress|任务进度/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator("[data-slot='badge']").filter({ hasText: /Queued|Running|排队中|生成中/ }).first()).toBeVisible({
     timeout: 15_000,
   });
 }
 
 async function waitForVideoResult(page: Page): Promise<void> {
-  await expect(page.getByText("生成结果")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("button", { name: "基于此重生成" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Result|生成结果/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: /Regenerate From This|基于此重生成/ })).toBeVisible({ timeout: 20_000 });
 }
 
 test("digital human pipeline uploads a portrait and completes", async ({ page }) => {

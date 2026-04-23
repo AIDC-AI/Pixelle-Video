@@ -33,7 +33,7 @@ describe('use-create-video hooks', () => {
       },
     });
     useCurrentProjectStore.setState({
-      currentProject: { id: 'project-1', name: 'Project 1' },
+      currentProjectId: 'project-1',
     });
   });
 
@@ -59,6 +59,7 @@ describe('use-create-video hooks', () => {
       frame_template: null,
       template_params: null,
       prompt_prefix: null,
+      bgm_mode: 'none',
       bgm_path: null,
       bgm_volume: 0.3,
     });
@@ -73,7 +74,7 @@ describe('use-create-video hooks', () => {
   });
 
   it('useSubmitQuick fails if no project is selected', async () => {
-    useCurrentProjectStore.setState({ currentProject: null });
+    useCurrentProjectStore.setState({ currentProjectId: null });
 
     const { result } = renderHook(() => useSubmitQuick(), {
       wrapper: createWrapper(queryClient),
@@ -96,6 +97,7 @@ describe('use-create-video hooks', () => {
       frame_template: null,
       template_params: null,
       prompt_prefix: null,
+      bgm_mode: 'none',
       bgm_path: null,
       bgm_volume: 0.3,
     });

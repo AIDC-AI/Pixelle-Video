@@ -3,7 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import QuickCreatePage, { QUICK_SUBMIT_REQUEST_KEYS } from './page';
+import QuickCreatePage from './page';
+import { QUICK_SUBMIT_REQUEST_KEYS } from '../request-keys';
 import { useCurrentProjectStore } from '@/stores/current-project';
 import {
   buildTask,
@@ -52,7 +53,8 @@ if (typeof window !== 'undefined' && !window.PointerEvent) {
   });
 }
 
-type PersistedProject = ReturnType<typeof useCurrentProjectStore.getState>['currentProject'];
+type PersistedProject = { id: string; name?: string } | null;
+const QUICK_PAGE_HEADING = '快速创作';
 
 function createQueryClient(): QueryClient {
   return new QueryClient({
@@ -73,7 +75,7 @@ async function seedCurrentProject(project: PersistedProject): Promise<void> {
     localStorage.setItem(
       'current-project-storage',
       JSON.stringify({
-        state: { currentProject: project },
+        state: { currentProjectId: project.id },
         version: 0,
       })
     );
@@ -81,7 +83,7 @@ async function seedCurrentProject(project: PersistedProject): Promise<void> {
     localStorage.removeItem('current-project-storage');
   }
 
-  useCurrentProjectStore.setState({ currentProject: project });
+  useCurrentProjectStore.setState({ currentProjectId: project?.id ?? null });
 
   await act(async () => {
     await useCurrentProjectStore.persist.rehydrate();
@@ -104,13 +106,13 @@ async function fillQuickForm(
   const topic = overrides?.topic ?? 'A valid topic description with enough detail';
 
   await user.type(screen.getByLabelText('视频标题'), title);
-  await user.type(screen.getByLabelText('创意描述 (Topic)'), topic);
+  await user.type(screen.getByLabelText('创意描述'), topic);
 
-  await user.click(screen.getByLabelText('配音 (TTS)'));
-  await user.click(await screen.findByText('TTS 1'));
+  await user.click(screen.getByLabelText('配音方案'));
+  await user.click(await screen.findByText('Edge 配音方案 · 本地'));
 
-  await user.click(screen.getByLabelText('媒体流 (Media)'));
-  await user.click(await screen.findByText('Media 1'));
+  await user.click(screen.getByLabelText('画面方案'));
+  await user.click(await screen.findByText('基础画面方案 · 本地'));
 
   if (overrides?.narration) {
     await user.click(screen.getByRole('button', { name: '高级配置' }));
@@ -120,6 +122,8 @@ async function fillQuickForm(
 
 describe('QuickCreatePage', () => {
   beforeEach(async () => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
+    document.documentElement.lang = 'zh-CN';
     resetMockApiState();
     mockSearchParams = new URLSearchParams('');
     await seedCurrentProject({ id: 'project-1', name: 'Test Project' });
@@ -128,7 +132,7 @@ describe('QuickCreatePage', () => {
   it('renders the quick form and summary panel', async () => {
     renderPage();
 
-    expect(await screen.findByRole('heading', { name: 'Quick' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: QUICK_PAGE_HEADING })).toBeInTheDocument();
     expect(screen.getByText('配置摘要')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '生成视频' })).toBeInTheDocument();
   });
@@ -138,7 +142,7 @@ describe('QuickCreatePage', () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     renderPage();
-    await screen.findByRole('heading', { name: 'Quick' });
+    await screen.findByRole('heading', { name: QUICK_PAGE_HEADING });
     await fillQuickForm(user);
 
     await user.click(screen.getByRole('button', { name: '生成视频' }));
@@ -153,7 +157,7 @@ describe('QuickCreatePage', () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     renderPage();
-    await screen.findByRole('heading', { name: 'Quick' });
+    await screen.findByRole('heading', { name: QUICK_PAGE_HEADING });
     await fillQuickForm(user);
 
     await user.click(screen.getByRole('button', { name: '生成视频' }));
@@ -162,14 +166,42 @@ describe('QuickCreatePage', () => {
     expect(screen.getByRole('button', { name: /复制链接/i })).toBeInTheDocument();
   });
 
+  it('shows the task-level RunningHub instance selector only when a RunningHub workflow is selected', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
+
+    renderPage();
+    await screen.findByRole('heading', { name: QUICK_PAGE_HEADING });
+
+    expect(screen.queryByTestId('quick-runninghub-instance-type')).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText('配音方案'));
+    await user.click(await screen.findByText('云端配音方案 · RunningHub'));
+
+    expect(await screen.findByTestId('quick-runninghub-instance-type')).toHaveTextContent('Plus (48GB VRAM)');
+
+    await user.click(screen.getByLabelText('配音方案'));
+    await user.click(await screen.findByRole('option', { name: 'Edge 配音方案 · 本地' }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('quick-runninghub-instance-type')).not.toBeInTheDocument();
+    });
+  });
+
   it('submits only backend-supported VideoGenerateRequest fields', async () => {
     setSubmitScenario('success', DEFAULT_SUCCESS_TASK_ID);
     setTaskScenario(DEFAULT_SUCCESS_TASK_ID, [buildTask(DEFAULT_SUCCESS_TASK_ID, 'completed')]);
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
+    mockSearchParams = new URLSearchParams('tts_workflow=runninghub/tts_cloud.json&media_workflow=selfhost/media_default.json');
 
     renderPage();
-    await screen.findByRole('heading', { name: 'Quick' });
-    await fillQuickForm(user, { narration: 'Use this fixed narration instead.' });
+    await screen.findByRole('heading', { name: QUICK_PAGE_HEADING });
+    await user.type(screen.getByLabelText('视频标题'), 'My Title');
+    await user.type(screen.getByLabelText('创意描述'), 'A valid topic description with enough detail');
+    await user.click(screen.getByRole('button', { name: '高级配置' }));
+    await user.type(screen.getByLabelText('自定义旁白'), 'Use this fixed narration instead.');
+    await waitFor(() => {
+      expect(screen.getByTestId('quick-runninghub-instance-type')).toHaveTextContent('Plus (48GB VRAM)');
+    });
 
     await user.click(screen.getByRole('button', { name: '生成视频' }));
 
@@ -185,7 +217,8 @@ describe('QuickCreatePage', () => {
       text: 'Use this fixed narration instead.',
       mode: 'fixed',
       title: 'My Title',
-      tts_workflow: 'selfhost/tts_edge.json',
+      style_id: null,
+      tts_workflow: 'runninghub/tts_cloud.json',
       media_workflow: 'selfhost/media_default.json',
       n_scenes: 5,
       ref_audio: null,
@@ -198,8 +231,38 @@ describe('QuickCreatePage', () => {
       frame_template: '1080x1920/image_default.html',
       template_params: null,
       prompt_prefix: null,
+      bgm_mode: 'none',
       bgm_path: null,
       bgm_volume: 0.3,
+      runninghub_instance_type: 'plus',
+    });
+  });
+
+  it('applies selected style defaults and submits style_id', async () => {
+    setSubmitScenario('success', DEFAULT_SUCCESS_TASK_ID);
+    setTaskScenario(DEFAULT_SUCCESS_TASK_ID, [buildTask(DEFAULT_SUCCESS_TASK_ID, 'completed')]);
+    const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
+    mockSearchParams = new URLSearchParams('style_id=style-1014');
+
+    renderPage();
+    await screen.findByRole('heading', { name: QUICK_PAGE_HEADING });
+    await fillQuickForm(user);
+
+    await waitFor(() => {
+      expect(screen.getByText('当前风格默认使用：发布故事默认背景音乐')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
+
+    await waitFor(() => {
+      expect(getLastGeneratePayload()).not.toBeNull();
+    });
+
+    expect(getLastGeneratePayload()).toMatchObject({
+      style_id: 'style-1014',
+      bgm_mode: 'default',
+      bgm_path: null,
+      prompt_prefix: 'Cinematic launch visuals with clean foreground focus',
     });
   });
 
@@ -208,7 +271,7 @@ describe('QuickCreatePage', () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     renderPage();
-    await screen.findByRole('heading', { name: 'Quick' });
+    await screen.findByRole('heading', { name: QUICK_PAGE_HEADING });
     await fillQuickForm(user);
 
     await user.click(screen.getByRole('button', { name: '生成视频' }));
@@ -222,7 +285,7 @@ describe('QuickCreatePage', () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     renderPage();
-    await screen.findByRole('heading', { name: 'Quick' });
+    await screen.findByRole('heading', { name: QUICK_PAGE_HEADING });
     await fillQuickForm(user);
 
     await user.click(screen.getByRole('button', { name: '生成视频' }));
@@ -237,7 +300,7 @@ describe('QuickCreatePage', () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     renderPage();
-    await screen.findByRole('heading', { name: 'Quick' });
+    await screen.findByRole('heading', { name: QUICK_PAGE_HEADING });
     await fillQuickForm(user);
 
     await user.click(screen.getByRole('button', { name: '生成视频' }));
@@ -263,7 +326,7 @@ describe('QuickCreatePage', () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     renderPage();
-    await screen.findByRole('heading', { name: 'Quick' });
+    await screen.findByRole('heading', { name: QUICK_PAGE_HEADING });
     await fillQuickForm(user);
 
     await user.click(screen.getByRole('button', { name: '生成视频' }));

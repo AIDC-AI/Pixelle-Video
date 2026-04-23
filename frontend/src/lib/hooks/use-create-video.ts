@@ -22,6 +22,14 @@ type CancelTaskResponse =
   paths['/api/tasks/{task_id}']['delete']['responses'][200]['content']['application/json'];
 type TaskStatus = components['schemas']['TaskStatus'];
 export type QuickSubmitRequest = Omit<VideoGenerateRequest, 'project_id'>;
+type MediaPreviewRequest =
+  paths['/api/media/generate']['post']['requestBody']['content']['application/json'];
+type MediaPreviewResponse =
+  paths['/api/media/generate']['post']['responses'][200]['content']['application/json'];
+type TtsPreviewRequest =
+  paths['/api/tts/synthesize']['post']['requestBody']['content']['application/json'];
+type TtsPreviewResponse =
+  paths['/api/tts/synthesize']['post']['responses'][200]['content']['application/json'];
 
 const TERMINAL_TASK_STATUSES: readonly TaskStatus[] = ['completed', 'failed', 'cancelled'];
 const DEFAULT_POLL_INTERVAL_MS = 2_000;
@@ -35,16 +43,16 @@ function getBasePollIntervalMs(): number {
 }
 
 function useSubmitAsyncVideo<Path extends AsyncVideoPath>(endpoint: Path) {
-  const currentProject = useCurrentProjectStore((state) => state.currentProject);
+  const currentProjectId = useCurrentProjectStore((state) => state.currentProjectId);
 
   return useMutation<AsyncVideoResponse<Path>, ApiError, AsyncVideoRequest<Path>>({
     mutationFn: async (data) => {
-      if (!currentProject?.id) {
+      if (!currentProjectId) {
         throw new Error('Project ID is required');
       }
       return apiClient<AsyncVideoResponse<Path>>(endpoint, {
         method: 'POST',
-        body: JSON.stringify({ ...data, project_id: currentProject.id }),
+        body: JSON.stringify({ ...data, project_id: currentProjectId }),
       });
     },
   });
@@ -98,5 +106,25 @@ export function useTaskPolling(taskId: string | undefined, isEnabled = true) {
 export function useCancelTask() {
   return useMutation<CancelTaskResponse, ApiError, string>({
     mutationFn: (taskId) => apiClient<CancelTaskResponse>(`/api/tasks/${taskId}`, { method: 'DELETE' }),
+  });
+}
+
+export function usePreviewMedia() {
+  return useMutation<MediaPreviewResponse, ApiError, MediaPreviewRequest>({
+    mutationFn: (payload) =>
+      apiClient<MediaPreviewResponse>('/api/media/generate', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+  });
+}
+
+export function usePreviewTts() {
+  return useMutation<TtsPreviewResponse, ApiError, TtsPreviewRequest>({
+    mutationFn: (payload) =>
+      apiClient<TtsPreviewResponse>('/api/tts/synthesize', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   });
 }

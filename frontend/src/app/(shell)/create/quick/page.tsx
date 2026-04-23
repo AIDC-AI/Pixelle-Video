@@ -5,26 +5,44 @@ import { useSearchParams } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { History } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { useSubmitQuick, useTaskPolling, useCancelTask, type QuickSubmitRequest } from '@/lib/hooks/use-create-video';
-import { useTtsWorkflows, useMediaWorkflows, useBgmList } from '@/lib/hooks/use-resources';
-import { useCurrentProjectStore } from '@/stores/current-project';
+import { useDraft } from '@/lib/hooks/use-draft';
+import { useCurrentProjectHydration } from '@/lib/hooks/use-current-project';
+import { useBgmList, useMediaWorkflows, useStyleDetail, useTtsWorkflows } from '@/lib/hooks/use-resources';
+import { useSettings } from '@/lib/hooks/use-settings';
+import { useAppTranslations } from '@/lib/i18n';
+import {
+  getBgmDisplayName,
+  getBgmOptionLabel,
+  getWorkflowOptionLabel,
+} from '@/lib/resource-display';
+import { isRunningHubWorkflow, normalizeRunningHubInstanceType } from '@/lib/runninghub-instance-type';
 import type { components } from '@/types/api';
 
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { AlertCircle, Ban } from 'lucide-react';
-
+import { ParamHintPopover } from '@/components/create/param-hint-popover';
+import { ParamHistoryDrawer } from '@/components/create/param-history-drawer';
+import { PreflightCheck } from '@/components/create/preflight-check';
+import { PresetSelector } from '@/components/create/preset-selector';
+import { RunningHubInstanceTypeField } from '@/components/create/runninghub-instance-type-field';
+import { SubmitSuccessToast } from '@/components/create/submit-success-toast';
+import { AiFeatureGates } from '@/components/create/ai-feature-gates';
 import { ConfigSummary } from '@/components/create/config-summary';
 import { TaskProgress } from '@/components/create/task-progress';
 import { VideoResult } from '@/components/create/video-result';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { AlertCircle, Ban } from 'lucide-react';
+
 type Task = components['schemas']['Task'];
 type TaskStatus = components['schemas']['TaskStatus'];
 
@@ -45,10 +63,13 @@ type QuickCreateHiddenDefaults = Pick<
   | 'min_narration_words'
   | 'n_scenes'
   | 'ref_audio'
+  | 'style_id'
   | 'template_params'
   | 'video_fps'
   | 'voice_id'
->;
+> & {
+  default_prompt_prefix: string | null;
+};
 
 type QuickCreateViewState = 'idle' | TaskStatus;
 
@@ -79,7 +100,8 @@ const QUICK_CREATE_DEFAULTS = {
   | 'bgm_volume'
 >;
 
-export const QUICK_SUBMIT_REQUEST_KEYS = [
+const QUICK_SUBMIT_REQUEST_KEYS = [
+  'bgm_mode',
   'bgm_path',
   'bgm_volume',
   'max_image_prompt_words',
@@ -93,6 +115,8 @@ export const QUICK_SUBMIT_REQUEST_KEYS = [
   'prompt_prefix',
   'ref_audio',
   'frame_template',
+  'runninghub_instance_type',
+  'style_id',
   'template_params',
   'text',
   'title',
@@ -105,15 +129,16 @@ const formSchema = z.object({
   title: z.string().min(2, '标题至少2个字符').max(100, '标题最多100个字符'),
   topic: z.string().min(10, '主题描述至少10个字符').max(2000, '主题描述最多2000个字符'),
   tts_workflow: z.string().min(1, '请选择配音'),
-  media_workflow: z.string().min(1, '请选择媒体工作流'),
+  media_workflow: z.string().min(1, '请选择画面方案'),
   bgm_path: z.string().optional(),
   narration: z.string().optional(),
   prompt_prefix: z.string().optional(),
+  runninghub_instance_type: z.enum(['auto', 'plus']),
 });
 
 type QuickFormValues = z.infer<typeof formSchema>;
 
-function toOptionalString(value: string | undefined): string | undefined {
+function toOptionalString(value: string | undefined | null): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
 }
@@ -151,6 +176,23 @@ function toOptionalNumber(value: string | null, fallback: number): number {
   return Number.isFinite(parsedValue) ? parsedValue : fallback;
 }
 
+function toQuickFormValuesFromPayload(payload: Record<string, unknown>): Partial<QuickFormValues> {
+  const mode = payload.mode === 'fixed' ? 'fixed' : 'generate';
+
+  return {
+    title: typeof payload.title === 'string' ? payload.title : '',
+    topic: typeof payload.text === 'string' && mode !== 'fixed' ? payload.text : '',
+    tts_workflow: typeof payload.tts_workflow === 'string' ? payload.tts_workflow : '',
+    media_workflow: typeof payload.media_workflow === 'string' ? payload.media_workflow : '',
+    bgm_path: typeof payload.bgm_path === 'string' ? payload.bgm_path : '',
+    narration: typeof payload.text === 'string' && mode === 'fixed' ? payload.text : '',
+    prompt_prefix: typeof payload.prompt_prefix === 'string' ? payload.prompt_prefix : '',
+    runninghub_instance_type: normalizeRunningHubInstanceType(
+      typeof payload.runninghub_instance_type === 'string' ? payload.runninghub_instance_type : null
+    ),
+  };
+}
+
 function parseTemplateParams(value: string | null): QuickSubmitRequest['template_params'] {
   if (!value) {
     return QUICK_CREATE_DEFAULTS.template_params;
@@ -171,20 +213,27 @@ function buildQuickSubmitPayload(
   hiddenDefaults: QuickCreateHiddenDefaults
 ): QuickSubmitRequest {
   const narration = toOptionalString(values.narration);
+  const bgmPath = toOptionalString(values.bgm_path) ?? null;
+  const promptPrefix = toOptionalString(values.prompt_prefix) ?? hiddenDefaults.default_prompt_prefix ?? null;
+  const { default_prompt_prefix: _defaultPromptPrefix, ...requestDefaults } = hiddenDefaults;
 
   return {
-    ...hiddenDefaults,
+    ...requestDefaults,
     title: values.title.trim(),
     text: narration ?? values.topic.trim(),
     mode: narration ? 'fixed' : 'generate',
     tts_workflow: values.tts_workflow,
     media_workflow: values.media_workflow,
-    prompt_prefix: toOptionalString(values.prompt_prefix) ?? null,
-    bgm_path: toOptionalString(values.bgm_path) ?? null,
+    prompt_prefix: promptPrefix,
+    bgm_path: bgmPath,
+    bgm_mode: bgmPath ? 'custom' : hiddenDefaults.style_id ? 'default' : 'none',
+    runninghub_instance_type: values.runninghub_instance_type,
   };
 }
 
 function QuickCreateContent() {
+  const t = useAppTranslations('quick');
+  const common = useAppTranslations('common');
   const searchParams = useSearchParams();
   const initialTopic = searchParams.get('topic') ?? '';
   const initialTitle = searchParams.get('title') ?? '';
@@ -193,9 +242,50 @@ function QuickCreateContent() {
   const initialTtsWorkflow = searchParams.get('tts_workflow') ?? '';
   const initialMediaWorkflow = searchParams.get('media_workflow') ?? '';
   const initialBgmPath = searchParams.get('bgm_path') ?? '';
+  const initialRunningHubInstanceType = searchParams.get('runninghub_instance_type');
+  const initialStyleId = searchParams.get('style_id');
   const initialTaskId = searchParams.get('task_id');
-  const hiddenDefaults = useMemo<QuickCreateHiddenDefaults>(
-    () => ({
+  const [taskId, setTaskId] = useState<string>();
+  const [localState, setLocalState] = useState<'idle' | 'failed' | 'cancelled'>('idle');
+  const [localMessage, setLocalMessage] = useState('');
+  const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [isPollingEnabled, setIsPollingEnabled] = useState(false);
+  const [consumedInitialTaskId, setConsumedInitialTaskId] = useState<string | null>(null);
+  const [highlightedFields, setHighlightedFields] = useState<string[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  const { currentProject, isHydrated } = useCurrentProjectHydration();
+  const currentProjectId = currentProject?.id ?? null;
+
+  const { data: ttsData } = useTtsWorkflows();
+  const { data: mediaData } = useMediaWorkflows();
+  const { data: bgmData } = useBgmList();
+  const { data: styleDetail } = useStyleDetail(initialStyleId);
+  const { data: settingsData } = useSettings();
+
+  const styleDefaultBgm = useMemo(
+    () => bgmData?.bgm_files.find((bgm) => bgm.linked_style_id === initialStyleId) ?? null,
+    [bgmData?.bgm_files, initialStyleId]
+  );
+
+  const hiddenDefaults = useMemo<QuickCreateHiddenDefaults>(() => {
+    const runtimeConfig = styleDetail?.runtime_config ?? null;
+    const stylePromptPrefix =
+      runtimeConfig &&
+      typeof runtimeConfig === 'object' &&
+      'prompt_prefix' in runtimeConfig &&
+      typeof runtimeConfig.prompt_prefix === 'string'
+        ? runtimeConfig.prompt_prefix
+        : null;
+    const styleFrameTemplate =
+      runtimeConfig &&
+      typeof runtimeConfig === 'object' &&
+      'template' in runtimeConfig &&
+      typeof runtimeConfig.template === 'string'
+        ? runtimeConfig.template
+        : null;
+
+    return {
       n_scenes: toOptionalNumber(searchParams.get('n_scenes'), QUICK_CREATE_DEFAULTS.n_scenes),
       ref_audio: searchParams.get('ref_audio') ?? QUICK_CREATE_DEFAULTS.ref_audio,
       voice_id: searchParams.get('voice_id') ?? QUICK_CREATE_DEFAULTS.voice_id,
@@ -216,26 +306,13 @@ function QuickCreateContent() {
         QUICK_CREATE_DEFAULTS.max_image_prompt_words
       ),
       video_fps: toOptionalNumber(searchParams.get('video_fps'), QUICK_CREATE_DEFAULTS.video_fps),
-      frame_template: searchParams.get('frame_template') ?? QUICK_CREATE_DEFAULTS.frame_template,
+      frame_template: searchParams.get('frame_template') ?? styleFrameTemplate ?? QUICK_CREATE_DEFAULTS.frame_template,
       template_params: parseTemplateParams(searchParams.get('template_params')),
       bgm_volume: toOptionalNumber(searchParams.get('bgm_volume'), QUICK_CREATE_DEFAULTS.bgm_volume),
-    }),
-    [searchParams]
-  );
-
-  const [taskId, setTaskId] = useState<string>();
-  const [localState, setLocalState] = useState<'idle' | 'failed' | 'cancelled'>('idle');
-  const [localMessage, setLocalMessage] = useState('');
-  const [showProjectDialog, setShowProjectDialog] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(useCurrentProjectStore.persist.hasHydrated());
-  const [isPollingEnabled, setIsPollingEnabled] = useState(false);
-  const [consumedInitialTaskId, setConsumedInitialTaskId] = useState<string | null>(null);
-
-  const currentProject = useCurrentProjectStore((state) => state.currentProject);
-
-  const { data: ttsData } = useTtsWorkflows();
-  const { data: mediaData } = useMediaWorkflows();
-  const { data: bgmData } = useBgmList();
+      style_id: initialStyleId,
+      default_prompt_prefix: toOptionalString(initialPromptPrefix) ?? stylePromptPrefix ?? null,
+    };
+  }, [initialPromptPrefix, initialStyleId, searchParams, styleDetail?.runtime_config]);
 
   const submitQuick = useSubmitQuick();
   const cancelTask = useCancelTask();
@@ -250,14 +327,21 @@ function QuickCreateContent() {
       bgm_path: initialBgmPath,
       narration: initialNarration,
       prompt_prefix: initialPromptPrefix,
+      runninghub_instance_type: normalizeRunningHubInstanceType(initialRunningHubInstanceType),
     },
   });
 
   const configValues = useWatch({ control: form.control });
+  const selectedTtsWorkflow = useWatch({ control: form.control, name: 'tts_workflow' });
+  const selectedMediaWorkflow = useWatch({ control: form.control, name: 'media_workflow' });
+  const shouldEnableDraft = searchParams.toString().length === 0;
   const polling = useTaskPolling(taskId, isPollingEnabled);
   const taskData = polling.data;
   const taskResult = isVideoTaskResult(taskData?.result) ? taskData.result : undefined;
   const remoteState = taskData?.status;
+  const shouldShowRunningHubInstanceType =
+    isRunningHubWorkflow(ttsData?.workflows, selectedTtsWorkflow) ||
+    isRunningHubWorkflow(mediaData?.workflows, selectedMediaWorkflow);
   const viewState: QuickCreateViewState = (() => {
     if (localState !== 'idle') {
       return localState;
@@ -279,23 +363,10 @@ function QuickCreateContent() {
       : localState === 'cancelled'
         ? localMessage
         : remoteState === 'failed'
-          ? taskData?.error ?? '生成失败'
+          ? taskData?.error ?? t('failedTitle')
           : remoteState === 'cancelled'
-            ? '任务已取消'
+            ? t('cancelledTitle')
             : taskData?.progress?.message ?? '';
-
-  useEffect(() => {
-    const persistApi = useCurrentProjectStore.persist;
-    const unsubscribe = persistApi.onFinishHydration(() => {
-      setIsHydrated(true);
-    });
-
-    if (!persistApi.hasHydrated()) {
-      void persistApi.rehydrate();
-    }
-
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     if (!initialTaskId) {
@@ -317,8 +388,55 @@ function QuickCreateContent() {
     return () => window.cancelAnimationFrame(frameId);
   }, [consumedInitialTaskId, initialTaskId, taskId]);
 
+  useEffect(() => {
+    if (initialRunningHubInstanceType !== null || !settingsData) {
+      return;
+    }
+
+    if (form.getFieldState('runninghub_instance_type').isDirty) {
+      return;
+    }
+
+    form.setValue(
+      'runninghub_instance_type',
+      normalizeRunningHubInstanceType(settingsData.comfyui?.runninghub_instance_type),
+      { shouldDirty: false, shouldTouch: false }
+    );
+  }, [form, initialRunningHubInstanceType, settingsData]);
+
+  useEffect(() => {
+    if (highlightedFields.length === 0) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setHighlightedFields([]), 1500);
+    return () => window.clearTimeout(timeoutId);
+  }, [highlightedFields]);
+
+  const { clearDraft } = useDraft('quick', currentProjectId, {
+    enabled: shouldEnableDraft && isHydrated && !initialTaskId,
+    onRestore: (draft) => {
+      form.reset({
+        ...form.getValues(),
+        ...(draft as Partial<QuickFormValues>),
+      });
+    },
+    params: (configValues ?? form.getValues()) as QuickFormValues,
+  });
+
+  const applyQuickParams = (params: Partial<QuickFormValues>, changedKeys: string[] = []) => {
+    form.reset({
+      ...form.getValues(),
+      ...params,
+    });
+    setHighlightedFields(changedKeys);
+  };
+
+  const fieldHighlightClass = (keys: string[]) =>
+    keys.some((key) => highlightedFields.includes(key)) ? 'animate-highlight rounded-xl' : '';
+
   const onSubmit = async (values: QuickFormValues) => {
-    if (!currentProject) {
+    if (!currentProjectId) {
       setShowProjectDialog(true);
       return;
     }
@@ -331,6 +449,10 @@ function QuickCreateContent() {
     try {
       const response = await submitQuick.mutateAsync(buildQuickSubmitPayload(values, hiddenDefaults));
       setTaskId(response.task_id);
+      await clearDraft();
+      toast.success(
+        <SubmitSuccessToast taskName={values.title.trim() || values.topic.trim().slice(0, 48) || 'Quick task'} />
+      );
     } catch (error: unknown) {
       setLocalState('failed');
       setLocalMessage(getErrorMessage(error));
@@ -344,7 +466,7 @@ function QuickCreateContent() {
     }
 
     setLocalState('cancelled');
-    setLocalMessage('任务已取消');
+    setLocalMessage(t('cancelledTitle'));
     setIsPollingEnabled(false);
 
     try {
@@ -363,7 +485,7 @@ function QuickCreateContent() {
   };
 
   if (!isHydrated) {
-    return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading quick create...</div>;
+    return <div className="animate-pulse p-8 text-center text-muted-foreground">{common('loading')}</div>;
   }
 
   const progressPercentage = taskData?.progress?.percentage ?? (viewState === 'completed' ? 100 : 0);
@@ -378,28 +500,46 @@ function QuickCreateContent() {
   return (
     <div className="mx-auto flex h-full max-w-7xl flex-col gap-6 p-4 text-foreground md:flex-row md:flex-nowrap md:p-0">
       <div className="min-w-0 md:basis-[70%] md:pr-4">
-        <h1 className="mb-2 text-2xl font-bold">Quick</h1>
-        <p className="mb-6 text-sm text-muted-foreground">
-          最快的视频生成方式，AI 自动完成文案、配音与画面。
-        </p>
+        <h1 className="mb-2 text-2xl font-bold">{t('title')}</h1>
+        <p className="mb-6 text-sm text-muted-foreground">{t('description')}</p>
+        <AiFeatureGates className="mb-4" />
 
         <ScrollArea className="h-[calc(100vh-160px)] pr-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex-1">
+                  <PresetSelector
+                    pipeline="quick"
+                    currentParams={(configValues ?? form.getValues()) as Record<string, unknown>}
+                    savePayload={buildQuickSubmitPayload(form.getValues(), hiddenDefaults)}
+                    mapPresetToParams={toQuickFormValuesFromPayload}
+                    onApply={(params, changedKeys) => applyQuickParams(params as Partial<QuickFormValues>, changedKeys)}
+                    disabled={viewState === 'running'}
+                  />
+                </div>
+                <Button variant="outline" type="button" onClick={() => setHistoryOpen(true)}>
+                  <History className="size-4" />
+                  历史记录
+                </Button>
+              </div>
+
               <div className="space-y-4">
-                <h3 className="border-b pb-2 text-lg font-medium">基础配置</h3>
+                <h3 className="border-b pb-2 text-lg font-medium">{t('basicConfig')}</h3>
 
                 <FormField
                   control={form.control}
                   name="title"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>视频标题</FormLabel>
+                    <ParamHintPopover paramKey="quick.title">
+                      <FormItem className={fieldHighlightClass(['title'])}>
+                      <FormLabel>{t('titleLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="输入一个吸引人的标题..." disabled={viewState === 'running'} {...field} />
+                        <Input placeholder={t('titlePlaceholder')} disabled={viewState === 'running'} {...field} />
                       </FormControl>
                       <FormMessage />
-                    </FormItem>
+                      </FormItem>
+                    </ParamHintPopover>
                   )}
                 />
 
@@ -407,18 +547,20 @@ function QuickCreateContent() {
                   control={form.control}
                   name="topic"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>创意描述 (Topic)</FormLabel>
+                    <ParamHintPopover paramKey="quick.topic">
+                      <FormItem className={fieldHighlightClass(['topic'])}>
+                      <FormLabel>{t('topicLabel')}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="描述您想生成的视频主题或创意细节..."
+                          placeholder={t('topicPlaceholder')}
                           className="min-h-[100px]"
                           disabled={viewState === 'running'}
                           {...field}
                         />
                       </FormControl>
                       <FormMessage />
-                    </FormItem>
+                      </FormItem>
+                    </ParamHintPopover>
                   )}
                 />
 
@@ -427,24 +569,26 @@ function QuickCreateContent() {
                     control={form.control}
                     name="tts_workflow"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>配音 (TTS)</FormLabel>
+                      <ParamHintPopover paramKey="quick.tts_workflow">
+                        <FormItem className={fieldHighlightClass(['tts_workflow'])}>
+                        <FormLabel>{t('ttsLabel')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} disabled={viewState === 'running'}>
                           <FormControl>
-                            <SelectTrigger aria-label="配音 (TTS)">
-                              <SelectValue placeholder="选择配音" />
+                            <SelectTrigger aria-label={t('ttsLabel')}>
+                              <SelectValue placeholder={t('ttsPlaceholder')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {ttsData?.workflows.map((workflow) => (
                               <SelectItem key={workflow.key} value={workflow.key}>
-                                {workflow.display_name}
+                                {getWorkflowOptionLabel(workflow)}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
-                      </FormItem>
+                        </FormItem>
+                      </ParamHintPopover>
                     )}
                   />
 
@@ -452,24 +596,26 @@ function QuickCreateContent() {
                     control={form.control}
                     name="media_workflow"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>媒体流 (Media)</FormLabel>
+                      <ParamHintPopover paramKey="quick.media_workflow">
+                        <FormItem className={fieldHighlightClass(['media_workflow'])}>
+                        <FormLabel>{t('mediaLabel')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} disabled={viewState === 'running'}>
                           <FormControl>
-                            <SelectTrigger aria-label="媒体流 (Media)">
-                              <SelectValue placeholder="选择媒体工作流" />
+                            <SelectTrigger aria-label={t('mediaLabel')}>
+                              <SelectValue placeholder={t('mediaPlaceholder')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {mediaData?.workflows.map((workflow) => (
                               <SelectItem key={workflow.key} value={workflow.key}>
-                                {workflow.display_name}
+                                {getWorkflowOptionLabel(workflow)}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
-                      </FormItem>
+                        </FormItem>
+                      </ParamHintPopover>
                     )}
                   />
                 </div>
@@ -478,45 +624,69 @@ function QuickCreateContent() {
                   control={form.control}
                   name="bgm_path"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>背景音乐 (BGM)</FormLabel>
+                    <ParamHintPopover paramKey="quick.bgm_path">
+                      <FormItem className={fieldHighlightClass(['bgm_path'])}>
+                      <FormLabel>{t('bgmLabel')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value} disabled={viewState === 'running'}>
                         <FormControl>
-                          <SelectTrigger aria-label="背景音乐 (BGM)">
-                            <SelectValue placeholder="选择 BGM (可选)" />
+                          <SelectTrigger aria-label={t('bgmLabel')}>
+                            <SelectValue placeholder={t('bgmPlaceholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {bgmData?.bgm_files.map((bgm) => (
                             <SelectItem key={bgm.path} value={bgm.path}>
-                              {bgm.name}
+                              {getBgmOptionLabel(bgm)}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {styleDefaultBgm && !field.value ? (
+                        <p className="text-xs text-muted-foreground">
+                          {t('bgmDefaultHint', { name: getBgmDisplayName(styleDefaultBgm) })}
+                        </p>
+                      ) : null}
                       <FormMessage />
-                    </FormItem>
+                      </FormItem>
+                    </ParamHintPopover>
                   )}
                 />
+
+                {shouldShowRunningHubInstanceType ? (
+                  <RunningHubInstanceTypeField
+                    disabled={viewState === 'running'}
+                    testId="quick-runninghub-instance-type"
+                    value={configValues.runninghub_instance_type ?? 'auto'}
+                    onChange={(value) => {
+                      form.setValue('runninghub_instance_type', value, { shouldDirty: true });
+                    }}
+                  />
+                ) : null}
               </div>
 
               <Accordion className="w-full">
                 <AccordionItem value="advanced">
                   <AccordionTrigger className="text-lg font-medium text-foreground hover:no-underline">
-                    高级配置
+                    {t('advancedConfig')}
                   </AccordionTrigger>
                   <AccordionContent className="space-y-4 pt-4">
                     <FormField
                       control={form.control}
                       name="narration"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>自定义旁白</FormLabel>
+                        <ParamHintPopover paramKey="quick.narration">
+                          <FormItem className={fieldHighlightClass(['narration'])}>
+                          <FormLabel>{t('narrationLabel')}</FormLabel>
                           <FormControl>
-                            <Textarea placeholder="留空则由 AI 自动生成文案..." disabled={viewState === 'running'} {...field} />
+                            <Textarea
+                              placeholder={t('narrationPlaceholder')}
+                              disabled={viewState === 'running'}
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
-                        </FormItem>
+                          </FormItem>
+                        </ParamHintPopover>
                       )}
                     />
 
@@ -524,17 +694,19 @@ function QuickCreateContent() {
                       control={form.control}
                       name="prompt_prefix"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>图像提示词词缀</FormLabel>
+                        <ParamHintPopover paramKey="quick.prompt_prefix">
+                          <FormItem className={fieldHighlightClass(['prompt_prefix'])}>
+                          <FormLabel>{t('promptPrefixLabel')}</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="附加给所有画面生成的 Prompt..."
+                              placeholder={t('promptPrefixPlaceholder')}
                               disabled={viewState === 'running'}
                               {...field}
                             />
                           </FormControl>
                           <FormMessage />
-                        </FormItem>
+                          </FormItem>
+                        </ParamHintPopover>
                       )}
                     />
                   </AccordionContent>
@@ -542,9 +714,20 @@ function QuickCreateContent() {
               </Accordion>
 
               <div className="pt-4">
-                <Button type="submit" className="h-12 w-full text-base font-semibold" disabled={viewState === 'running'}>
-                  {viewState === 'running' || viewState === 'pending' ? '生成中...' : '生成视频'}
-                </Button>
+                <PreflightCheck
+                  pipeline="quick"
+                  className="h-12 w-full text-base font-semibold"
+                  disabled={viewState === 'running'}
+                  requiredFields={[
+                    { key: 'title', label: t('titleLabel'), value: form.getValues('title') },
+                    { key: 'topic', label: t('topicLabel'), value: form.getValues('topic') },
+                    { key: 'tts_workflow', label: t('ttsLabel'), value: form.getValues('tts_workflow') },
+                    { key: 'media_workflow', label: t('mediaLabel'), value: form.getValues('media_workflow') },
+                  ]}
+                  onPass={() => form.handleSubmit(onSubmit)()}
+                >
+                  {viewState === 'running' || viewState === 'pending' ? t('generating') : t('generate')}
+                </PreflightCheck>
               </div>
             </form>
           </Form>
@@ -553,7 +736,7 @@ function QuickCreateContent() {
 
       <div className="w-full md:basis-[30%]">
         <div className="flex flex-col gap-4">
-          {viewState === 'idle' && <ConfigSummary config={configValues} />}
+          {viewState === 'idle' ? <ConfigSummary config={configValues} /> : null}
 
           {(viewState === 'pending' || viewState === 'running' || (viewState === 'completed' && !taskResult)) && taskId ? (
             <TaskProgress
@@ -577,14 +760,14 @@ function QuickCreateContent() {
           {viewState === 'failed' ? (
             <Card className="border-destructive bg-destructive/10 shadow-none">
               <CardContent className="flex flex-col items-center justify-center space-y-4 pt-6 text-center">
-                <div className="text-lg font-medium text-destructive">生成失败</div>
+                <div className="text-lg font-medium text-destructive">{t('failedTitle')}</div>
                 <p className="text-sm text-destructive/80">{statusMessage}</p>
                 <Button
                   variant="outline"
                   className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                   onClick={handleRegenerate}
                 >
-                  重新配置
+                  {t('reconfigure')}
                 </Button>
               </CardContent>
             </Card>
@@ -596,10 +779,10 @@ function QuickCreateContent() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                   <Ban className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <div className="text-lg font-medium text-foreground">任务已取消</div>
-                <p className="text-sm text-muted-foreground">{statusMessage || '生成任务已停止。'}</p>
+                <div className="text-lg font-medium text-foreground">{t('cancelledTitle')}</div>
+                <p className="text-sm text-muted-foreground">{statusMessage || t('cancelledMessage')}</p>
                 <Button variant="outline" className="w-full" onClick={handleRegenerate}>
-                  重新开始
+                  {t('restart')}
                 </Button>
               </CardContent>
             </Card>
@@ -613,25 +796,34 @@ function QuickCreateContent() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
               <AlertCircle className="h-6 w-6 text-destructive" />
             </div>
-            <DialogTitle className="text-center">未选择项目</DialogTitle>
-            <DialogDescription className="text-center">
-              视频生成需要归属于一个项目。请在页面顶部的项目切换器中选择或创建一个项目后再重试。
-            </DialogDescription>
+            <DialogTitle className="text-center">{t('projectRequiredTitle')}</DialogTitle>
+            <DialogDescription className="text-center">{t('projectRequiredDescription')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button className="w-full" onClick={() => setShowProjectDialog(false)}>
-              知道了
+              {t('projectRequiredConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ParamHistoryDrawer
+        pipeline="quick"
+        projectId={currentProjectId}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        mapTaskToParams={(task) => toQuickFormValuesFromPayload((task.request_params ?? {}) as Record<string, unknown>)}
+        onApply={(params) => applyQuickParams(params as Partial<QuickFormValues>)}
+      />
     </div>
   );
 }
 
 export default function QuickCreatePage() {
+  const common = useAppTranslations('common');
+
   return (
-    <Suspense fallback={<div className="p-8 text-center text-muted-foreground animate-pulse">加载中...</div>}>
+    <Suspense fallback={<div className="animate-pulse p-8 text-center text-muted-foreground">{common('loading')}</div>}>
       <QuickCreateContent />
     </Suspense>
   );

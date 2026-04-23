@@ -2,7 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import I2VPage, { I2V_REQUEST_KEYS } from './page';
+import I2VPage from './page';
+import { I2V_REQUEST_KEYS } from '../request-keys';
 import { renderWithQueryClient, seedCurrentProject } from '@/tests/pipeline-page-test-utils';
 import {
   buildTask,
@@ -33,11 +34,11 @@ describe('I2VPage', () => {
 
     renderWithQueryClient(<I2VPage />);
 
-    await screen.findByRole('heading', { name: 'Image → Video' });
-    await user.type(screen.getByLabelText('Motion Prompt'), 'Slow camera push-in with drifting fog.');
-    await user.click(screen.getByRole('combobox', { name: 'Media workflow' }));
-    await user.click(await screen.findByText('Media 1'));
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '图片转视频' });
+    await user.type(screen.getByLabelText('运动提示词'), 'Slow camera push-in with drifting fog.');
+    await user.click(screen.getByRole('combobox', { name: '画面方案' }));
+    await user.click(await screen.findByText('基础画面方案'));
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     expect(await screen.findByText('生成结果')).toBeInTheDocument();
   });
@@ -49,11 +50,11 @@ describe('I2VPage', () => {
 
     renderWithQueryClient(<I2VPage />);
 
-    await screen.findByRole('heading', { name: 'Image → Video' });
-    await user.type(screen.getByLabelText('Motion Prompt'), 'Animate the scene with a subtle parallax effect.');
-    await user.click(screen.getByRole('combobox', { name: 'Media workflow' }));
-    await user.click(await screen.findByText('Media 1'));
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '图片转视频' });
+    await user.type(screen.getByLabelText('运动提示词'), 'Animate the scene with a subtle parallax effect.');
+    await user.click(screen.getByRole('combobox', { name: '画面方案' }));
+    await user.click(await screen.findByText('基础画面方案'));
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     await waitFor(() => {
       expect(getLastI2VPayload()).not.toBeNull();
@@ -86,11 +87,11 @@ describe('I2VPage', () => {
 
     renderWithQueryClient(<I2VPage />);
 
-    await screen.findByRole('heading', { name: 'Image → Video' });
-    await user.type(screen.getByLabelText('Motion Prompt'), 'Keep rendering so the cancel path can be exercised.');
-    await user.click(screen.getByRole('combobox', { name: 'Media workflow' }));
-    await user.click(await screen.findByText('Media 1'));
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '图片转视频' });
+    await user.type(screen.getByLabelText('运动提示词'), 'Keep rendering so the cancel path can be exercised.');
+    await user.click(screen.getByRole('combobox', { name: '画面方案' }));
+    await user.click(await screen.findByText('基础画面方案'));
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     expect(await screen.findByText('排队中')).toBeInTheDocument();
 
@@ -100,7 +101,7 @@ describe('I2VPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '取消任务' }));
 
-    expect(await screen.findByRole('button', { name: 'Start Over' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '重新开始' })).toBeInTheDocument();
     const pollCountAfterCancel = getTaskPollCount('task-i2v-cancelled');
 
     await new Promise((resolve) => window.setTimeout(resolve, 120));

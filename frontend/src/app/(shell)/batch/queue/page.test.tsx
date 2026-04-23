@@ -39,7 +39,7 @@ async function seedCurrentProject(project: { id: string; name: string } | null) 
     localStorage.setItem(
       'current-project-storage',
       JSON.stringify({
-        state: { currentProject: project },
+        state: { currentProjectId: project.id },
         version: 0,
       })
     );
@@ -47,7 +47,7 @@ async function seedCurrentProject(project: { id: string; name: string } | null) 
     localStorage.removeItem('current-project-storage');
   }
 
-  useCurrentProjectStore.setState({ currentProject: project });
+  useCurrentProjectStore.setState({ currentProjectId: project?.id ?? null });
 
   await act(async () => {
     await useCurrentProjectStore.persist.rehydrate();
@@ -64,6 +64,7 @@ function renderPage() {
 
 describe('Batch Queue Page', () => {
   beforeEach(async () => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
     mockSearchParams = new URLSearchParams('');
     mockPush.mockReset();
     mockReplace.mockReset();
@@ -73,9 +74,9 @@ describe('Batch Queue Page', () => {
   it('renders queue rows from the tasks endpoint', async () => {
     renderPage();
 
-    expect(await screen.findByRole('heading', { name: 'Task Queue' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '任务队列' })).toBeInTheDocument();
     expect(await screen.findByText('task-library-video-1')).toBeInTheDocument();
-    expect(screen.getAllByText('Quick').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('快速创作').length).toBeGreaterThan(0);
   });
 
   it('applies the running status filter from URL state', async () => {
@@ -134,7 +135,7 @@ describe('Batch Queue Page', () => {
     renderPage();
     expect(await screen.findByText('task-running-cancel')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: '取消' }));
 
     await waitFor(() => {
       expect(screen.queryByText('task-running-cancel')).not.toBeInTheDocument();
@@ -163,7 +164,7 @@ describe('Batch Queue Page', () => {
     renderPage();
     expect(await screen.findByText('task-running-view')).toBeInTheDocument();
 
-    await user.click(screen.getAllByRole('button', { name: 'View' })[0]);
+    await user.click(screen.getAllByRole('button', { name: '查看' })[0]);
 
     expect(mockPush).toHaveBeenCalledWith('/create/quick?task_id=task-running-view');
   });
@@ -173,8 +174,8 @@ describe('Batch Queue Page', () => {
 
     renderPage();
 
-    expect(await screen.findByText('No matching tasks')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Go to Create' })).toHaveAttribute('href', '/create');
+    expect(await screen.findByText('没有匹配的任务')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '前往创作' })).toHaveAttribute('href', '/create');
   });
 
   it('routes completed tasks to the library detail page', async () => {
@@ -188,7 +189,7 @@ describe('Batch Queue Page', () => {
     const row = taskCell?.closest('.grid');
     expect(row).not.toBeNull();
 
-    await user.click(within(row as HTMLElement).getByRole('button', { name: 'View' }));
+    await user.click(within(row as HTMLElement).getByRole('button', { name: '查看' }));
 
     expect(mockPush).toHaveBeenCalledWith('/library/videos/task-library-video-1');
   });
@@ -197,10 +198,10 @@ describe('Batch Queue Page', () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     renderPage();
-    await screen.findByRole('heading', { name: 'Task Queue' });
+    await screen.findByRole('heading', { name: '任务队列' });
 
-    await user.click(screen.getByRole('combobox', { name: 'Status filter' }));
-    await user.click(screen.getByText('Cancelled'));
+    await user.click(screen.getByRole('combobox', { name: '状态' }));
+    await user.click(screen.getByText('已取消'));
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/batch/queue?status=cancelled', { scroll: false });
     });

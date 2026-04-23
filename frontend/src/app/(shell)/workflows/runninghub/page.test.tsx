@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import Page from './page';
 import { renderWithQueryClient } from '@/tests/pipeline-page-test-utils';
@@ -9,12 +9,17 @@ import { server } from '@/tests/msw/server';
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 describe('RunningHub Workflows Page', () => {
+  beforeEach(() => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
+  });
+
   it('shows only runninghub workflows', async () => {
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('heading', { name: 'RunningHub Workflows' })).toBeInTheDocument();
-    expect(await screen.findByText('TTS Cloud')).toBeInTheDocument();
-    expect(screen.queryByText('TTS 1')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'RunningHub 工作流' })).toBeInTheDocument();
+    expect(await screen.findByText('云端配音方案')).toBeInTheDocument();
+    expect((await screen.findAllByText('outdated')).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Edge 配音方案')).not.toBeInTheDocument();
   });
 
   it('shows an empty state when no runninghub workflows are returned', async () => {
@@ -36,6 +41,6 @@ describe('RunningHub Workflows Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByText('No RunningHub workflows available')).toBeInTheDocument();
+    expect(await screen.findByText('暂无 RunningHub 工作流')).toBeInTheDocument();
   });
 });

@@ -17,6 +17,7 @@ vi.mock('next/navigation', () => ({
 
 describe('Batch Detail Page', () => {
   beforeEach(() => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
     mockPush.mockReset();
   });
 
@@ -25,7 +26,7 @@ describe('Batch Detail Page', () => {
 
     expect(await screen.findByRole('heading', { name: 'Motion Batch' })).toBeInTheDocument();
     expect(screen.getByText('task-batch-running')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cancel Batch' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '取消批处理' })).toBeInTheDocument();
   });
 
   it('cancels the batch and returns to the list', async () => {
@@ -34,8 +35,8 @@ describe('Batch Detail Page', () => {
     renderWithQueryClient(<Page />);
     await screen.findByRole('heading', { name: 'Motion Batch' });
 
-    await user.click(screen.getByRole('button', { name: 'Cancel Batch' }));
-    await user.click(await screen.findByRole('button', { name: 'Confirm' }));
+    await user.click(screen.getByRole('button', { name: '取消批处理' }));
+    await user.click(await screen.findByRole('button', { name: '确认' }));
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/batch/list');
@@ -70,8 +71,8 @@ describe('Batch Detail Page', () => {
     renderWithQueryClient(<Page />);
 
     expect(await screen.findByRole('heading', { name: 'Completed Batch' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete Batch' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Download Outputs' })).toHaveAttribute('href', '#successful-outputs');
+    expect(screen.getByRole('button', { name: '删除批处理' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '下载输出' })).toHaveAttribute('href', '#successful-outputs');
   });
 
   it('routes child tasks to the correct detail destination', async () => {
@@ -80,7 +81,7 @@ describe('Batch Detail Page', () => {
     renderWithQueryClient(<Page />);
     await screen.findByText('task-batch-running');
 
-    await user.click(screen.getByRole('button', { name: 'View' }));
+    await user.click(screen.getByRole('button', { name: '查看' }));
 
     expect(mockPush).toHaveBeenCalledWith('/create/i2v?task_id=task-batch-running');
   });

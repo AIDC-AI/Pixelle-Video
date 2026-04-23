@@ -31,14 +31,16 @@ async function readCurrentProjectFromStorage(page: Page): Promise<{ id: string; 
   });
 }
 
-async function selectFirstOption(page: Page, triggerLabel: string): Promise<void> {
+async function selectFirstOption(page: Page, triggerLabel: string | RegExp): Promise<void> {
   await page.getByLabel(triggerLabel).click();
   await page.locator("[data-slot='select-content']:visible [data-slot='select-item']").first().click();
 }
 
 async function waitForVideoResult(page: Page): Promise<void> {
-  await expect(page.getByText("生成结果")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("button", { name: "基于此重生成" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Result|生成结果/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: /Regenerate(?: From This)?|基于此重生成/ })).toBeVisible({
+    timeout: 20_000,
+  });
 }
 
 test("project selection flows from create to library detail and regenerate", async ({ page }) => {
@@ -50,11 +52,11 @@ test("project selection flows from create to library detail and regenerate", asy
   await createProject(page, projectName);
   await page.locator("main").getByRole("link", { name: /Quick/ }).first().click();
 
-  await page.getByLabel("视频标题").fill(title);
-  await page.getByLabel("创意描述 (Topic)").fill(topic);
-  await selectFirstOption(page, "配音 (TTS)");
-  await selectFirstOption(page, "媒体流 (Media)");
-  await page.getByRole("button", { name: "生成视频" }).click();
+  await page.getByLabel(/Video Title|视频标题/).fill(title);
+  await page.getByLabel(/Creative Brief \(Topic\)|创意描述 \(Topic\)/).fill(topic);
+  await selectFirstOption(page, /Voice \(TTS\)|配音 \(TTS\)/);
+  await selectFirstOption(page, /Media Workflow|媒体流 \(Media\)/);
+  await page.getByRole("button", { name: /Generate Video|生成视频/ }).click();
   await waitForVideoResult(page);
 
   const currentProject = await readCurrentProjectFromStorage(page);
@@ -66,9 +68,9 @@ test("project selection flows from create to library detail and regenerate", asy
 
   await expect(page).toHaveURL(/\/library\/videos\/.+/);
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
-  await page.getByRole("button", { name: "Regenerate From This" }).click();
+  await page.getByRole("button", { name: /Regenerate(?: From This)?|基于此重生成/ }).click();
 
   await expect(page).toHaveURL(/\/create\/quick/);
-  await expect(page.getByLabel("视频标题")).toHaveValue(title);
-  await expect(page.getByLabel("创意描述 (Topic)")).toHaveValue(topic);
+  await expect(page.getByLabel(/Video Title|视频标题/)).toHaveValue(title);
+  await expect(page.getByLabel(/Creative Brief \(Topic\)|创意描述 \(Topic\)/)).toHaveValue(topic);
 });

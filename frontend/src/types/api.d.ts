@@ -151,6 +151,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/media/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Media Generate
+         * @description Generate an image or short video preview using the shared media service.
+         */
+        post: operations["media_generate_api_media_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/content/narration": {
         parameters: {
             query?: never;
@@ -660,6 +680,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/resources/styles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Styles */
+        get: operations["list_styles_api_resources_styles_get"];
+        put?: never;
+        /** Create Style */
+        post: operations["create_style_api_resources_styles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resources/styles/{style_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Style Detail */
+        get: operations["get_style_detail_api_resources_styles__style_id__get"];
+        /** Update Style */
+        put: operations["update_style_api_resources_styles__style_id__put"];
+        post?: never;
+        /** Delete Style */
+        delete: operations["delete_style_api_resources_styles__style_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/resources/workflows/{workflow_id}": {
         parameters: {
             query?: never;
@@ -669,7 +726,8 @@ export interface paths {
         };
         /** Get Workflow Detail */
         get: operations["get_workflow_detail_api_resources_workflows__workflow_id__get"];
-        put?: never;
+        /** Update Workflow Detail */
+        put: operations["update_workflow_detail_api_resources_workflows__workflow_id__put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -687,8 +745,27 @@ export interface paths {
         /** List Presets */
         get: operations["list_presets_api_resources_presets_get"];
         put?: never;
-        post?: never;
+        /** Create Preset */
+        post: operations["create_preset_api_resources_presets_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resources/presets/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Preset */
+        put: operations["update_preset_api_resources_presets__name__put"];
+        post?: never;
+        /** Delete Preset */
+        delete: operations["delete_preset_api_resources_presets__name__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -836,6 +913,23 @@ export interface paths {
         patch: operations["update_project_api_projects__project_id__patch"];
         trace?: never;
     };
+    "/api/projects/{project_id}/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Project Overview */
+        get: operations["get_project_overview_api_projects__project_id__overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/library/videos": {
         parameters: {
             query?: never;
@@ -864,7 +958,8 @@ export interface paths {
         get: operations["get_video_detail_api_library_videos__video_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Video */
+        delete: operations["delete_video_api_library_videos__video_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -992,6 +1087,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/comfyui/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check Comfyui Connection */
+        post: operations["check_comfyui_connection_api_settings_comfyui_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/llm/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check Llm Connection */
+        post: operations["check_llm_connection_api_settings_llm_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/runninghub/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check Runninghub Connection */
+        post: operations["check_runninghub_connection_api_settings_runninghub_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/storage/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Storage Stats */
+        get: operations["get_storage_stats_api_settings_storage_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/storage/cleanup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cleanup Storage */
+        post: operations["cleanup_storage_api_settings_storage_cleanup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/uploads": {
         parameters: {
             query?: never;
@@ -1003,6 +1183,77 @@ export interface paths {
         put?: never;
         /** Upload File */
         post: operations["upload_file_api_uploads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Notifications
+         * @description Return current shell notifications.
+         *
+         *     The workbench currently does not persist notifications server-side. Returning
+         *     a stable empty list keeps the shell contract explicit and avoids frontend 404
+         *     noise while task-level notifications are implemented.
+         */
+        get: operations["list_notifications_api_notifications_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Clear Notifications
+         * @description Clear all notifications.
+         */
+        delete: operations["clear_notifications_api_notifications_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Notification Read
+         * @description Mark one notification as read.
+         *
+         *     This is intentionally idempotent: unknown IDs are accepted because the
+         *     current backend has no persisted notification store.
+         */
+        post: operations["mark_notification_read_api_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark All Notifications Read
+         * @description Mark all notifications as read.
+         */
+        post: operations["mark_all_notifications_read_api_notifications_read_all_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1036,6 +1287,24 @@ export interface components {
         /** ActionTransferAsyncRequest */
         ActionTransferAsyncRequest: {
             /**
+             * Bgm Mode
+             * @description BGM source mode: default=use runtime default, custom=use bgm_path, none=disable background music
+             * @default none
+             * @enum {string}
+             */
+            bgm_mode: "default" | "custom" | "none";
+            /**
+             * Bgm Path
+             * @description Optional BGM path
+             */
+            bgm_path?: string | null;
+            /**
+             * Bgm Volume
+             * @description BGM volume
+             * @default 0.3
+             */
+            bgm_volume: number;
+            /**
              * Driver Video
              * @description Driver video path
              */
@@ -1050,6 +1319,11 @@ export interface components {
              * @description Pose workflow key
              */
             pose_workflow: string;
+            /**
+             * Runninghub Instance Type
+             * @description Optional RunningHub instance type override for this job.
+             */
+            runninghub_instance_type?: string | null;
             /**
              * Project Id
              * @description Project ID
@@ -1085,6 +1359,41 @@ export interface components {
              * @description Source (default or custom)
              */
             source: string;
+            /**
+             * Display Name Zh
+             * @description Chinese-first BGM display name
+             */
+            display_name_zh?: string | null;
+            /**
+             * Description Zh
+             * @description Chinese BGM description
+             */
+            description_zh?: string | null;
+            /**
+             * Source Label
+             * @description Chinese source label
+             */
+            source_label?: string | null;
+            /**
+             * Linked Style Display Name Zh
+             * @description Chinese linked style name
+             */
+            linked_style_display_name_zh?: string | null;
+            /**
+             * Technical Name
+             * @description Original BGM filename for debugging
+             */
+            technical_name?: string | null;
+            /**
+             * Linked Style Id
+             * @description Linked style id when this BGM is style-specific
+             */
+            linked_style_id?: string | null;
+            /**
+             * Linked Style Name
+             * @description Linked style name when this BGM is style-specific
+             */
+            linked_style_name?: string | null;
         };
         /** BGMListResponse */
         BGMListResponse: {
@@ -1103,6 +1412,24 @@ export interface components {
              * @description List of available BGM files
              */
             bgm_files: components["schemas"]["BGMInfo"][];
+        };
+        /**
+         * BaseResponse
+         * @description Base API response
+         */
+        BaseResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /**
+             * Message
+             * @default Success
+             */
+            message: string;
+            /** Data */
+            data?: unknown | null;
         };
         /** Batch */
         Batch: {
@@ -1319,6 +1646,72 @@ export interface components {
              */
             file: string;
         };
+        /** ComfyUICheckRequest */
+        ComfyUICheckRequest: {
+            /**
+             * Comfyui Url
+             * @description ComfyUI endpoint override
+             */
+            comfyui_url?: string | null;
+            /**
+             * Comfyui Api Key
+             * @description ComfyUI API key override
+             */
+            comfyui_api_key?: string | null;
+        };
+        /** ComfyUICheckResponse */
+        ComfyUICheckResponse: {
+            /**
+             * Provider
+             * @description Validated provider
+             * @default comfyui
+             * @constant
+             */
+            provider: "comfyui";
+            /**
+             * Status
+             * @description Validation status
+             * @enum {string}
+             */
+            status: "success" | "warning" | "error";
+            /**
+             * Success
+             * @description Whether the validation fully succeeded
+             */
+            success: boolean;
+            /**
+             * Reachable
+             * @description Whether the upstream endpoint responded
+             */
+            reachable: boolean;
+            /**
+             * Authenticated
+             * @description Whether authentication succeeded
+             */
+            authenticated: boolean;
+            /**
+             * Message
+             * @description Human-readable validation result
+             */
+            message: string;
+            /**
+             * Endpoint
+             * @description Checked endpoint URL
+             */
+            endpoint?: string | null;
+            /**
+             * Status Code
+             * @description HTTP status code when available
+             */
+            status_code?: number | null;
+            /**
+             * Response Time Ms
+             * @description Response time in milliseconds
+             */
+            response_time_ms?: number | null;
+            /** @description Provider-specific diagnostics */
+            diagnostics?: components["schemas"]["ProviderConnectionDiagnosticsPayload"];
+        };
         /** ComfyUISettingsPayload */
         ComfyUISettingsPayload: {
             /**
@@ -1389,6 +1782,24 @@ export interface components {
         /** CustomAsyncRequest */
         CustomAsyncRequest: {
             /**
+             * Bgm Mode
+             * @description BGM source mode: default=use runtime default, custom=use bgm_path, none=disable background music
+             * @default none
+             * @enum {string}
+             */
+            bgm_mode: "default" | "custom" | "none";
+            /**
+             * Bgm Path
+             * @description Optional BGM path
+             */
+            bgm_path?: string | null;
+            /**
+             * Bgm Volume
+             * @description BGM volume
+             * @default 0.3
+             */
+            bgm_volume: number;
+            /**
              * Scenes
              * @description Scene list
              */
@@ -1420,6 +1831,24 @@ export interface components {
         /** DigitalHumanAsyncRequest */
         DigitalHumanAsyncRequest: {
             /**
+             * Bgm Mode
+             * @description BGM source mode: default=use runtime default, custom=use bgm_path, none=disable background music
+             * @default none
+             * @enum {string}
+             */
+            bgm_mode: "default" | "custom" | "none";
+            /**
+             * Bgm Path
+             * @description Optional BGM path
+             */
+            bgm_path?: string | null;
+            /**
+             * Bgm Volume
+             * @description BGM volume
+             * @default 0.3
+             */
+            bgm_volume: number;
+            /**
              * Portrait Url
              * @description Portrait asset URL or path
              */
@@ -1434,6 +1863,11 @@ export interface components {
              * @description Voice workflow key
              */
             voice_workflow?: string | null;
+            /**
+             * Runninghub Instance Type
+             * @description Optional RunningHub instance type override for this job.
+             */
+            runninghub_instance_type?: string | null;
             /**
              * Project Id
              * @description Project ID
@@ -1532,6 +1966,24 @@ export interface components {
         /** I2VAsyncRequest */
         I2VAsyncRequest: {
             /**
+             * Bgm Mode
+             * @description BGM source mode: default=use runtime default, custom=use bgm_path, none=disable background music
+             * @default none
+             * @enum {string}
+             */
+            bgm_mode: "default" | "custom" | "none";
+            /**
+             * Bgm Path
+             * @description Optional BGM path
+             */
+            bgm_path?: string | null;
+            /**
+             * Bgm Volume
+             * @description BGM volume
+             * @default 0.3
+             */
+            bgm_volume: number;
+            /**
              * Source Image
              * @description Source image path
              */
@@ -1546,6 +1998,11 @@ export interface components {
              * @description Media workflow key
              */
             media_workflow: string;
+            /**
+             * Runninghub Instance Type
+             * @description Optional RunningHub instance type override for this job.
+             */
+            runninghub_instance_type?: string | null;
             /**
              * Project Id
              * @description Project ID
@@ -1806,6 +2263,77 @@ export interface components {
              */
             tokens_used?: number | null;
         };
+        /** LLMConnectionCheckRequest */
+        LLMConnectionCheckRequest: {
+            /**
+             * Api Key
+             * @description LLM API key override
+             */
+            api_key?: string | null;
+            /**
+             * Base Url
+             * @description LLM API base URL override
+             */
+            base_url?: string | null;
+            /**
+             * Model
+             * @description LLM model override
+             */
+            model?: string | null;
+        };
+        /** LLMConnectionCheckResponse */
+        LLMConnectionCheckResponse: {
+            /**
+             * Provider
+             * @description Validated provider
+             * @default llm
+             * @constant
+             */
+            provider: "llm";
+            /**
+             * Status
+             * @description Validation status
+             * @enum {string}
+             */
+            status: "success" | "warning" | "error";
+            /**
+             * Success
+             * @description Whether the validation fully succeeded
+             */
+            success: boolean;
+            /**
+             * Reachable
+             * @description Whether the upstream endpoint responded
+             */
+            reachable: boolean;
+            /**
+             * Authenticated
+             * @description Whether authentication succeeded
+             */
+            authenticated: boolean;
+            /**
+             * Message
+             * @description Human-readable validation result
+             */
+            message: string;
+            /**
+             * Endpoint
+             * @description Checked endpoint URL
+             */
+            endpoint?: string | null;
+            /**
+             * Status Code
+             * @description HTTP status code when available
+             */
+            status_code?: number | null;
+            /**
+             * Response Time Ms
+             * @description Response time in milliseconds
+             */
+            response_time_ms?: number | null;
+            /** @description Provider-specific diagnostics */
+            diagnostics?: components["schemas"]["ProviderConnectionDiagnosticsPayload"];
+        };
         /** LLMSettingsPayload */
         LLMSettingsPayload: {
             /**
@@ -1889,6 +2417,41 @@ export interface components {
              */
             source: string;
             /**
+             * Display Name Zh
+             * @description Chinese-first BGM display name
+             */
+            display_name_zh?: string | null;
+            /**
+             * Description Zh
+             * @description Chinese BGM description
+             */
+            description_zh?: string | null;
+            /**
+             * Source Label
+             * @description Chinese source label
+             */
+            source_label?: string | null;
+            /**
+             * Linked Style Display Name Zh
+             * @description Chinese linked style name
+             */
+            linked_style_display_name_zh?: string | null;
+            /**
+             * Technical Name
+             * @description Original BGM filename
+             */
+            technical_name?: string | null;
+            /**
+             * Linked Style Id
+             * @description Associated style id when the BGM comes from a style
+             */
+            linked_style_id?: string | null;
+            /**
+             * Linked Style Name
+             * @description Associated style name when the BGM comes from a style
+             */
+            linked_style_name?: string | null;
+            /**
              * Project Id
              * @description Linked project ID
              */
@@ -1911,6 +2474,104 @@ export interface components {
              * @description Pagination cursor
              */
             next_cursor?: string | null;
+        };
+        /** MediaGenerateRequest */
+        MediaGenerateRequest: {
+            /**
+             * Prompt
+             * @description Media generation prompt
+             */
+            prompt: string;
+            /**
+             * Media Type
+             * @description Requested media type
+             * @enum {string}
+             */
+            media_type: "image" | "video";
+            /**
+             * Workflow
+             * @description Workflow key or filename override
+             */
+            workflow?: string | null;
+            /**
+             * Width
+             * @description Media width
+             */
+            width?: number | null;
+            /**
+             * Height
+             * @description Media height
+             */
+            height?: number | null;
+            /**
+             * Duration
+             * @description Preview duration in seconds
+             */
+            duration?: number | null;
+            /**
+             * Negative Prompt
+             * @description Negative prompt
+             */
+            negative_prompt?: string | null;
+            /**
+             * Steps
+             * @description Sampler steps
+             */
+            steps?: number | null;
+            /**
+             * Seed
+             * @description Random seed
+             */
+            seed?: number | null;
+            /**
+             * Cfg
+             * @description CFG scale
+             */
+            cfg?: number | null;
+            /**
+             * Sampler
+             * @description Sampler name
+             */
+            sampler?: string | null;
+        };
+        /** MediaGenerateResponse */
+        MediaGenerateResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /**
+             * Message
+             * @default Success
+             */
+            message: string;
+            /**
+             * Media Type
+             * @description Generated media type
+             * @enum {string}
+             */
+            media_type: "image" | "video";
+            /**
+             * File Url
+             * @description Accessible media URL
+             */
+            file_url: string;
+            /**
+             * File Path
+             * @description Stored path or upstream URL
+             */
+            file_path: string;
+            /**
+             * Duration
+             * @description Duration in seconds for video previews
+             */
+            duration?: number | null;
+            /**
+             * File Size
+             * @description File size in bytes when available
+             */
+            file_size?: number | null;
         };
         /**
          * NarrationGenerateRequest
@@ -1968,6 +2629,42 @@ export interface components {
              */
             narrations: string[];
         };
+        /**
+         * NotificationItem
+         * @description User-facing shell notification.
+         */
+        NotificationItem: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Summary */
+            summary: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "error" | "info" | "success" | "warning";
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "system" | "task";
+            /** Created At */
+            created_at: string;
+            /** Action Href */
+            action_href?: string | null;
+            /** Read At */
+            read_at?: string | null;
+        };
+        /**
+         * NotificationListResponse
+         * @description List response consumed by the notification center.
+         */
+        NotificationListResponse: {
+            /** Items */
+            items?: components["schemas"]["NotificationItem"][];
+        };
         /** PresetItem */
         PresetItem: {
             /**
@@ -2021,6 +2718,31 @@ export interface components {
              */
             presets?: components["schemas"]["PresetItem"][];
         };
+        /** PresetUpsertRequest */
+        PresetUpsertRequest: {
+            /**
+             * Name
+             * @description Preset name
+             */
+            name: string;
+            /**
+             * Description
+             * @description Preset description
+             */
+            description?: string | null;
+            /**
+             * Pipeline
+             * @description Preset scope or pipeline
+             */
+            pipeline: string;
+            /**
+             * Payload Template
+             * @description Preset payload template
+             */
+            payload_template?: {
+                [key: string]: unknown;
+            };
+        };
         /** Project */
         Project: {
             /**
@@ -2067,6 +2789,16 @@ export interface components {
              */
             last_task_id?: string | null;
             /**
+             * Preview Url
+             * @description Derived preview URL
+             */
+            preview_url?: string | null;
+            /**
+             * Preview Kind
+             * @description Derived preview kind
+             */
+            preview_kind?: ("image" | "video") | null;
+            /**
              * Deleted At
              * @description Soft delete timestamp
              */
@@ -2098,6 +2830,128 @@ export interface components {
              */
             items?: components["schemas"]["Project"][];
         };
+        /** ProjectOverviewRecent */
+        ProjectOverviewRecent: {
+            /**
+             * Batches
+             * @description Recent batches
+             */
+            batches?: components["schemas"]["Batch"][];
+            /**
+             * Tasks
+             * @description Recent tasks
+             */
+            tasks?: components["schemas"]["Task"][];
+            /**
+             * Videos
+             * @description Recent videos
+             */
+            videos?: components["schemas"]["VideoItem"][];
+            /**
+             * Images
+             * @description Recent images
+             */
+            images?: components["schemas"]["ImageItem"][];
+            /**
+             * Voices
+             * @description Recent voices
+             */
+            voices?: components["schemas"]["VoiceItem"][];
+            /**
+             * Bgm
+             * @description Recent bgm
+             */
+            bgm?: components["schemas"]["LibraryBGMItem"][];
+            /**
+             * Scripts
+             * @description Recent scripts
+             */
+            scripts?: components["schemas"]["ScriptItem"][];
+        };
+        /** ProjectOverviewResponse */
+        ProjectOverviewResponse: {
+            /** @description Project summary */
+            project: components["schemas"]["Project"];
+            /** @description Aggregated project stats */
+            stats?: components["schemas"]["ProjectOverviewStats"];
+            /** @description Recent project content */
+            recent?: components["schemas"]["ProjectOverviewRecent"];
+        };
+        /** ProjectOverviewStats */
+        ProjectOverviewStats: {
+            /**
+             * Batch Count
+             * @description Number of linked batches
+             * @default 0
+             */
+            batch_count: number;
+            /**
+             * Task Count
+             * @description Number of linked tasks
+             * @default 0
+             */
+            task_count: number;
+            /**
+             * Pending Task Count
+             * @description Number of pending tasks
+             * @default 0
+             */
+            pending_task_count: number;
+            /**
+             * Running Task Count
+             * @description Number of running tasks
+             * @default 0
+             */
+            running_task_count: number;
+            /**
+             * Completed Task Count
+             * @description Number of completed tasks
+             * @default 0
+             */
+            completed_task_count: number;
+            /**
+             * Failed Task Count
+             * @description Number of failed tasks
+             * @default 0
+             */
+            failed_task_count: number;
+            /**
+             * Cancelled Task Count
+             * @description Number of cancelled tasks
+             * @default 0
+             */
+            cancelled_task_count: number;
+            /**
+             * Video Count
+             * @description Number of linked videos
+             * @default 0
+             */
+            video_count: number;
+            /**
+             * Image Count
+             * @description Number of linked images
+             * @default 0
+             */
+            image_count: number;
+            /**
+             * Voice Count
+             * @description Number of linked voices
+             * @default 0
+             */
+            voice_count: number;
+            /**
+             * Bgm Count
+             * @description Number of linked bgm items
+             * @default 0
+             */
+            bgm_count: number;
+            /**
+             * Script Count
+             * @description Number of linked scripts
+             * @default 0
+             */
+            script_count: number;
+        };
         /** ProjectUpdateRequest */
         ProjectUpdateRequest: {
             /**
@@ -2115,6 +2969,130 @@ export interface components {
              * @description Updated pipeline hint
              */
             pipeline_hint?: string | null;
+        };
+        /** ProviderConnectionDiagnosticsPayload */
+        ProviderConnectionDiagnosticsPayload: {
+            /**
+             * Error Code
+             * @description Normalized validation error code
+             */
+            error_code?: string | null;
+            /**
+             * Model Count
+             * @description Available model count for LLM providers
+             */
+            model_count?: number | null;
+            /**
+             * Selected Model
+             * @description Currently selected model
+             */
+            selected_model?: string | null;
+            /**
+             * Selected Model Available
+             * @description Whether the selected model is available
+             */
+            selected_model_available?: boolean | null;
+            /**
+             * Auth Applied
+             * @description Whether credentials were attached to the probe request
+             */
+            auth_applied?: boolean | null;
+            /**
+             * Auth Required
+             * @description Whether the upstream reported authentication as required
+             */
+            auth_required?: boolean | null;
+            /**
+             * Api Type
+             * @description RunningHub API account type
+             */
+            api_type?: string | null;
+            /**
+             * Current Task Nums
+             * @description RunningHub current task count
+             */
+            current_task_nums?: number | null;
+            /**
+             * Remain Num
+             * @description Remaining RunningHub credits or quota
+             */
+            remain_num?: string | null;
+            /**
+             * Remain Money
+             * @description Remaining RunningHub balance
+             */
+            remain_money?: string | null;
+            /**
+             * Currency
+             * @description RunningHub balance currency
+             */
+            currency?: string | null;
+        };
+        /** RunningHubConnectionCheckRequest */
+        RunningHubConnectionCheckRequest: {
+            /**
+             * Runninghub Api Key
+             * @description RunningHub API key override
+             */
+            runninghub_api_key?: string | null;
+            /**
+             * Runninghub Instance Type
+             * @description RunningHub instance type override
+             */
+            runninghub_instance_type?: string | null;
+        };
+        /** RunningHubConnectionCheckResponse */
+        RunningHubConnectionCheckResponse: {
+            /**
+             * Provider
+             * @description Validated provider
+             * @default runninghub
+             * @constant
+             */
+            provider: "runninghub";
+            /**
+             * Status
+             * @description Validation status
+             * @enum {string}
+             */
+            status: "success" | "warning" | "error";
+            /**
+             * Success
+             * @description Whether the validation fully succeeded
+             */
+            success: boolean;
+            /**
+             * Reachable
+             * @description Whether the upstream endpoint responded
+             */
+            reachable: boolean;
+            /**
+             * Authenticated
+             * @description Whether authentication succeeded
+             */
+            authenticated: boolean;
+            /**
+             * Message
+             * @description Human-readable validation result
+             */
+            message: string;
+            /**
+             * Endpoint
+             * @description Checked endpoint URL
+             */
+            endpoint?: string | null;
+            /**
+             * Status Code
+             * @description HTTP status code when available
+             */
+            status_code?: number | null;
+            /**
+             * Response Time Ms
+             * @description Response time in milliseconds
+             */
+            response_time_ms?: number | null;
+            /** @description Provider-specific diagnostics */
+            diagnostics?: components["schemas"]["ProviderConnectionDiagnosticsPayload"];
         };
         /** ScriptItem */
         ScriptItem: {
@@ -2144,6 +3122,11 @@ export interface components {
              */
             batch_id?: string | null;
             /**
+             * Pipeline
+             * @description Origin pipeline slug when available
+             */
+            pipeline?: string | null;
+            /**
              * Text
              * @description Script or narration text
              */
@@ -2158,6 +3141,21 @@ export interface components {
              * @description Associated prompt
              */
             prompt_used?: string | null;
+            /**
+             * Type Label Zh
+             * @description Chinese script type label
+             */
+            type_label_zh?: string | null;
+            /**
+             * Pipeline Label Zh
+             * @description Chinese pipeline label
+             */
+            pipeline_label_zh?: string | null;
+            /**
+             * Summary Zh
+             * @description Chinese summary label for the record
+             */
+            summary_zh?: string | null;
         };
         /** ScriptListResponse */
         ScriptListResponse: {
@@ -2200,6 +3198,295 @@ export interface components {
             comfyui?: components["schemas"]["ComfyUISettingsUpdatePayload"] | null;
             /** @description Template settings */
             template?: components["schemas"]["TemplateSettingsUpdatePayload"] | null;
+        };
+        /** StorageCleanupRequest */
+        StorageCleanupRequest: {
+            /**
+             * Target
+             * @description Cleanup target, currently only temp is supported
+             * @default temp
+             */
+            target: string;
+        };
+        /** StorageCleanupResponse */
+        StorageCleanupResponse: {
+            /**
+             * Success
+             * @description Whether cleanup completed
+             * @default true
+             */
+            success: boolean;
+            /**
+             * Message
+             * @description Human-readable result
+             * @default Cleanup completed
+             */
+            message: string;
+            /**
+             * Target
+             * @description Cleanup target
+             */
+            target: string;
+            /**
+             * Deleted Files
+             * @description Number of deleted files
+             */
+            deleted_files: number;
+            /**
+             * Deleted Directories
+             * @description Number of deleted directories
+             */
+            deleted_directories: number;
+            /**
+             * Reclaimed Bytes
+             * @description Disk space reclaimed in bytes
+             */
+            reclaimed_bytes: number;
+        };
+        /** StoragePathStatsPayload */
+        StoragePathStatsPayload: {
+            /**
+             * Key
+             * @description Storage bucket identifier
+             */
+            key: string;
+            /**
+             * Path
+             * @description Runtime path
+             */
+            path: string;
+            /**
+             * Exists
+             * @description Whether the path exists
+             */
+            exists: boolean;
+            /**
+             * File Count
+             * @description Total files under the path
+             */
+            file_count: number;
+            /**
+             * Total Size Bytes
+             * @description Total storage size in bytes
+             */
+            total_size_bytes: number;
+        };
+        /** StorageStatsResponse */
+        StorageStatsResponse: {
+            /**
+             * Success
+             * @description Whether stats were collected
+             * @default true
+             */
+            success: boolean;
+            /**
+             * Message
+             * @description Human-readable result
+             * @default Storage statistics loaded
+             */
+            message: string;
+            /**
+             * Total Size Bytes
+             * @description Combined storage size
+             */
+            total_size_bytes: number;
+            /**
+             * Paths
+             * @description Per-path storage stats
+             */
+            paths?: components["schemas"]["StoragePathStatsPayload"][];
+        };
+        /** StyleDetail */
+        StyleDetail: {
+            /**
+             * Id
+             * @description Style id
+             */
+            id: string;
+            /**
+             * Name
+             * @description Style name
+             */
+            name: string;
+            /**
+             * Display Name Zh
+             * @description Chinese-first style name
+             */
+            display_name_zh?: string | null;
+            /**
+             * Short Description Zh
+             * @description Short Chinese style description
+             */
+            short_description_zh?: string | null;
+            /**
+             * Description
+             * @description Style description
+             */
+            description?: string | null;
+            /**
+             * Scene
+             * @description Primary use-case scene
+             */
+            scene?: string | null;
+            /**
+             * Tone
+             * @description Narration or visual tone
+             */
+            tone?: string | null;
+            /**
+             * Is Builtin
+             * @description Whether the style is built-in
+             */
+            is_builtin: boolean;
+            /**
+             * Preview Bgm Url
+             * @description Preview audio URL for the linked BGM
+             */
+            preview_bgm_url?: string | null;
+            /**
+             * Analysis Creative Layer
+             * @description High-level style guidance for script generation
+             */
+            analysis_creative_layer: string;
+            /**
+             * Audio Sync Creative Layer
+             * @description Style guidance for narration refinement
+             */
+            audio_sync_creative_layer: string;
+            /**
+             * Reference Config
+             * @description Imported reference style metadata
+             */
+            reference_config?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Runtime Config
+             * @description Normalized runtime config used by Pixelle
+             */
+            runtime_config?: {
+                [key: string]: unknown;
+            };
+        };
+        /** StyleListResponse */
+        StyleListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /**
+             * Message
+             * @default Success
+             */
+            message: string;
+            /**
+             * Styles
+             * @description List of available styles
+             */
+            styles?: components["schemas"]["StyleSummary"][];
+        };
+        /** StyleSummary */
+        StyleSummary: {
+            /**
+             * Id
+             * @description Style id
+             */
+            id: string;
+            /**
+             * Name
+             * @description Style name
+             */
+            name: string;
+            /**
+             * Display Name Zh
+             * @description Chinese-first style name
+             */
+            display_name_zh?: string | null;
+            /**
+             * Short Description Zh
+             * @description Short Chinese style description
+             */
+            short_description_zh?: string | null;
+            /**
+             * Description
+             * @description Style description
+             */
+            description?: string | null;
+            /**
+             * Scene
+             * @description Primary use-case scene
+             */
+            scene?: string | null;
+            /**
+             * Tone
+             * @description Narration or visual tone
+             */
+            tone?: string | null;
+            /**
+             * Is Builtin
+             * @description Whether the style is built-in
+             */
+            is_builtin: boolean;
+            /**
+             * Preview Bgm Url
+             * @description Preview audio URL for the linked BGM
+             */
+            preview_bgm_url?: string | null;
+        };
+        /** StyleUpsertRequest */
+        StyleUpsertRequest: {
+            /**
+             * Id
+             * @description Style id
+             */
+            id: string;
+            /**
+             * Name
+             * @description Style name
+             */
+            name: string;
+            /**
+             * Description
+             * @description Style description
+             */
+            description?: string | null;
+            /**
+             * Scene
+             * @description Primary use-case scene
+             */
+            scene?: string | null;
+            /**
+             * Tone
+             * @description Narration or visual tone
+             */
+            tone?: string | null;
+            /**
+             * Analysis Creative Layer
+             * @description High-level style guidance for script generation
+             * @default
+             */
+            analysis_creative_layer: string;
+            /**
+             * Audio Sync Creative Layer
+             * @description Style guidance for narration refinement
+             * @default
+             */
+            audio_sync_creative_layer: string;
+            /**
+             * Reference Config
+             * @description Imported reference style metadata
+             */
+            reference_config?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Runtime Config
+             * @description Normalized runtime config used by Pixelle
+             */
+            runtime_config?: {
+                [key: string]: unknown;
+            };
         };
         /** TTSComfySettingsPayload */
         TTSComfySettingsPayload: {
@@ -2437,6 +3724,17 @@ export interface components {
              * @description Template key (size/name)
              */
             key: string;
+            /**
+             * Preview Image Url
+             * @description Template preview image URL
+             */
+            preview_image_url?: string | null;
+            /**
+             * Preview Available
+             * @description Whether a static preview image exists
+             * @default false
+             */
+            preview_available: boolean;
         };
         /** TemplateListResponse */
         TemplateListResponse: {
@@ -2725,6 +4023,7 @@ export interface components {
          *       "frame_template": "1080x1920/image_default.html",
          *       "mode": "generate",
          *       "n_scenes": 5,
+         *       "runninghub_instance_type": "plus",
          *       "template_params": {
          *         "accent_color": "#3498db",
          *         "background": "https://example.com/custom-bg.jpg"
@@ -2807,6 +4106,11 @@ export interface components {
              */
             media_workflow?: string | null;
             /**
+             * Runninghub Instance Type
+             * @description Optional RunningHub instance type override for this job (for example: 'plus' or 'auto').
+             */
+            runninghub_instance_type?: string | null;
+            /**
              * Video Fps
              * @description Video FPS
              * @default 30
@@ -2825,10 +4129,22 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /**
+             * Style Id
+             * @description Optional style id resolved from /api/resources/styles
+             */
+            style_id?: string | null;
+            /**
              * Prompt Prefix
              * @description Image style prefix
              */
             prompt_prefix?: string | null;
+            /**
+             * Bgm Mode
+             * @description BGM source mode: default=use style/runtime default, custom=use bgm_path, none=disable background music
+             * @default none
+             * @enum {string}
+             */
+            bgm_mode: "default" | "custom" | "none";
             /**
              * Bgm Path
              * @description Background music path
@@ -3069,6 +4385,41 @@ export interface components {
              */
             display_name: string;
             /**
+             * Display Name Zh
+             * @description Chinese-first display name for users
+             */
+            display_name_zh?: string | null;
+            /**
+             * Description Zh
+             * @description Chinese user-facing description
+             */
+            description_zh?: string | null;
+            /**
+             * Display Category
+             * @description Workflow display category
+             */
+            display_category?: string | null;
+            /**
+             * Display Category Zh
+             * @description Chinese workflow display category
+             */
+            display_category_zh?: string | null;
+            /**
+             * Display Tags
+             * @description User-facing workflow tags
+             */
+            display_tags?: string[];
+            /**
+             * Technical Name
+             * @description Original workflow filename for debugging
+             */
+            technical_name?: string | null;
+            /**
+             * Technical Path
+             * @description Original workflow path for debugging
+             */
+            technical_path?: string | null;
+            /**
              * Source
              * @description Source (runninghub or selfhost)
              */
@@ -3110,6 +4461,13 @@ export interface components {
              * @description Top-level workflow node IDs
              */
             raw_nodes?: string[];
+            /**
+             * Workflow Json
+             * @description Complete workflow JSON content
+             */
+            workflow_json?: {
+                [key: string]: unknown;
+            };
         };
         /** WorkflowInfo */
         WorkflowInfo: {
@@ -3123,6 +4481,41 @@ export interface components {
              * @description Display name with source info
              */
             display_name: string;
+            /**
+             * Display Name Zh
+             * @description Chinese-first display name for users
+             */
+            display_name_zh?: string | null;
+            /**
+             * Description Zh
+             * @description Chinese user-facing description
+             */
+            description_zh?: string | null;
+            /**
+             * Display Category
+             * @description Workflow display category
+             */
+            display_category?: string | null;
+            /**
+             * Display Category Zh
+             * @description Chinese workflow display category
+             */
+            display_category_zh?: string | null;
+            /**
+             * Display Tags
+             * @description User-facing workflow tags
+             */
+            display_tags?: string[];
+            /**
+             * Technical Name
+             * @description Original workflow filename for debugging
+             */
+            technical_name?: string | null;
+            /**
+             * Technical Path
+             * @description Original workflow path for debugging
+             */
+            technical_path?: string | null;
             /**
              * Source
              * @description Source (runninghub or selfhost)
@@ -3297,6 +4690,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImageGenerateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    media_generate_api_media_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaGenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaGenerateResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3836,6 +5262,156 @@ export interface operations {
             };
         };
     };
+    list_styles_api_resources_styles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StyleListResponse"];
+                };
+            };
+        };
+    };
+    create_style_api_resources_styles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StyleUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StyleDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_style_detail_api_resources_styles__style_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                style_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StyleDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_style_api_resources_styles__style_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                style_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StyleUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StyleDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_style_api_resources_styles__style_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                style_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_workflow_detail_api_resources_workflows__workflow_id__get: {
         parameters: {
             query?: never;
@@ -3846,6 +5422,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_workflow_detail_api_resources_workflows__workflow_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3883,6 +5496,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresetListResponse"];
+                };
+            };
+        };
+    };
+    create_preset_api_resources_presets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresetUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresetItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_preset_api_resources_presets__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresetUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresetItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_preset_api_resources_presets__name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4116,6 +5828,37 @@ export interface operations {
             };
         };
     };
+    get_project_overview_api_projects__project_id__overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOverviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_videos_api_library_videos_get: {
         parameters: {
             query?: {
@@ -4170,6 +5913,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_video_api_library_videos__video_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaseResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4260,6 +6034,8 @@ export interface operations {
             query?: {
                 /** @description Filter by project ID */
                 project_id?: string | null;
+                /** @description Filter by linked style id */
+                style_id?: string | null;
                 /** @description Pagination cursor */
                 cursor?: string | null;
                 /** @description Page size */
@@ -4516,6 +6292,158 @@ export interface operations {
             };
         };
     };
+    check_comfyui_connection_api_settings_comfyui_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComfyUICheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComfyUICheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_llm_connection_api_settings_llm_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LLMConnectionCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMConnectionCheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_runninghub_connection_api_settings_runninghub_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunningHubConnectionCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunningHubConnectionCheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_storage_stats_api_settings_storage_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageStatsResponse"];
+                };
+            };
+        };
+    };
+    cleanup_storage_api_settings_storage_cleanup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StorageCleanupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageCleanupResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     upload_file_api_uploads_post: {
         parameters: {
             query?: never;
@@ -4572,6 +6500,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    list_notifications_api_notifications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationListResponse"];
+                };
+            };
+        };
+    };
+    clear_notifications_api_notifications_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaseResponse"];
+                };
+            };
+        };
+    };
+    mark_notification_read_api_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_all_notifications_read_api_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaseResponse"];
                 };
             };
         };

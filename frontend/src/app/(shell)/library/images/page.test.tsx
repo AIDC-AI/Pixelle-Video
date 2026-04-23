@@ -19,6 +19,7 @@ vi.mock('next/navigation', () => ({
 
 describe('Library Images Page', () => {
   beforeEach(async () => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
     mockSearchParams = new URLSearchParams('');
     mockReplace.mockReset();
     await seedCurrentProject({ id: 'project-1', name: 'Launch Campaign' });
@@ -27,7 +28,7 @@ describe('Library Images Page', () => {
   it('renders image cards and binds the default project filter to currentProject', async () => {
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('heading', { name: 'Images' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '图片' })).toBeInTheDocument();
     expect(await screen.findByText('Sunlit portrait with soft cinematic lighting')).toBeInTheDocument();
 
     await waitFor(() => {
@@ -46,10 +47,10 @@ describe('Library Images Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('button', { name: 'Open image-hero' }));
+    await user.click(await screen.findByRole('button', { name: '打开图片资产 image-hero' }));
 
-    expect(await screen.findByRole('heading', { name: 'Reuse image asset' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Reuse in Image → Video/i })).toHaveAttribute(
+    expect(await screen.findByRole('heading', { name: '复用图片资产' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /在图片转视频中复用/i })).toHaveAttribute(
       'href',
       '/create/i2v?source_image=https%3A%2F%2Fcdn.example.com%2Fhero.png'
     );
@@ -65,7 +66,7 @@ describe('Library Images Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByText('This project has no images yet.')).toBeInTheDocument();
+    expect(await screen.findByText('Launch Campaign 目前没有已索引的图片资产。')).toBeInTheDocument();
   });
 
   it('loads the next cursor page when more images are available', async () => {
@@ -86,7 +87,7 @@ describe('Library Images Page', () => {
     expect(await screen.findByText('Prompt 12')).toBeInTheDocument();
     expect(screen.queryByText('Prompt 0')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Load More' }));
+    await user.click(screen.getByRole('button', { name: '加载更多' }));
 
     expect(await screen.findByText('Prompt 0')).toBeInTheDocument();
   });
@@ -95,8 +96,8 @@ describe('Library Images Page', () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('combobox', { name: 'Project' }));
-    await user.click(await screen.findByRole('option', { name: 'All Projects' }));
+    await user.click(await screen.findByRole('combobox', { name: '项目' }));
+    await user.click(await screen.findByRole('option', { name: '全部项目' }));
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/library/images', { scroll: false });
@@ -114,16 +115,16 @@ describe('Library Images Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    await user.click(await screen.findByRole('combobox', { name: 'Project' }));
+    await user.click(await screen.findByRole('combobox', { name: '项目' }));
     await user.click(await screen.findByRole('option', { name: 'Unreleased Experiments' }));
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/library/images?project_id=project-2', { scroll: false });
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Open image-no-prompt' }));
+    await user.click(await screen.findByRole('button', { name: '打开图片资产 image-no-prompt' }));
 
-    expect(await screen.findByText('No prompt snapshot stored for this asset.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy Prompt' })).toBeDisabled();
+    expect(await screen.findByText('这个资产没有保存提示词快照。')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '复制提示词' })).toBeDisabled();
   });
 });

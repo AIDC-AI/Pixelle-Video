@@ -2,7 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import CustomPage, { CUSTOM_REQUEST_KEYS, CUSTOM_SCENE_KEYS } from './page';
+import CustomPage from './page';
+import { CUSTOM_REQUEST_KEYS, CUSTOM_SCENE_KEYS } from '../request-keys';
 import { renderWithQueryClient, seedCurrentProject } from '@/tests/pipeline-page-test-utils';
 import {
   buildTask,
@@ -48,8 +49,8 @@ describe('CustomPage', () => {
 
     renderWithQueryClient(<CustomPage />);
 
-    await screen.findByRole('heading', { name: 'Custom Asset' });
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '自定义资产' });
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     expect(await screen.findByText('生成结果')).toBeInTheDocument();
   });
@@ -61,8 +62,8 @@ describe('CustomPage', () => {
 
     renderWithQueryClient(<CustomPage />);
 
-    await screen.findByRole('heading', { name: 'Custom Asset' });
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '自定义资产' });
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     await waitFor(() => {
       expect(getLastCustomPayload()).not.toBeNull();
@@ -97,8 +98,8 @@ describe('CustomPage', () => {
 
     renderWithQueryClient(<CustomPage />);
 
-    await screen.findByRole('heading', { name: 'Custom Asset' });
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '自定义资产' });
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     expect(await screen.findByText('排队中')).toBeInTheDocument();
 
@@ -108,7 +109,7 @@ describe('CustomPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '取消任务' }));
 
-    expect(await screen.findByRole('button', { name: 'Start Over' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '重新开始' })).toBeInTheDocument();
     const pollCountAfterCancel = getTaskPollCount('task-custom-cancelled');
 
     await new Promise((resolve) => window.setTimeout(resolve, 120));

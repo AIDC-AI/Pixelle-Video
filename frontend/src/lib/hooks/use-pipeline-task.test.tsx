@@ -1,9 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 
 import { usePipelineTask } from './use-pipeline-task';
-import { seedCurrentProject } from '@/tests/pipeline-page-test-utils';
-import { useCurrentProjectStore } from '@/stores/current-project';
 import type { components } from '@/types/api';
 
 const mockUseTaskPolling = vi.fn();
@@ -12,6 +12,20 @@ const mockCancelMutateAsync = vi.fn();
 vi.mock('@/lib/hooks/use-create-video', () => ({
   useCancelTask: () => ({ mutateAsync: mockCancelMutateAsync }),
   useTaskPolling: (taskId: string | undefined, enabled: boolean) => mockUseTaskPolling(taskId, enabled),
+}));
+
+const mockCurrentProjectState: {
+  currentProject: { id: string; name: string } | null;
+  currentProjectId: string | null;
+  isHydrated: boolean;
+} = {
+  currentProject: { id: 'project-1', name: 'Test Project' },
+  currentProjectId: 'project-1',
+  isHydrated: true,
+};
+
+vi.mock('@/lib/hooks/use-current-project', () => ({
+  useCurrentProjectHydration: () => mockCurrentProjectState,
 }));
 
 type Task = components['schemas']['Task'];
@@ -38,12 +52,27 @@ function buildTask(status: components['schemas']['TaskStatus'], overrides: Parti
   };
 }
 
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+      mutations: { retry: false },
+    },
+  });
+
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  };
+}
+
 describe('usePipelineTask', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.restoreAllMocks();
     mockUseTaskPolling.mockReturnValue({ data: undefined });
     mockCancelMutateAsync.mockReset();
-    await seedCurrentProject({ id: 'project-1', name: 'Test Project' });
+    mockCurrentProjectState.currentProject = { id: 'project-1', name: 'Test Project' };
+    mockCurrentProjectState.currentProjectId = 'project-1';
+    mockCurrentProjectState.isHydrated = true;
   });
 
   afterEach(() => {
@@ -51,14 +80,17 @@ describe('usePipelineTask', () => {
   });
 
   it('blocks submit and opens the project dialog when no project is selected', async () => {
-    await seedCurrentProject(null);
+    mockCurrentProjectState.currentProject = null;
+    mockCurrentProjectState.currentProjectId = null;
     const mutateAsync = vi.fn<(request: { prompt: string }) => Promise<{ task_id: string }>>();
 
-    const { result } = renderHook(() =>
-      usePipelineTask({
-        isPending: false,
-        mutateAsync,
-      })
+    const { result } = renderHook(
+      () =>
+        usePipelineTask({
+          isPending: false,
+          mutateAsync,
+        }),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -72,11 +104,13 @@ describe('usePipelineTask', () => {
   it('submits successfully and exposes pending task state before polling resolves', async () => {
     const mutateAsync = vi.fn(async () => ({ task_id: 'task-success' }));
 
-    const { result } = renderHook(() =>
-      usePipelineTask({
-        isPending: false,
-        mutateAsync,
-      })
+    const { result } = renderHook(
+      () =>
+        usePipelineTask({
+          isPending: false,
+          mutateAsync,
+        }),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -95,11 +129,13 @@ describe('usePipelineTask', () => {
 
     mockUseTaskPolling.mockImplementation(() => ({ data: taskDataRef.current }));
 
-    const { result, rerender } = renderHook(() =>
-      usePipelineTask({
-        isPending: false,
-        mutateAsync,
-      })
+    const { result, rerender } = renderHook(
+      () =>
+        usePipelineTask({
+          isPending: false,
+          mutateAsync,
+        }),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -133,11 +169,13 @@ describe('usePipelineTask', () => {
     });
     mockCancelMutateAsync.mockRejectedValueOnce({ message: 'Cancel failed' });
 
-    const { result } = renderHook(() =>
-      usePipelineTask({
-        isPending: false,
-        mutateAsync,
-      })
+    const { result } = renderHook(
+      () =>
+        usePipelineTask({
+          isPending: false,
+          mutateAsync,
+        }),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -148,11 +186,13 @@ describe('usePipelineTask', () => {
     expect(result.current.statusMessage).toBe('Submit failed');
 
     const successMutation = vi.fn(async () => ({ task_id: 'task-cancel' }));
-    const { result: cancelResult } = renderHook(() =>
-      usePipelineTask({
-        isPending: false,
-        mutateAsync: successMutation,
-      })
+    const { result: cancelResult } = renderHook(
+      () =>
+        usePipelineTask({
+          isPending: false,
+          mutateAsync: successMutation,
+        }),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -167,33 +207,31 @@ describe('usePipelineTask', () => {
     expect(cancelResult.current.statusMessage).toBe('Cancel failed');
   });
 
-  it('rehydrates the persisted project store when hydration has not completed yet', async () => {
+  it('surfaces hydration state from the current-project hook', () => {
     const mutateAsync = vi.fn(async () => ({ task_id: 'task-hydrate' }));
-    const hasHydratedSpy = vi.spyOn(useCurrentProjectStore.persist, 'hasHydrated').mockReturnValue(false);
-    const rehydrateSpy = vi.spyOn(useCurrentProjectStore.persist, 'rehydrate').mockResolvedValue(undefined);
+    mockCurrentProjectState.isHydrated = false;
 
-    renderHook(() =>
-      usePipelineTask({
-        isPending: false,
-        mutateAsync,
-      })
+    const { result } = renderHook(
+      () =>
+        usePipelineTask({
+          isPending: false,
+          mutateAsync,
+        }),
+      { wrapper: createWrapper() }
     );
 
-    await waitFor(() => {
-      expect(rehydrateSpy).toHaveBeenCalled();
-    });
-
-    hasHydratedSpy.mockRestore();
-    rehydrateSpy.mockRestore();
+    expect(result.current.isHydrated).toBe(false);
   });
 
   it('resets local task state after a cancelled task', async () => {
     const mutateAsync = vi.fn(async () => ({ task_id: 'task-reset' }));
-    const { result } = renderHook(() =>
-      usePipelineTask({
-        isPending: false,
-        mutateAsync,
-      })
+    const { result } = renderHook(
+      () =>
+        usePipelineTask({
+          isPending: false,
+          mutateAsync,
+        }),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -219,14 +257,16 @@ describe('usePipelineTask', () => {
     vi.useFakeTimers();
     mockUseTaskPolling.mockReturnValue({ data: buildTask('running') });
 
-    const { result } = renderHook(() =>
-      usePipelineTask(
-        {
-          isPending: false,
-          mutateAsync: vi.fn(async () => ({ task_id: 'task-ignored' })),
-        },
-        { initialTaskId: 'task-resume' }
-      )
+    const { result } = renderHook(
+      () =>
+        usePipelineTask(
+          {
+            isPending: false,
+            mutateAsync: vi.fn(async () => ({ task_id: 'task-ignored' })),
+          },
+          { initialTaskId: 'task-resume' }
+        ),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -242,11 +282,13 @@ describe('usePipelineTask', () => {
     mockUseTaskPolling.mockReturnValue({ data: runningTask });
     const mutateAsync = vi.fn(async () => ({ task_id: 'task-running' }));
 
-    const { result } = renderHook(() =>
-      usePipelineTask({
-        isPending: false,
-        mutateAsync,
-      })
+    const { result } = renderHook(
+      () =>
+        usePipelineTask({
+          isPending: false,
+          mutateAsync,
+        }),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {

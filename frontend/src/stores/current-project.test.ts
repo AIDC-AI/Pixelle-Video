@@ -7,17 +7,17 @@ describe('useCurrentProjectStore', () => {
   });
 
   it('initializes with null', () => {
-    expect(useCurrentProjectStore.getState().currentProject).toBeNull();
+    expect(useCurrentProjectStore.getState().currentProjectId).toBeNull();
   });
 
   it('can set current project', () => {
-    useCurrentProjectStore.getState().setCurrentProject({ id: '1', name: 'Test' });
-    expect(useCurrentProjectStore.getState().currentProject).toEqual({ id: '1', name: 'Test' });
+    useCurrentProjectStore.getState().setCurrentProjectId('1');
+    expect(useCurrentProjectStore.getState().currentProjectId).toBe('1');
   });
 
   it('can reset current project', () => {
-    useCurrentProjectStore.getState().setCurrentProject({ id: '1', name: 'Test' });
+    useCurrentProjectStore.getState().setCurrentProjectId('1');
     useCurrentProjectStore.getState().reset();
-    expect(useCurrentProjectStore.getState().currentProject).toBeNull();
+    expect(useCurrentProjectStore.getState().currentProjectId).toBeNull();
   });
 });

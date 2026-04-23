@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EmptyProjectsPrompt } from './empty-projects-prompt';
+import { AppIntlProvider } from '@/lib/i18n';
 import { setProjects } from '@/tests/msw/handlers';
 import { server } from '@/tests/msw/server';
 import type { components } from '@/types/api';
@@ -60,14 +61,17 @@ function renderPrompt() {
   });
 
   return render(
-    <QueryClientProvider client={queryClient}>
-      <EmptyProjectsPrompt />
-    </QueryClientProvider>
+    <AppIntlProvider>
+      <QueryClientProvider client={queryClient}>
+        <EmptyProjectsPrompt />
+      </QueryClientProvider>
+    </AppIntlProvider>
   );
 }
 
 describe('EmptyProjectsPrompt', () => {
   beforeEach(() => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
     mockState.currentProject = { id: 'project-current', name: 'Current Project' };
     mockState.setCurrentProject = vi.fn();
   });
@@ -83,12 +87,12 @@ describe('EmptyProjectsPrompt', () => {
 
     renderPrompt();
 
-    expect(await screen.findByText('2 empty projects can be cleaned up.')).toBeInTheDocument();
+    expect(await screen.findByText('可清理 2 个空项目')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Maybe Later' }));
+    await user.click(screen.getByRole('button', { name: '稍后再说' }));
 
     await waitFor(() => {
-      expect(screen.queryByText('2 empty projects can be cleaned up.')).not.toBeInTheDocument();
+      expect(screen.queryByText('可清理 2 个空项目')).not.toBeInTheDocument();
     });
 
     expect(window.sessionStorage.getItem('empty-project-cleanup-dismissed')).toBe(
@@ -103,12 +107,12 @@ describe('EmptyProjectsPrompt', () => {
 
     renderPrompt();
 
-    expect(await screen.findByText('1 empty project can be cleaned up.')).toBeInTheDocument();
+    expect(await screen.findByText('可清理 1 个空项目')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Clean Up' }));
+    await user.click(screen.getByRole('button', { name: '立即清理' }));
 
     await waitFor(() => {
-      expect(screen.queryByText('1 empty project can be cleaned up.')).not.toBeInTheDocument();
+      expect(screen.queryByText('可清理 1 个空项目')).not.toBeInTheDocument();
     });
 
     expect(mockState.setCurrentProject).not.toHaveBeenCalled();
@@ -120,7 +124,7 @@ describe('EmptyProjectsPrompt', () => {
 
     renderPrompt();
 
-    expect(await screen.findByText('1 empty project can be cleaned up.')).toBeInTheDocument();
+    expect(await screen.findByText('可清理 1 个空项目')).toBeInTheDocument();
     expect(window.sessionStorage.getItem('empty-project-cleanup-dismissed')).toBeNull();
   });
 
@@ -136,7 +140,7 @@ describe('EmptyProjectsPrompt', () => {
     renderPrompt();
 
     await waitFor(() => {
-      expect(screen.queryByText(/empty project/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/空项目/)).not.toBeInTheDocument();
     });
   });
 
@@ -157,8 +161,8 @@ describe('EmptyProjectsPrompt', () => {
 
     renderPrompt();
 
-    expect(await screen.findByText('1 empty project can be cleaned up.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Clean Up' }));
+    expect(await screen.findByText('可清理 1 个空项目')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '立即清理' }));
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Cleanup failed.');

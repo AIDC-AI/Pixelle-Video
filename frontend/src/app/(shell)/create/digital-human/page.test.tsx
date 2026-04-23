@@ -2,7 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import DigitalHumanPage, { DIGITAL_HUMAN_REQUEST_KEYS } from './page';
+import DigitalHumanPage from './page';
+import { DIGITAL_HUMAN_REQUEST_KEYS } from '../request-keys';
 import { renderWithQueryClient, seedCurrentProject } from '@/tests/pipeline-page-test-utils';
 import {
   buildTask,
@@ -33,9 +34,9 @@ describe('DigitalHumanPage', () => {
 
     renderWithQueryClient(<DigitalHumanPage />);
 
-    await screen.findByRole('heading', { name: 'Digital Human' });
-    await user.type(screen.getByLabelText('Narration'), 'Read this script in a confident presenter voice.');
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '数字人' });
+    await user.type(screen.getByLabelText('旁白'), 'Read this script in a confident presenter voice.');
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     expect(await screen.findByText('生成结果')).toBeInTheDocument();
   });
@@ -47,11 +48,11 @@ describe('DigitalHumanPage', () => {
 
     renderWithQueryClient(<DigitalHumanPage />);
 
-    await screen.findByRole('heading', { name: 'Digital Human' });
-    await user.type(screen.getByLabelText('Narration'), 'Anchor the update with a short intro.');
-    await user.click(screen.getByRole('combobox', { name: 'Voice workflow' }));
-    await user.click(await screen.findByText('TTS 1'));
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '数字人' });
+    await user.type(screen.getByLabelText('旁白'), 'Anchor the update with a short intro.');
+    await user.click(screen.getByRole('combobox', { name: '配音方案' }));
+    await user.click(await screen.findByText('Edge 配音方案'));
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     await waitFor(() => {
       expect(getLastDigitalHumanPayload()).not.toBeNull();
@@ -84,9 +85,9 @@ describe('DigitalHumanPage', () => {
 
     renderWithQueryClient(<DigitalHumanPage />);
 
-    await screen.findByRole('heading', { name: 'Digital Human' });
-    await user.type(screen.getByLabelText('Narration'), 'Keep this running long enough to cancel.');
-    await user.click(screen.getByRole('button', { name: 'Generate Video' }));
+    await screen.findByRole('heading', { name: '数字人' });
+    await user.type(screen.getByLabelText('旁白'), 'Keep this running long enough to cancel.');
+    await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     expect(await screen.findByText('排队中')).toBeInTheDocument();
 
@@ -96,7 +97,7 @@ describe('DigitalHumanPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '取消任务' }));
 
-    expect(await screen.findByRole('button', { name: 'Start Over' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '重新开始' })).toBeInTheDocument();
     const pollCountAfterCancel = getTaskPollCount('task-digital-human-cancelled');
 
     await new Promise((resolve) => window.setTimeout(resolve, 120));

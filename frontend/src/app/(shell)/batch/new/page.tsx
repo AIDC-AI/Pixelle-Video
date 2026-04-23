@@ -30,14 +30,16 @@ import {
 import {
   buildBatchDefaultName,
   buildBatchTemplateCsv,
+  getPipelineMetadata,
   getBatchRequestFields,
-  PIPELINE_METADATA,
   type BatchPipeline,
   type BatchRowPayload,
 } from '@/lib/batch-utils';
+import { decodeCSV } from '@/lib/csv-encoding';
 import { useCreateBatch } from '@/lib/hooks/use-batches';
 import { useCurrentProjectHydration } from '@/lib/hooks/use-current-project';
 import { useProjects } from '@/lib/hooks/use-projects';
+import { useAppTranslations } from '@/lib/i18n';
 import { projectFilterLabel } from '@/lib/pipeline-utils';
 import { cn } from '@/lib/utils';
 
@@ -91,19 +93,21 @@ function BatchSourceTab({
   active: 'manual' | 'csv';
   onSelect: (next: 'manual' | 'csv') => void;
 }) {
+  const t = useAppTranslations('batch');
   return (
     <div className="flex flex-wrap gap-2">
       <Button variant={active === 'manual' ? 'default' : 'outline'} onClick={() => onSelect('manual')}>
-        Manual Add
+        {t('new.source.manual')}
       </Button>
       <Button variant={active === 'csv' ? 'default' : 'outline'} onClick={() => onSelect('csv')}>
-        CSV Import
+        {t('new.source.csv')}
       </Button>
     </div>
   );
 }
 
 function FieldInput({
+  helperText,
   label,
   onChange,
   type,
@@ -111,6 +115,7 @@ function FieldInput({
   options,
   placeholder,
 }: {
+  helperText?: string;
   label: string;
   onChange: (value: string) => void;
   options?: readonly { label: string; value: string }[];
@@ -120,45 +125,55 @@ function FieldInput({
 }) {
   if (type === 'select' && options) {
     return (
-      <Select value={value} onValueChange={(nextValue) => onChange(nextValue ?? '')}>
-        <SelectTrigger aria-label={label}>
-          <SelectValue placeholder={placeholder ?? label} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="space-y-1.5">
+        <Select value={value} onValueChange={(nextValue) => onChange(nextValue ?? '')}>
+          <SelectTrigger aria-label={label}>
+            <SelectValue placeholder={placeholder ?? label} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {helperText ? <p className="text-[11px] leading-4 text-muted-foreground">{helperText}</p> : null}
+      </div>
     );
   }
 
   if (type === 'textarea' || type === 'json') {
     return (
-      <Textarea
-        aria-label={label}
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className="min-h-24"
-      />
+      <div className="space-y-1.5">
+        <Textarea
+          aria-label={label}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-h-24"
+        />
+        {helperText ? <p className="text-[11px] leading-4 text-muted-foreground">{helperText}</p> : null}
+      </div>
     );
   }
 
   return (
-    <Input
-      aria-label={label}
-      type={type}
-      value={value}
-      placeholder={placeholder}
-      onChange={(event) => onChange(event.target.value)}
-    />
+    <div className="space-y-1.5">
+      <Input
+        aria-label={label}
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {helperText ? <p className="text-[11px] leading-4 text-muted-foreground">{helperText}</p> : null}
+    </div>
   );
 }
 
 function BatchNewPageContent() {
+  const t = useAppTranslations('batch');
   const router = useRouter();
   const { currentProject, setCurrentProject } = useCurrentProjectHydration();
   const { data: projectsData } = useProjects();
@@ -171,7 +186,7 @@ function BatchNewPageContent() {
   const [manualRows, setManualRows] = useState<ManualRowsState>(() => createInitialManualRows());
   const [csvImports, setCsvImports] = useState<CsvRowsState>(() => createInitialCsvRows());
 
-  const metadata = PIPELINE_METADATA[pipeline];
+  const metadata = getPipelineMetadata(pipeline);
   const fields = getBatchRequestFields(pipeline);
   const projectOptions = projectsData?.items ?? [];
   const currentManualRows = manualRows[pipeline];
@@ -188,6 +203,10 @@ function BatchNewPageContent() {
   const validRows = useMemo(
     () => parsedRows.flatMap((row) => (row.payload ? [row.payload as BatchRowPayload] : [])),
     [parsedRows]
+  );
+  const csvErrorRows = useMemo(
+    () => currentCsvImport?.rows.filter((row) => row.errors.length > 0) ?? [],
+    [currentCsvImport?.rows]
   );
 
   const hasBlockingErrors =
@@ -206,7 +225,8 @@ function BatchNewPageContent() {
   };
 
   const handleCsvFile = async (file: File) => {
-    const text = await file.text();
+    const buffer = await file.arrayBuffer();
+    const text = decodeCSV(buffer);
     const parsed = parseBatchCsv(pipeline, text);
     setCsvImports((current) => ({
       ...current,
@@ -217,17 +237,17 @@ function BatchNewPageContent() {
 
   const handleSubmit = async () => {
     if (pipeline === 'asset_based' && sourceMode === 'manual') {
-      toast.error('Custom Asset batches currently require CSV import.');
+      toast.error(t('new.toasts.customRequiresCsv'));
       return;
     }
 
     if (validRows.length === 0) {
-      toast.error('Add at least one valid batch row before submitting.');
+      toast.error(t('new.toasts.needValidRows'));
       return;
     }
 
     if (hasBlockingErrors) {
-      toast.error('Resolve the invalid batch rows before submitting.');
+      toast.error(t('new.toasts.resolveInvalidRows'));
       return;
     }
 
@@ -248,13 +268,13 @@ function BatchNewPageContent() {
         }
       }
 
-      toast.success('Batch submitted.');
+      toast.success(t('new.toasts.submitted'));
       router.push(`/batch/${response.batch_id}`);
     } catch (error) {
       const message =
         typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string'
           ? error.message
-          : 'Failed to submit the batch.';
+          : t('new.toasts.submitFailed');
       toast.error(message);
     }
   };
@@ -262,16 +282,16 @@ function BatchNewPageContent() {
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">New Batch</h1>
+        <h1 className="text-3xl font-bold text-foreground">{t('new.title')}</h1>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          Pick a pipeline, define the shared batch settings, then add rows manually or import them from CSV.
+          {t('new.description')}
         </p>
       </div>
 
       <Card className="border-border/70 bg-card shadow-none">
         <CardHeader>
-          <CardTitle>1. Choose a Pipeline</CardTitle>
-          <CardDescription>Select the pipeline that all rows in this batch will use.</CardDescription>
+          <CardTitle>{t('new.steps.pipelineTitle')}</CardTitle>
+          <CardDescription>{t('new.steps.pipelineDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <PipelineSelector value={pipeline} onChange={setPipeline} />
@@ -280,17 +300,17 @@ function BatchNewPageContent() {
 
       <Card className="border-border/70 bg-card shadow-none">
         <CardHeader>
-          <CardTitle>2. Batch Settings</CardTitle>
-          <CardDescription>Name the batch and choose which project should own the generated tasks.</CardDescription>
+          <CardTitle>{t('new.steps.settingsTitle')}</CardTitle>
+          <CardDescription>{t('new.steps.settingsDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground" htmlFor="batch-name">
-              Batch Name
+              {t('new.fields.batchName')}
             </label>
             <Input
               id="batch-name"
-              aria-label="Batch name"
+              aria-label={t('new.fields.batchName')}
               value={batchName}
               placeholder={buildBatchDefaultName()}
               onChange={(event) => setBatchName(event.target.value)}
@@ -299,10 +319,10 @@ function BatchNewPageContent() {
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground" htmlFor="batch-project">
-              Target Project
+              {t('new.fields.targetProject')}
             </label>
             <Select value={effectiveProjectSelection} onValueChange={(value) => setProjectSelection(value ?? '__unassigned__')}>
-              <SelectTrigger id="batch-project" aria-label="Target project">
+              <SelectTrigger id="batch-project" aria-label={t('new.fields.targetProject')}>
                 <span data-slot="select-value" className="flex flex-1 text-left">
                   {projectFilterLabel(effectiveProjectSelection, projectOptions)}
                 </span>
@@ -313,7 +333,7 @@ function BatchNewPageContent() {
                     {project.name}
                   </SelectItem>
                 ))}
-                <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                <SelectItem value="__unassigned__">{t('shared.filters.unassigned')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -323,9 +343,12 @@ function BatchNewPageContent() {
       <Card className="border-border/70 bg-card shadow-none">
         <CardHeader className="flex flex-col gap-3 border-b md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
-            <CardTitle>3. Add Batch Rows</CardTitle>
+            <CardTitle>{t('new.steps.rowsTitle')}</CardTitle>
             <CardDescription>
-              {metadata.label} rows map directly to the backend schema. CSV imports are capped at {MAX_BATCH_CSV_ROWS} rows.
+              {t('new.steps.rowsDescription', {
+                pipeline: metadata.label,
+                limit: MAX_BATCH_CSV_ROWS,
+              })}
             </CardDescription>
           </div>
 
@@ -333,7 +356,7 @@ function BatchNewPageContent() {
             <BatchSourceTab active={sourceMode} onSelect={setSourceMode} />
             <Button variant="outline" onClick={handleDownloadTemplate}>
               <Download className="size-4" />
-              Download Template
+              {t('new.actions.downloadTemplate')}
             </Button>
           </div>
         </CardHeader>
@@ -350,7 +373,7 @@ function BatchNewPageContent() {
                   }
                 >
                   <Plus className="size-4" />
-                  Add Row
+                  {t('new.actions.addRow')}
                 </Button>
               </div>
 
@@ -366,7 +389,7 @@ function BatchNewPageContent() {
                           </div>
                         </th>
                       ))}
-                      <th className="px-3 py-3 text-right font-semibold text-foreground">Actions</th>
+                      <th className="px-3 py-3 text-right font-semibold text-foreground">{t('new.columns.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -382,6 +405,7 @@ function BatchNewPageContent() {
                                 value={row[field.key] ?? ''}
                                 options={field.options}
                                 placeholder={field.placeholder}
+                                helperText={field.helperText}
                                 onChange={(value) =>
                                   setManualRows((current) =>
                                     updateManualRowSet(current, pipeline, (rows) =>
@@ -435,7 +459,7 @@ function BatchNewPageContent() {
                                 ))}
                               </div>
                             ) : (
-                              <Badge className="border-transparent bg-[hsl(145,70%,40%)] text-white">Valid</Badge>
+                              <Badge className="border-transparent bg-[hsl(145,70%,40%)] text-white">{t('new.validation.valid')}</Badge>
                             )}
                           </td>
                         </tr>
@@ -450,9 +474,9 @@ function BatchNewPageContent() {
           {sourceMode === 'manual' && pipeline === 'asset_based' ? (
             <Card className="border-border/70 bg-muted/10 shadow-none">
               <CardContent className="space-y-3 py-8 text-sm text-muted-foreground">
-                <p>Custom Asset batches currently support CSV import only because each row contains a scenes array.</p>
+                <p>{t('new.customCsvOnly')}</p>
                 <Button variant="outline" onClick={() => setSourceMode('csv')}>
-                  Switch to CSV Import
+                  {t('new.actions.switchToCsv')}
                 </Button>
               </CardContent>
             </Card>
@@ -466,15 +490,15 @@ function BatchNewPageContent() {
               >
                 <Upload className="size-8 text-muted-foreground" />
                 <div className="space-y-1">
-                  <p className="font-medium text-foreground">Upload CSV</p>
+                  <p className="font-medium text-foreground">{t('new.csv.uploadTitle')}</p>
                   <p className="text-sm text-muted-foreground">
-                    Header names must match the {metadata.label} request fields exactly.
+                    {t('new.csv.uploadDescription', { pipeline: metadata.label })}
                   </p>
                 </div>
               </label>
               <Input
                 id="batch-csv-file"
-                aria-label="CSV file"
+                aria-label={t('new.csv.fileLabel')}
                 type="file"
                 accept=".csv,text/csv"
                 className="hidden"
@@ -495,6 +519,32 @@ function BatchNewPageContent() {
                 </div>
               ) : null}
 
+              {csvErrorRows.length > 0 ? (
+                <div className="rounded-2xl border border-[hsl(3,80%,56%)]/30 bg-[hsl(3,80%,56%)]/5 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="border-transparent bg-[hsl(3,80%,56%)] text-white">
+                      {t('new.columns.validation')} {csvErrorRows.length}
+                    </Badge>
+                    {csvErrorRows.map((row, index) => (
+                      <Button
+                        key={row.id}
+                        variant="outline"
+                        size="sm"
+                        className="border-[hsl(3,80%,56%)]/30"
+                        onClick={() => {
+                          document.getElementById(`csv-row-${row.id}`)?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                          });
+                        }}
+                      >
+                        {`#${index + 1}`}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               {currentCsvImport ? (
                 <div className="overflow-x-auto rounded-2xl border border-border/70">
                   <table className="min-w-full text-sm">
@@ -505,13 +555,20 @@ function BatchNewPageContent() {
                             {field.label}
                           </th>
                         ))}
-                        <th className="px-3 py-3 text-left font-semibold text-foreground">Validation</th>
-                        <th className="px-3 py-3 text-right font-semibold text-foreground">Actions</th>
+                        <th className="px-3 py-3 text-left font-semibold text-foreground">{t('new.columns.validation')}</th>
+                        <th className="px-3 py-3 text-right font-semibold text-foreground">{t('new.columns.actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {currentCsvImport.rows.map((row) => (
-                        <tr key={row.id} className="border-t border-border/60 align-top">
+                        <tr
+                          key={row.id}
+                          id={`csv-row-${row.id}`}
+                          className={cn(
+                            'border-t border-border/60 align-top',
+                            row.errors.length > 0 ? 'bg-[hsl(3,80%,56%)]/5' : undefined
+                          )}
+                        >
                           {fields.map((field) => (
                             <td key={`${row.id}-${field.key}`} className="min-w-44 px-3 py-3">
                               <FieldInput
@@ -520,6 +577,7 @@ function BatchNewPageContent() {
                                 value={row.raw[field.key] ?? ''}
                                 options={field.options}
                                 placeholder={field.placeholder}
+                                helperText={field.helperText}
                                 onChange={(value) =>
                                   setCsvImports((current) => ({
                                     ...current,
@@ -540,7 +598,7 @@ function BatchNewPageContent() {
                           ))}
                           <td className="space-y-1 px-3 py-3">
                             {row.errors.length === 0 ? (
-                              <Badge className="border-transparent bg-[hsl(145,70%,40%)] text-white">Valid</Badge>
+                              <Badge className="border-transparent bg-[hsl(145,70%,40%)] text-white">{t('new.validation.valid')}</Badge>
                             ) : (
                               row.errors.map((error) => (
                                 <p key={`${row.id}-${error}`} className="text-xs text-[hsl(3,80%,56%)]">
@@ -576,7 +634,7 @@ function BatchNewPageContent() {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-border/70 bg-card p-6 text-sm text-muted-foreground">
-                  Upload a CSV to preview and validate its rows before submission.
+                  {t('new.csv.emptyState')}
                 </div>
               )}
             </div>
@@ -586,24 +644,26 @@ function BatchNewPageContent() {
 
       <Card className="border-border/70 bg-card shadow-none">
         <CardHeader>
-          <CardTitle>Submission Summary</CardTitle>
+          <CardTitle>{t('new.summary.title')}</CardTitle>
           <CardDescription>
-            {validRows.length} valid row(s) ready for {metadata.label}. {hasBlockingErrors ? 'Resolve the invalid rows before submitting.' : 'Ready to submit.'}
+            {hasBlockingErrors
+              ? t('new.summary.invalidDescription', { count: validRows.length, pipeline: metadata.label })
+              : t('new.summary.readyDescription', { count: validRows.length, pipeline: metadata.label })}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
             <Badge variant="outline">{metadata.label}</Badge>
-            <Badge variant="outline">{sourceMode === 'manual' ? 'Manual Add' : 'CSV Import'}</Badge>
-            <Badge variant="outline">{validRows.length} valid rows</Badge>
+            <Badge variant="outline">{sourceMode === 'manual' ? t('new.source.manual') : t('new.source.csv')}</Badge>
+            <Badge variant="outline">{t('new.summary.validRows', { count: validRows.length })}</Badge>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/batch" className={cn(buttonVariants({ variant: 'outline' }))}>
-              Cancel
+              {t('actions.cancel')}
             </Link>
             <Button onClick={() => void handleSubmit()} disabled={createBatch.isPending || validRows.length === 0}>
               <FileSpreadsheet className="size-4" />
-              {createBatch.isPending ? 'Submitting…' : 'Submit Batch'}
+              {createBatch.isPending ? t('new.actions.submitting') : t('new.actions.submitBatch')}
             </Button>
           </div>
         </CardContent>
@@ -613,8 +673,9 @@ function BatchNewPageContent() {
 }
 
 export default function BatchNewPage() {
+  const t = useAppTranslations('batch');
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading batch builder…</div>}>
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">{t('fallback.loadingBatchBuilder')}</div>}>
       <BatchNewPageContent />
     </Suspense>
   );

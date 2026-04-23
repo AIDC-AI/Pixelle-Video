@@ -38,7 +38,7 @@
         "quick": "快速创作",
         "digitalHuman": "数字人",
         "i2v": "图片转视频",
-        "actionTransfer": "动作迁移",
+        "actionTransfer": "舞蹈复刻",
         "customAsset": "自定义资产",
         "batches": "批处理总览",
         "allBatches": "全部批处理",
@@ -163,8 +163,8 @@
     "i2vTitle": "图片转视频",
     "i2vDescription": "图片转视频。上传一张或多张图片，使用高级动画模型让静态图像动起来。",
     "i2vTime": "约 3-8 分钟",
-    "actionTransferTitle": "动作迁移",
-    "actionTransferDescription": "动作迁移视频。提供动作视频和目标形象，将动作完美复刻到新形象上。",
+    "actionTransferTitle": "舞蹈复刻",
+    "actionTransferDescription": "舞蹈复刻视频。提供舞蹈视频和目标形象，将舞蹈动作复刻到新形象上。",
     "actionTransferTime": "约 10-20 分钟",
     "customTitle": "自定义资产",
     "customDescription": "自定义资产生成。按需生成独立的配音、配乐、背景图片或短视频片段。",
@@ -353,22 +353,22 @@
       }
     },
     "actionTransfer": {
-      "title": "动作迁移",
-      "description": "把驱动视频和目标图片配对，将动作迁移到新的生成片段中。",
+      "title": "舞蹈复刻",
+      "description": "把舞蹈视频和目标图片配对，将舞蹈动作复刻到新的生成片段中。",
       "sections": {
-        "motionInputs": "动作输入"
+        "motionInputs": "舞蹈输入"
       },
       "fields": {
-        "driverVideo": "驱动视频",
+        "driverVideo": "舞蹈视频",
         "targetImage": "目标图片",
-        "poseWorkflow": "动作方案"
+        "poseWorkflow": "舞蹈复刻方案"
       },
       "placeholders": {
-        "poseWorkflow": "选择动作方案"
+        "poseWorkflow": "选择舞蹈复刻方案"
       },
       "validation": {
-        "driverVideo": "请上传驱动视频。",
-        "poseWorkflow": "请选择动作方案。",
+        "driverVideo": "请上传舞蹈视频。",
+        "poseWorkflow": "请选择舞蹈复刻方案。",
         "targetImage": "请上传目标图片。"
       }
     },

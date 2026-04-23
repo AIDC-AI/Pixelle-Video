@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { apiClient, type ApiError } from '@/lib/api-client';
 import { useCurrentProjectHydration } from '@/lib/hooks/use-current-project';
 import { useProjects } from '@/lib/hooks/use-projects';
+import { useAppTranslations } from '@/lib/i18n';
 import type { components, paths } from '@/types/api';
 
 type Project = components['schemas']['Project'];
@@ -31,6 +32,7 @@ function isStaleEmptyProject(project: Project): boolean {
 }
 
 export function EmptyProjectsPrompt() {
+  const t = useAppTranslations('shell');
   const queryClient = useQueryClient();
   const { currentProject, setCurrentProject } = useCurrentProjectHydration();
   const { data: projectsData, isLoading } = useProjects();
@@ -84,14 +86,14 @@ export function EmptyProjectsPrompt() {
         throw {
           status: 400,
           code: 'EMPTY_PROJECT_SELECTION',
-          message: 'No empty projects were selected for cleanup.',
+          message: t('emptyProjects.noneSelected'),
         } satisfies ApiError;
       }
 
       return lastResponse;
     },
     onSuccess: async (_, projectIds) => {
-      toast.success(`Cleaned up ${projectIds.length} empty project${projectIds.length === 1 ? '' : 's'}.`);
+      toast.success(t('emptyProjects.cleanedUp', { count: projectIds.length }));
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error) => {
@@ -108,10 +110,10 @@ export function EmptyProjectsPrompt() {
       <CardContent className="flex flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
-            {staleProjects.length} empty project{staleProjects.length === 1 ? '' : 's'} can be cleaned up.
+            {t('emptyProjects.title', { count: staleProjects.length })}
           </p>
           <p className="text-sm text-muted-foreground">
-            These projects have no linked tasks and were created more than 24 hours ago.
+            {t('emptyProjects.description')}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -126,7 +128,7 @@ export function EmptyProjectsPrompt() {
               }
             }}
           >
-            Maybe Later
+            {t('emptyProjects.maybeLater')}
           </Button>
           <Button
             type="button"
@@ -136,7 +138,7 @@ export function EmptyProjectsPrompt() {
             disabled={deleteProjects.isPending}
           >
             <Trash2 className="size-4" />
-            Clean Up
+            {t('emptyProjects.cleanUp')}
           </Button>
         </div>
       </CardContent>

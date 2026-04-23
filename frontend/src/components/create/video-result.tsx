@@ -54,7 +54,12 @@ export function VideoResult({
               <LinkIcon className="w-4 h-4 mr-2" />
               复制链接
             </Button>
-            <Button variant="secondary" render={<a href={videoUrl} download target="_blank" rel="noreferrer" />} className="w-full">
+            <Button
+              nativeButton={false}
+              variant="secondary"
+              render={<a href={videoUrl} download target="_blank" rel="noreferrer" />}
+              className="w-full"
+            >
               <Download className="w-4 h-4 mr-2" />
               下载视频
             </Button>

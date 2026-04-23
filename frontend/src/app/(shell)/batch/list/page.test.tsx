@@ -19,6 +19,7 @@ vi.mock('next/navigation', () => ({
 
 describe('Batch List Page', () => {
   beforeEach(async () => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
     mockSearchParams = new URLSearchParams('');
     mockReplace.mockReset();
     await seedCurrentProject({ id: 'project-1', name: 'Launch Campaign' });
@@ -27,11 +28,11 @@ describe('Batch List Page', () => {
   it('renders the batch table from the batch list endpoint', async () => {
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByRole('heading', { name: 'All Batches' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '全部批处理' })).toBeInTheDocument();
     expect(await screen.findByText('Launch Batch')).toBeInTheDocument();
     expect(screen.queryByText('Motion Batch')).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('combobox', { name: 'Project filter' })).toHaveTextContent('Launch Campaign');
+      expect(screen.getByRole('combobox', { name: '项目' })).toHaveTextContent('Launch Campaign');
     });
   });
 
@@ -51,7 +52,7 @@ describe('Batch List Page', () => {
     renderWithQueryClient(<Page />);
     expect(await screen.findByText('Motion Batch')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: '取消' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Motion Batch')).not.toBeInTheDocument();
@@ -63,10 +64,10 @@ describe('Batch List Page', () => {
     mockSearchParams = new URLSearchParams('project_id=project-1');
 
     renderWithQueryClient(<Page />);
-    await screen.findByRole('heading', { name: 'All Batches' });
+    await screen.findByRole('heading', { name: '全部批处理' });
 
-    await user.click(screen.getByRole('combobox', { name: 'Status filter' }));
-    await user.click(await screen.findByRole('option', { name: 'Completed' }));
+    await user.click(screen.getByRole('combobox', { name: '状态' }));
+    await user.click(await screen.findByRole('option', { name: '已完成' }));
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/batch/list?project_id=project-1&status=completed', { scroll: false });
@@ -86,6 +87,6 @@ describe('Batch List Page', () => {
 
     renderWithQueryClient(<Page />);
 
-    expect(await screen.findByText('No batches match these filters')).toBeInTheDocument();
+    expect(await screen.findByText('没有匹配当前筛选条件的批处理')).toBeInTheDocument();
   });
 });

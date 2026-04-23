@@ -6,8 +6,9 @@ import { toast } from 'sonner';
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 // Mock clipboard
-Object.assign(navigator, {
-  clipboard: {
+Object.defineProperty(navigator, 'clipboard', {
+  configurable: true,
+  value: {
     writeText: vi.fn(),
   },
 });

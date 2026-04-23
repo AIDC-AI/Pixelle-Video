@@ -196,6 +196,7 @@ export function ProjectSwitcher({ isCollapsed }: ProjectSwitcherProps) {
               variant="ghost"
               size="sm"
               className="h-7 gap-2 text-xs"
+              nativeButton={false}
               render={<Link href="/projects" onClick={() => setIsOpen(false)} />}
             >
                 <Settings2 className="h-3 w-3" />

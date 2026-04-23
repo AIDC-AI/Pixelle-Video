@@ -8,28 +8,14 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
 import { LibraryGrid } from '@/components/library/library-grid';
 import { useImageWorkflows, useMediaWorkflows, useTtsWorkflows } from '@/lib/hooks/use-resources';
+import { useAppTranslations } from '@/lib/i18n';
 
 type WorkflowTab = 'tts' | 'media' | 'image';
 
-const WORKFLOW_TABS: readonly { description: string; label: string; value: WorkflowTab }[] = [
-  {
-    value: 'tts',
-    label: 'TTS',
-    description: 'Voice and speech generation workflows available to the workbench.',
-  },
-  {
-    value: 'media',
-    label: 'Media',
-    description: 'Image and video generation workflows currently connected to Pixelle.',
-  },
-  {
-    value: 'image',
-    label: 'Image',
-    description: 'Image-specialized subsets preserved for compatibility with existing create flows.',
-  },
-];
+const WORKFLOW_TABS: readonly WorkflowTab[] = ['tts', 'media', 'image'];
 
 export default function WorkflowsOverviewPage() {
+  const t = useAppTranslations('workflows');
   const [activeTab, setActiveTab] = useState<WorkflowTab>('tts');
   const ttsQuery = useTtsWorkflows();
   const mediaQuery = useMediaWorkflows();
@@ -48,32 +34,28 @@ export default function WorkflowsOverviewPage() {
   }, [activeTab, imageQuery.data?.workflows, mediaQuery.data?.workflows, ttsQuery.data?.workflows]);
 
   const isLoading = ttsQuery.isLoading || mediaQuery.isLoading || imageQuery.isLoading;
-  const activeDefinition = WORKFLOW_TABS.find((tab) => tab.value === activeTab) ?? WORKFLOW_TABS[0];
-
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-foreground">Workflows</h1>
-        <p className="text-sm text-muted-foreground">
-          Compare every connected workflow source, grouped by the runtime lane it powers inside Pixelle.
-        </p>
+        <h1 className="text-2xl font-bold text-foreground">{t('overview.title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('overview.description')}</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
         {WORKFLOW_TABS.map((tab) => (
           <Button
-            key={tab.value}
+            key={tab}
             type="button"
-            variant={activeTab === tab.value ? 'default' : 'outline'}
-            onClick={() => setActiveTab(tab.value)}
+            variant={activeTab === tab ? 'default' : 'outline'}
+            onClick={() => setActiveTab(tab)}
           >
-            {tab.label}
+            {t(`overview.tabs.${tab}.label`)}
           </Button>
         ))}
       </div>
 
       <div className="rounded-2xl border border-border/70 bg-card p-4">
-        <p className="text-sm text-muted-foreground">{activeDefinition.description}</p>
+        <p className="text-sm text-muted-foreground">{t(`overview.tabs.${activeTab}.description`)}</p>
       </div>
 
       {isLoading ? (
@@ -87,8 +69,8 @@ export default function WorkflowsOverviewPage() {
       {!isLoading && tabItems.length === 0 ? (
         <EmptyState
           icon={Layers3}
-          title="No workflows found"
-          description="No workflows are currently available for this category."
+          title={t('overview.emptyTitle')}
+          description={t('overview.emptyDescription')}
         />
       ) : null}
 

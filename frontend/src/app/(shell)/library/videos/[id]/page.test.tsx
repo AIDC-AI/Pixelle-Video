@@ -36,7 +36,7 @@ async function seedCurrentProject(project: { id: string; name: string } | null) 
     localStorage.setItem(
       'current-project-storage',
       JSON.stringify({
-        state: { currentProject: project },
+        state: { currentProjectId: project.id },
         version: 0,
       })
     );
@@ -44,7 +44,7 @@ async function seedCurrentProject(project: { id: string; name: string } | null) 
     localStorage.removeItem('current-project-storage');
   }
 
-  useCurrentProjectStore.setState({ currentProject: project });
+  useCurrentProjectStore.setState({ currentProjectId: project?.id ?? null });
 
   await act(async () => {
     await useCurrentProjectStore.persist.rehydrate();
@@ -63,6 +63,7 @@ describe('Library Video Detail Page', () => {
   beforeEach(async () => {
     mockVideoId = 'task-library-video-1';
     mockPush.mockReset();
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
     await seedCurrentProject({ id: 'project-1', name: 'Launch Campaign' });
   });
 
@@ -70,9 +71,11 @@ describe('Library Video Detail Page', () => {
     renderPage();
 
     expect(await screen.findByRole('heading', { name: 'Library Video' })).toBeInTheDocument();
-    expect(screen.getByText('Generation Snapshot')).toBeInTheDocument();
-    expect(screen.getByText('Metadata')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Regenerate From This' })).toBeInTheDocument();
+    expect(screen.getByText('创作摘要')).toBeInTheDocument();
+    expect(screen.getByText('基本信息')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '重新生成' })).toBeInTheDocument();
+    expect(screen.getByText('分镜详情')).toBeInTheDocument();
+    expect(screen.queryByText('media workflow')).not.toBeInTheDocument();
   });
 
   it('builds the regenerate URL from the task snapshot', async () => {
@@ -80,14 +83,14 @@ describe('Library Video Detail Page', () => {
 
     renderPage();
     await screen.findByRole('heading', { name: 'Library Video' });
-    await user.click(screen.getByRole('button', { name: 'Regenerate From This' }));
+    await user.click(screen.getByRole('button', { name: '重新生成' }));
 
     expect(mockPush).toHaveBeenCalledWith(
       '/create/quick?title=Library+Video&topic=A+generated+library+video&tts_workflow=selfhost%2Ftts_edge.json&media_workflow=selfhost%2Fmedia_default.json'
     );
   });
 
-  it('falls back to task detail on 501 and opens the cancel confirmation flow', async () => {
+  it('uses task fallback on 501 and opens the cancel confirmation flow', async () => {
     mockVideoId = 'task-detail-running';
     setLibraryVideoDetail('task-detail-running', { kind: 'not-implemented' });
     setTaskScenario('task-detail-running', [
@@ -107,26 +110,30 @@ describe('Library Video Detail Page', () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
     renderPage();
 
-    expect(await screen.findByText(/Detailed library metadata is not available yet/i)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(await screen.findByRole('heading', { name: 'Active Task' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '取消任务？' }));
 
-    expect(screen.getByText('Cancel task?')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Confirm Cancel' }));
+    expect(screen.getAllByText('取消任务？').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: '确认取消' }));
 
     await waitFor(() => {
-      expect(screen.queryByText('Cancel task?')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '确认取消' })).not.toBeInTheDocument();
     });
   });
 
-  it('shows the non-destructive deletion fallback for completed videos', async () => {
+  it('deletes completed videos through the library endpoint', async () => {
     const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     renderPage();
     await screen.findByRole('heading', { name: 'Library Video' });
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: '删除' }));
 
-    expect(screen.getByText('Deletion unavailable')).toBeInTheDocument();
-    expect(screen.getByText(/does not expose completed-history deletion yet/i)).toBeInTheDocument();
+    expect(screen.getByText('删除这个视频？')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '确认删除' }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/library/videos');
+    });
   });
 
   it('shows the missing-detail empty state when both detail and task are absent', async () => {
@@ -135,7 +142,7 @@ describe('Library Video Detail Page', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Video detail unavailable')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to Library' })).toHaveAttribute('href', '/library/videos');
+    expect(await screen.findByText('无法读取视频详情')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '返回视频库' })).toHaveAttribute('href', '/library/videos');
   });
 });

@@ -19,6 +19,7 @@ interface UseLibraryCursorOptions {
   initialCursor?: string | null;
   limit?: number;
   projectFilter: string;
+  styleFilter?: string | null;
 }
 
 function buildQueryString(params: Record<string, string | number | undefined | null>): string {
@@ -37,16 +38,17 @@ function buildQueryString(params: Record<string, string | number | undefined | n
 function useLibraryCursorQuery<TResponse extends { next_cursor?: string | null }>(
   key: string,
   endpoint: '/api/library/images' | '/api/library/voices' | '/api/library/bgm' | '/api/library/scripts',
-  { initialCursor = null, limit = 12, projectFilter }: UseLibraryCursorOptions
+  { initialCursor = null, limit = 12, projectFilter, styleFilter }: UseLibraryCursorOptions
 ) {
   return useInfiniteQuery<TResponse, ApiError>({
     initialPageParam: initialCursor,
-    queryKey: ['library', key, projectFilter, limit, initialCursor],
+    queryKey: ['library', key, projectFilter, styleFilter, limit, initialCursor],
     queryFn: ({ pageParam }) => {
       const queryString = buildQueryString({
         cursor: typeof pageParam === 'string' && pageParam ? pageParam : undefined,
         limit,
         project_id: toProjectFilterQuery(projectFilter),
+        style_id: styleFilter || undefined,
       });
 
       return apiClient<TResponse>(`${endpoint}${queryString}`);
