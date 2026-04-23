@@ -1,10 +1,14 @@
+import 'fake-indexeddb/auto';
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { beforeAll, afterAll, afterEach } from "vitest";
+import { toHaveNoViolations } from 'jest-axe';
+import { beforeAll, beforeEach, afterAll, afterEach } from "vitest";
 import { resetMockApiState } from "./msw/handlers";
 import { server } from "./msw/server";
 
 process.env.NEXT_PUBLIC_TASK_POLL_INTERVAL_MS = '20';
+
+expect.extend(toHaveNoViolations);
 
 const createStorageMock = () => {
   let store: Record<string, string> = {};
@@ -62,6 +66,31 @@ if (typeof window !== 'undefined') {
     });
   }
 
+  if (!window.matchMedia) {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: (query: string) => ({
+        matches: query === '(hover: hover)',
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => false,
+      }),
+    });
+  }
+
+  if (!navigator.clipboard) {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () => Promise.resolve(),
+      },
+    });
+  }
+
   window.HTMLElement.prototype.getAnimations = () => [];
   window.HTMLElement.prototype.scrollIntoView = () => {};
 }
@@ -75,4 +104,19 @@ afterEach(() => {
   resetMockApiState();
   globalThis.localStorage.clear();
   globalThis.sessionStorage.clear();
+});
+
+beforeAll(() => {
+  globalThis.localStorage.setItem('skyframe-language-preference', 'zh-CN');
+  document.documentElement.lang = 'zh-CN';
+});
+
+beforeEach(() => {
+  globalThis.localStorage.setItem('skyframe-language-preference', 'zh-CN');
+  document.documentElement.lang = 'zh-CN';
+});
+
+afterEach(() => {
+  globalThis.localStorage.setItem('skyframe-language-preference', 'zh-CN');
+  document.documentElement.lang = 'zh-CN';
 });

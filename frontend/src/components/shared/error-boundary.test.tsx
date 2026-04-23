@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ErrorBoundary } from './error-boundary';
 
@@ -9,6 +9,10 @@ function BrokenChild(): null {
 
 describe('ErrorBoundary', () => {
   const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+  beforeEach(() => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
+  });
 
   afterEach(() => {
     consoleErrorSpy.mockClear();
@@ -21,8 +25,8 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong in the workbench.')).toBeInTheDocument();
+    expect(screen.getByText('工作台发生错误。')).toBeInTheDocument();
     expect(screen.getByText('Exploded during render')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '重试' })).toBeInTheDocument();
   });
 });

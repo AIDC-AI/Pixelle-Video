@@ -6,7 +6,7 @@ import { AppIntlProvider } from '@/lib/i18n';
 
 describe('PipelineCard', () => {
   beforeEach(() => {
-    localStorage.setItem('skyframe-language-preference', 'en-US');
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
   });
 
   it('renders correctly', () => {
@@ -23,7 +23,7 @@ describe('PipelineCard', () => {
     );
     expect(screen.getByText('Test Pipeline')).toBeInTheDocument();
     expect(screen.getByText('A great pipeline')).toBeInTheDocument();
-    expect(screen.getByText('Time')).toBeInTheDocument();
+    expect(screen.getByText('耗时')).toBeInTheDocument();
     expect(screen.getByText('1 min')).toBeInTheDocument();
     expect(screen.getByRole('link')).toHaveAttribute('href', '/test');
   });
@@ -46,7 +46,7 @@ describe('PipelineCard', () => {
     expect(card).toHaveAttribute('href', '/compact');
     expect(card.querySelector('[data-variant="compact"]')).toBeInTheDocument();
     expect(screen.getByText('Compact Pipeline')).toBeInTheDocument();
-    expect(screen.queryByText('Time')).not.toBeInTheDocument();
+    expect(screen.queryByText('耗时')).not.toBeInTheDocument();
     expect(screen.queryByText('1 min')).not.toBeInTheDocument();
   });
 });

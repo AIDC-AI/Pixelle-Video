@@ -37,6 +37,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   public render(): ReactNode {
     const { error } = this.state;
+    const copy = {
+      backToCreate: '返回创作页',
+      details: '查看详情',
+      fallbackMessage: '出现了意外的渲染错误，当前视图已被中断。',
+      retry: '重试',
+      title: '工作台发生错误。',
+    };
 
     if (!error) {
       return this.props.children;
@@ -51,9 +58,9 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 <AlertTriangle className="size-5" />
               </div>
               <div>
-                <CardTitle>Something went wrong in the workbench.</CardTitle>
+                <CardTitle>{copy.title}</CardTitle>
                 <CardDescription className="mt-1 text-muted-foreground">
-                  {error.message || 'An unexpected rendering error interrupted this view.'}
+                  {error.message || copy.fallbackMessage}
                 </CardDescription>
               </div>
             </div>
@@ -62,17 +69,17 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             <div className="flex flex-wrap gap-2">
               <Button type="button" onClick={this.handleRetry}>
                 <RotateCcw className="size-4" />
-                Retry
+                {copy.retry}
               </Button>
-              <Button variant="outline" render={<Link href="/create" />}>
+              <Button variant="outline" nativeButton={false} render={<Link href="/create" />}>
                 <Home className="size-4" />
-                Back to Create
+                {copy.backToCreate}
               </Button>
             </div>
 
             <Accordion defaultValue={undefined}>
               <AccordionItem value="details">
-                <AccordionTrigger>View Details</AccordionTrigger>
+                <AccordionTrigger>{copy.details}</AccordionTrigger>
                 <AccordionContent>
                   <pre className="overflow-x-auto rounded-2xl border border-border/70 bg-muted/20 p-4 text-xs leading-6 text-foreground">
                     {error.stack ?? error.message}

@@ -13,11 +13,11 @@ type PipelineDescriptor = {
 type RequestParamsRecord = Record<string, unknown>;
 
 const PIPELINES: Record<PipelineSlug, PipelineDescriptor> = {
-  quick: { slug: 'quick', label: 'Quick' },
-  'digital-human': { slug: 'digital-human', label: 'Digital Human' },
-  i2v: { slug: 'i2v', label: 'Image → Video' },
-  'action-transfer': { slug: 'action-transfer', label: 'Action Transfer' },
-  custom: { slug: 'custom', label: 'Custom Asset' },
+  quick: { slug: 'quick', label: '快速创作' },
+  'digital-human': { slug: 'digital-human', label: '数字人' },
+  i2v: { slug: 'i2v', label: '图片转视频' },
+  'action-transfer': { slug: 'action-transfer', label: '动作迁移' },
+  custom: { slug: 'custom', label: '自定义资产' },
 };
 
 const TERMINAL_TASK_STATUSES: readonly TaskStatus[] = ['completed', 'failed', 'cancelled'];
@@ -60,11 +60,11 @@ export function projectFilterLabel(
   projects: Array<{ id: string; name: string }>
 ): string {
   if (value === 'all') {
-    return 'All Projects';
+    return '全部项目';
   }
 
   if (value === '__unassigned__' || value === 'null') {
-    return 'Unassigned';
+    return '未分配';
   }
 
   return projects.find((project) => project.id === value)?.name ?? value;
@@ -72,7 +72,7 @@ export function projectFilterLabel(
 
 export function formatRelativeTime(value?: string | null): string {
   if (!value) {
-    return 'Unknown time';
+    return '未知时间';
   }
 
   const timestamp = Date.parse(value);
@@ -82,15 +82,18 @@ export function formatRelativeTime(value?: string | null): string {
 
   const deltaSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
   if (deltaSeconds < 60) {
-    return 'Just now';
+    return '刚刚';
   }
   if (deltaSeconds < 3_600) {
-    return `${Math.floor(deltaSeconds / 60)}m ago`;
+    const minutes = Math.floor(deltaSeconds / 60);
+    return `${minutes} 分钟前`;
   }
   if (deltaSeconds < 86_400) {
-    return `${Math.floor(deltaSeconds / 3_600)}h ago`;
+    const hours = Math.floor(deltaSeconds / 3_600);
+    return `${hours} 小时前`;
   }
-  return `${Math.floor(deltaSeconds / 86_400)}d ago`;
+  const days = Math.floor(deltaSeconds / 86_400);
+  return `${days} 天前`;
 }
 
 export function formatDurationClock(value?: number | null): string {
@@ -147,17 +150,17 @@ export function statusBadgeClassName(status: TaskStatus | 'unknown'): string {
 export function statusLabel(status: TaskStatus | 'unknown'): string {
   switch (status) {
     case 'pending':
-      return 'Pending';
+      return '排队中';
     case 'running':
-      return 'Running';
+      return '生成中';
     case 'completed':
-      return 'Completed';
+      return '已完成';
     case 'failed':
-      return 'Failed';
+      return '失败';
     case 'cancelled':
-      return 'Cancelled';
+      return '已取消';
     default:
-      return 'Unknown';
+      return '未知';
   }
 }
 

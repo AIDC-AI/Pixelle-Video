@@ -1,5 +1,4 @@
 import type { components } from '@/types/api';
-import { getCurrentLocale, isZhLocale } from '@/lib/locale';
 
 type WorkflowInfo = components['schemas']['WorkflowInfo'];
 type BGMInfo = components['schemas']['BGMInfo'];
@@ -141,50 +140,40 @@ function pipelineLabelZh(pipeline: string | null | undefined): string {
   }
 }
 
-function sourceLabel(source: string | null | undefined, locale = getCurrentLocale()): string {
-  const zh = isZhLocale(locale);
+function sourceLabel(source: string | null | undefined): string {
   if (source === 'runninghub') {
     return 'RunningHub';
   }
   if (source === 'selfhost') {
-    return zh ? '本地' : 'Self-host';
+    return '本地';
   }
   if (source === 'builtin' || source === 'default') {
-    return zh ? '内建资源' : 'Built-in';
+    return '内建资源';
   }
   if (source === 'history' || source === 'custom') {
-    return zh ? '我的资源' : 'My Library';
+    return '我的资源';
   }
-  return source || (zh ? '未知来源' : 'Unknown source');
+  return source || '未知来源';
 }
 
-export function getWorkflowDisplayName(workflow: WorkflowInfo, locale = getCurrentLocale()): string {
-  if (isZhLocale(locale)) {
-    return workflow.display_name_zh || workflow.display_name || workflow.name;
-  }
-  return workflow.display_name || workflow.technical_name || workflow.name;
+export function getWorkflowDisplayName(workflow: WorkflowInfo): string {
+  return workflow.display_name_zh || workflow.display_name || workflow.name;
 }
 
-export function getWorkflowSourceLabel(workflow: WorkflowInfo, locale = getCurrentLocale()): string {
-  return sourceLabel(workflow.source, locale);
+export function getWorkflowSourceLabel(workflow: WorkflowInfo): string {
+  return sourceLabel(workflow.source);
 }
 
-export function getWorkflowDescription(workflow: WorkflowInfo, locale = getCurrentLocale()): string | null {
-  if (isZhLocale(locale)) {
-    return workflow.description_zh || `${getWorkflowCategoryLabel(workflow, locale)} · ${getWorkflowSourceLabel(workflow, locale)}`;
-  }
-  return workflow.display_name || workflow.technical_name || null;
+export function getWorkflowDescription(workflow: WorkflowInfo): string | null {
+  return workflow.description_zh || `${getWorkflowCategoryLabel(workflow)} · ${getWorkflowSourceLabel(workflow)}`;
 }
 
-export function getWorkflowCategoryLabel(workflow: WorkflowInfo, locale = getCurrentLocale()): string {
-  if (isZhLocale(locale)) {
-    return workflow.display_category_zh || workflow.display_category || '生成方案';
-  }
-  return workflow.display_category || 'Workflow';
+export function getWorkflowCategoryLabel(workflow: WorkflowInfo): string {
+  return workflow.display_category_zh || workflow.display_category || '生成方案';
 }
 
-export function getWorkflowOptionLabel(workflow: WorkflowInfo, locale = getCurrentLocale()): string {
-  return `${getWorkflowDisplayName(workflow, locale)} · ${getWorkflowSourceLabel(workflow, locale)}`;
+export function getWorkflowOptionLabel(workflow: WorkflowInfo): string {
+  return `${getWorkflowDisplayName(workflow)} · ${getWorkflowSourceLabel(workflow)}`;
 }
 
 export function getWorkflowTechnicalLabel(workflow: WorkflowInfo): string | null {
@@ -192,20 +181,15 @@ export function getWorkflowTechnicalLabel(workflow: WorkflowInfo): string | null
 }
 
 export function getWorkflowReferenceDisplayName(
-  reference: string | null | undefined,
-  locale = getCurrentLocale()
+  reference: string | null | undefined
 ): string {
   if (!reference) {
-    return isZhLocale(locale) ? '未命名方案' : 'Unknown plan';
+    return '未命名方案';
   }
 
   const leafName = getLeafName(reference);
   if (!leafName) {
     return reference;
-  }
-
-  if (!isZhLocale(locale)) {
-    return leafName;
   }
 
   const exactMatch = WORKFLOW_REFERENCE_LABELS_ZH[leafName.toLowerCase()];
@@ -227,14 +211,10 @@ export function getWorkflowReferenceDisplayName(
 }
 
 export function getWorkflowReferenceDescription(
-  reference: string | null | undefined,
-  locale = getCurrentLocale()
+  reference: string | null | undefined
 ): string | null {
   if (!reference) {
     return null;
-  }
-  if (!isZhLocale(locale)) {
-    return getLeafName(reference) || reference;
   }
 
   const lowered = getLeafName(reference).toLowerCase();
@@ -256,53 +236,41 @@ export function getWorkflowReferenceDescription(
   return '用于像影 Pixelle 的生成流程。';
 }
 
-export function getWorkflowTagLabels(workflow: WorkflowInfo, locale = getCurrentLocale()): string[] {
+export function getWorkflowTagLabels(workflow: WorkflowInfo): string[] {
   const tags = workflow.display_tags?.filter(Boolean) ?? [];
   if (tags.length > 0) {
     return tags;
   }
 
-  return [getWorkflowCategoryLabel(workflow, locale), getWorkflowSourceLabel(workflow, locale)];
+  return [getWorkflowCategoryLabel(workflow), getWorkflowSourceLabel(workflow)];
 }
 
-export function getStyleDisplayName(style: StyleSummary, locale = getCurrentLocale()): string {
-  if (isZhLocale(locale)) {
-    return style.display_name_zh || style.name;
-  }
-  return style.name;
+export function getStyleDisplayName(style: StyleSummary): string {
+  return style.display_name_zh || style.name;
 }
 
-export function getStyleSummary(style: StyleSummary, locale = getCurrentLocale()): string | null {
-  if (isZhLocale(locale)) {
-    return style.short_description_zh || style.description || null;
-  }
-  return style.description || [style.scene, style.tone].filter(Boolean).join(' · ') || null;
+export function getStyleSummary(style: StyleSummary): string | null {
+  return style.short_description_zh || style.description || null;
 }
 
-export function getStyleOptionLabel(style: StyleSummary, locale = getCurrentLocale()): string {
-  const summary = getStyleSummary(style, locale);
-  return summary ? `${getStyleDisplayName(style, locale)} · ${summary}` : getStyleDisplayName(style, locale);
+export function getStyleOptionLabel(style: StyleSummary): string {
+  const summary = getStyleSummary(style);
+  return summary ? `${getStyleDisplayName(style)} · ${summary}` : getStyleDisplayName(style);
 }
 
 type BgmLike = BGMInfo | LibraryBGMItem;
 
-export function getBgmDisplayName(bgm: BgmLike, locale = getCurrentLocale()): string {
-  if (isZhLocale(locale)) {
-    return bgm.display_name_zh || bgm.linked_style_display_name_zh || bgm.linked_style_name || bgm.name;
-  }
-  return bgm.name;
+export function getBgmDisplayName(bgm: BgmLike): string {
+  return bgm.display_name_zh || bgm.linked_style_display_name_zh || bgm.linked_style_name || bgm.name;
 }
 
-export function getBgmDescription(bgm: BgmLike, locale = getCurrentLocale()): string | null {
-  if (isZhLocale(locale)) {
-    return bgm.description_zh || bgm.technical_name || bgm.name;
-  }
-  return bgm.technical_name || bgm.name;
+export function getBgmDescription(bgm: BgmLike): string | null {
+  return bgm.description_zh || bgm.technical_name || bgm.name;
 }
 
-export function getBgmOptionLabel(bgm: BgmLike, locale = getCurrentLocale()): string {
-  const source = bgm.source_label || sourceLabel(bgm.source, locale);
-  return `${getBgmDisplayName(bgm, locale)} · ${source}`;
+export function getBgmOptionLabel(bgm: BgmLike): string {
+  const source = bgm.source_label || sourceLabel(bgm.source);
+  return `${getBgmDisplayName(bgm)} · ${source}`;
 }
 
 export function getBgmTechnicalName(bgm: BgmLike): string | null {
@@ -310,19 +278,8 @@ export function getBgmTechnicalName(bgm: BgmLike): string | null {
 }
 
 export function getBgmModeLabel(
-  mode: 'default' | 'custom' | 'none' | null | undefined,
-  locale = getCurrentLocale()
+  mode: 'default' | 'custom' | 'none' | null | undefined
 ): string {
-  if (!isZhLocale(locale)) {
-    if (mode === 'default') {
-      return 'Use the style default track';
-    }
-    if (mode === 'custom') {
-      return 'Pick from the library';
-    }
-    return 'No background music';
-  }
-
   if (mode === 'default') {
     return '使用风格默认曲目';
   }
@@ -332,46 +289,32 @@ export function getBgmModeLabel(
   return '不使用背景音乐';
 }
 
-export function getScriptTypeLabel(script: ScriptItem, locale = getCurrentLocale()): string {
-  if (isZhLocale(locale)) {
-    return script.type_label_zh || script.script_type;
-  }
-  return script.script_type;
+export function getScriptTypeLabel(script: ScriptItem): string {
+  return script.type_label_zh || script.script_type;
 }
 
-export function getScriptSummaryLabel(script: ScriptItem, locale = getCurrentLocale()): string {
-  if (isZhLocale(locale)) {
-    return script.summary_zh || script.type_label_zh || '内容草稿';
-  }
-  return script.script_type;
+export function getScriptSummaryLabel(script: ScriptItem): string {
+  return script.summary_zh || script.type_label_zh || '内容草稿';
 }
 
-export function getScriptPipelineLabel(script: ScriptItem, fallback: string, locale = getCurrentLocale()): string {
-  if (isZhLocale(locale)) {
-    return script.pipeline_label_zh || fallback;
-  }
-  return fallback;
+export function getScriptPipelineLabel(script: ScriptItem, fallback: string): string {
+  return script.pipeline_label_zh || fallback;
 }
 
-export function getScriptPromptLabel(promptUsed: string | null | undefined, locale = getCurrentLocale()): string | null {
+export function getScriptPromptLabel(promptUsed: string | null | undefined): string | null {
   if (!promptUsed) {
     return null;
   }
-  return isZhLocale(locale) ? `关联提示：${promptUsed}` : `Prompt: ${promptUsed}`;
+  return `关联提示：${promptUsed}`;
 }
 
-export function getBgmSourceLabel(bgm: BgmLike, locale = getCurrentLocale()): string {
-  return bgm.source_label || sourceLabel(bgm.source, locale);
+export function getBgmSourceLabel(bgm: BgmLike): string {
+  return bgm.source_label || sourceLabel(bgm.source);
 }
 
 export function getPresetDisplayName(
-  preset: Pick<PresetItem, 'name' | 'pipeline'>,
-  locale = getCurrentLocale()
+  preset: Pick<PresetItem, 'name' | 'pipeline'>
 ): string {
-  if (!isZhLocale(locale)) {
-    return preset.name;
-  }
-
   const original = preset.name.trim();
   if (!original) {
     return `${pipelineLabelZh(preset.pipeline)}预设`;
@@ -400,13 +343,8 @@ export function getPresetDisplayName(
 }
 
 export function getPresetDescription(
-  preset: Pick<PresetItem, 'description' | 'pipeline'>,
-  locale = getCurrentLocale()
+  preset: Pick<PresetItem, 'description' | 'pipeline'>
 ): string | null {
-  if (!isZhLocale(locale)) {
-    return preset.description ?? null;
-  }
-
   if (preset.description && /[\u4e00-\u9fff]/.test(preset.description)) {
     return preset.description;
   }
@@ -415,14 +353,10 @@ export function getPresetDescription(
 }
 
 export function getStyleReferenceDisplayName(
-  styleId: string | null | undefined,
-  locale = getCurrentLocale()
+  styleId: string | null | undefined
 ): string {
   if (!styleId || styleId === '__none__') {
-    return isZhLocale(locale) ? '未使用风格方案' : 'No style plan';
-  }
-  if (!isZhLocale(locale)) {
-    return styleId;
+    return '未使用风格方案';
   }
 
   const numericId = /^style-(.+)$/i.exec(styleId)?.[1];

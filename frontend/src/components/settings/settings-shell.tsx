@@ -16,12 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BrandMark } from '@/components/shell/brand-mark';
 import { useHealthStatus, useSettings, useUpdateSettings } from '@/lib/hooks/use-settings';
-import {
-  readLanguagePreference,
-  readSidebarCollapsedPreference,
-  writeLanguagePreference,
-  writeSidebarCollapsedPreference,
-} from '@/lib/preferences';
+import { readSidebarCollapsedPreference, writeSidebarCollapsedPreference } from '@/lib/preferences';
 import { useAppTranslations } from '@/lib/i18n';
 import type { components } from '@/types/api';
 
@@ -31,7 +26,6 @@ type AppearanceTheme = 'dark' | 'light' | 'system';
 type SettingsTabKey = 'keys' | 'appearance' | 'storage' | 'about';
 
 interface AppearanceDraft {
-  language: 'zh-CN' | 'en-US';
   sidebarCollapsed: boolean;
   theme: AppearanceTheme;
 }
@@ -70,7 +64,7 @@ const SETTINGS_TABS: Array<{
   {
     value: 'appearance',
     label: 'Appearance',
-    description: 'Theme, language, and sidebar behavior.',
+    description: 'Theme and sidebar behavior.',
     icon: Palette,
   },
   {
@@ -242,7 +236,6 @@ export function SettingsShell() {
   const baseAppearance = useMemo<AppearanceDraft>(
     () => ({
       theme: normalizeAppearanceTheme(theme),
-      language: readLanguagePreference(),
       sidebarCollapsed: readSidebarCollapsedPreference(),
     }),
     [theme]
@@ -281,7 +274,6 @@ export function SettingsShell() {
 
       if (appearanceDirty) {
         setTheme(currentAppearanceDraft.theme);
-        writeLanguagePreference(currentAppearanceDraft.language);
         writeSidebarCollapsedPreference(currentAppearanceDraft.sidebarCollapsed);
         setAppearanceDraft(null);
       }
@@ -569,26 +561,6 @@ export function SettingsShell() {
                       </Button>
                     ))}
                   </div>
-                </SettingsField>
-
-                <SettingsField label="Language" description="UI-only until next-intl wiring is completed.">
-                  <Select
-                    value={currentAppearanceDraft.language}
-                    onValueChange={(value) =>
-                      setAppearanceDraft((current) => ({
-                        ...(current ?? currentAppearanceDraft),
-                        language: value === 'en-US' ? 'en-US' : 'zh-CN',
-                      }))
-                    }
-                  >
-                    <SelectTrigger aria-label="Language preference">
-                      <SelectValue placeholder="Choose a language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="zh-CN">zh-CN</SelectItem>
-                      <SelectItem value="en-US">en-US</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </SettingsField>
 
                 <SettingsField label="Sidebar Collapse Preference">
