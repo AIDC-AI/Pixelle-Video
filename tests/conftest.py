@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import sys
 import types
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Generator, cast
+from typing import Any, AsyncIterator, Generator, Optional, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -122,6 +123,14 @@ class DummyCore:
 
     async def _get_or_create_comfykit(self) -> Any:
         raise RuntimeError("ComfyKit should not be used in tests when COMFY_MOCK=1")
+
+    @asynccontextmanager
+    async def _comfykit_session(
+        self,
+        *,
+        runninghub_instance_type: Optional[str] = None,
+    ) -> AsyncIterator[Any]:
+        yield await self._get_or_create_comfykit()
 
 
 @pytest.fixture(autouse=True)
