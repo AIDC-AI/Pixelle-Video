@@ -33,56 +33,58 @@ import {
 } from 'lucide-react';
 import { readSidebarCollapsedPreference, SIDEBAR_PREFERENCE_EVENT, writeSidebarCollapsedPreference } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
+import { useAppTranslations } from '@/lib/i18n';
+import { ProjectSwitcher } from '@/components/shell/project-switcher';
 
 const MENU_GROUPS = [
   {
-    label: 'Create',
+    groupKey: 'create',
     items: [
-      { href: '/create', icon: Sparkles, label: 'Overview' },
-      { href: '/create/quick', icon: Zap, label: 'Quick' },
-      { href: '/create/digital-human', icon: User, label: 'Digital Human' },
-      { href: '/create/i2v', icon: ImageIcon, label: 'Image → Video' },
-      { href: '/create/action-transfer', icon: Activity, label: 'Action Transfer' },
-      { href: '/create/custom', icon: PenTool, label: 'Custom Asset' },
+      { href: '/create', icon: Sparkles, itemKey: 'createOverview' },
+      { href: '/create/quick', icon: Zap, itemKey: 'quick' },
+      { href: '/create/digital-human', icon: User, itemKey: 'digitalHuman' },
+      { href: '/create/i2v', icon: ImageIcon, itemKey: 'i2v' },
+      { href: '/create/action-transfer', icon: Activity, itemKey: 'actionTransfer' },
+      { href: '/create/custom', icon: PenTool, itemKey: 'customAsset' },
     ],
   },
   {
-    label: 'Batch',
+    groupKey: 'batch',
     items: [
-      { href: '/batch', icon: LayoutDashboard, label: 'Batches' },
-      { href: '/batch/list', icon: ListOrdered, label: 'All Batches' },
-      { href: '/batch/new', icon: PlusCircle, label: 'New Batch' },
-      { href: '/batch/queue', icon: List, label: 'Task Queue' },
+      { href: '/batch', icon: LayoutDashboard, itemKey: 'batches' },
+      { href: '/batch/list', icon: ListOrdered, itemKey: 'allBatches' },
+      { href: '/batch/new', icon: PlusCircle, itemKey: 'newBatch' },
+      { href: '/batch/queue', icon: List, itemKey: 'taskQueue' },
     ],
   },
   {
-    label: 'Library',
+    groupKey: 'library',
     items: [
-      { href: '/library/videos', icon: Library, label: 'Videos' },
-      { href: '/library/images', icon: ImageIcon, label: 'Images' },
-      { href: '/library/voices', icon: Mic, label: 'Voices' },
-      { href: '/library/bgm', icon: Music, label: 'BGM' },
-      { href: '/library/scripts', icon: FileText, label: 'Scripts' },
+      { href: '/library/videos', icon: Library, itemKey: 'videos' },
+      { href: '/library/images', icon: ImageIcon, itemKey: 'images' },
+      { href: '/library/voices', icon: Mic, itemKey: 'voices' },
+      { href: '/library/bgm', icon: Music, itemKey: 'bgm' },
+      { href: '/library/scripts', icon: FileText, itemKey: 'scripts' },
     ],
   },
   {
-    label: 'Advanced',
+    groupKey: 'advanced',
     items: [
-      { href: '/workflows', icon: Settings2, label: 'Workflows' },
-      { href: '/workflows/self-host', icon: Server, label: 'Self-host' },
-      { href: '/workflows/runninghub', icon: Cloud, label: 'RunningHub' },
-      { href: '/templates', icon: LayoutTemplate, label: 'Templates' },
-      { href: '/presets', icon: Box, label: 'Model Presets' },
+      { href: '/workflows', icon: Settings2, itemKey: 'workflows' },
+      { href: '/workflows/self-host', icon: Server, itemKey: 'selfHost' },
+      { href: '/workflows/runninghub', icon: Cloud, itemKey: 'runningHub' },
+      { href: '/templates', icon: LayoutTemplate, itemKey: 'templates' },
+      { href: '/presets', icon: Box, itemKey: 'modelPresets' },
     ],
   },
   {
-    label: 'System',
+    groupKey: 'system',
     items: [
-      { href: '/settings', icon: Settings, label: 'Overview' },
-      { href: '/settings/keys', icon: Key, label: 'API Keys' },
-      { href: '/settings/appearance', icon: Palette, label: 'Appearance' },
-      { href: '/settings/storage', icon: HardDrive, label: 'Storage' },
-      { href: '/settings/about', icon: Info, label: 'About' },
+      { href: '/settings', icon: Settings, itemKey: 'settingsOverview' },
+      { href: '/settings/keys', icon: Key, itemKey: 'apiKeys' },
+      { href: '/settings/appearance', icon: Palette, itemKey: 'appearance' },
+      { href: '/settings/storage', icon: HardDrive, itemKey: 'storage' },
+      { href: '/settings/about', icon: Info, itemKey: 'about' },
     ],
   },
 ];
@@ -90,6 +92,7 @@ const MENU_GROUPS = [
 export function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const t = useAppTranslations('shell');
 
   useEffect(() => {
     const syncPreference = () => {
@@ -115,19 +118,20 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "flex flex-col border-r bg-card transition-all duration-150 ease-out",
+        "flex flex-col border-r bg-card/50 backdrop-blur-sm transition-all duration-150 ease-out",
         isCollapsed ? "w-16" : "w-[260px]"
       )}
     >
-      <div className="flex flex-col flex-1 py-4 overflow-y-auto overflow-x-hidden">
+      <div className="flex flex-col flex-1 py-6 overflow-y-auto overflow-x-hidden">
+        <ProjectSwitcher isCollapsed={isCollapsed} />
         {MENU_GROUPS.map((group, i) => (
-          <div key={i} className="mb-6 px-3">
+          <div key={i} className="mb-8 px-4">
             {!isCollapsed && (
-              <h4 className="px-3 mb-2 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
-                {group.label}
+              <h4 className="px-2 mb-3 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+                {t(`sidebar.groups.${group.groupKey}` as Parameters<typeof t>[0])}
               </h4>
             )}
-            <nav className="flex flex-col gap-1">
+            <nav className="flex flex-col gap-2">
               {group.items.map((item) => {
                 const isActive = item.href === activeHref;
                 return (
@@ -135,16 +139,16 @@ export function Sidebar() {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                      "flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors",
                       isActive
-                        ? "bg-accent text-accent-foreground font-medium"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                       isCollapsed && "justify-center"
                     )}
-                    title={isCollapsed ? item.label : undefined}
+                    title={isCollapsed ? t(`sidebar.items.${item.itemKey}` as Parameters<typeof t>[0]) : undefined}
                   >
                     <item.icon className="w-4 h-4 shrink-0" />
-                    {!isCollapsed && <span>{item.label}</span>}
+                    {!isCollapsed && <span>{t(`sidebar.items.${item.itemKey}` as Parameters<typeof t>[0])}</span>}
                   </Link>
                 );
               })}
@@ -152,11 +156,11 @@ export function Sidebar() {
           </div>
         ))}
       </div>
-      <div className="p-3 border-t">
+      <div className="p-4 border-t">
         <button
           onClick={toggleCollapse}
-          className="flex w-full items-center justify-center p-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="flex w-full items-center justify-center p-2 rounded-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+          title={isCollapsed ? t('sidebar.actions.expand') : t('sidebar.actions.collapse')}
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>

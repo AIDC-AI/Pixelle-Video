@@ -1,63 +1,108 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { Sidebar } from './sidebar';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+
+import { Sidebar } from './sidebar';
+import { AppIntlProvider } from '@/lib/i18n';
+import { buildProject } from '@/tests/msw/handlers';
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
-interface MockLinkProps {
-  children: ReactNode;
-  href: string;
-  className?: string;
-  title?: string;
-}
-
 vi.mock('next/link', () => ({
-  default: ({ children, href, className, title }: MockLinkProps) => (
-    <a href={href} className={className} title={title}>{children}</a>
+  default: ({ children, href, className, title }: { children: ReactNode; href: string; className?: string; title?: string }) => (
+    <a href={href} className={className} title={title}>
+      {children}
+    </a>
   ),
 }));
 
+const mockCurrentProjectState = {
+  currentProjectId: 'project-1',
+  currentProject: buildProject('project-1', 'Launch Campaign', { pipeline_hint: 'quick' }),
+  isHydrated: true,
+};
+
+const mockProjects = [
+  buildProject('project-1', 'Launch Campaign', {
+    pipeline_hint: 'quick',
+    updated_at: '2026-04-22T12:00:00Z',
+    preview_url: 'http://localhost:8000/api/files/output/project-1/thumb.jpg',
+    preview_kind: 'image',
+  }),
+  buildProject('project-2', 'Motion Lab', {
+    pipeline_hint: 'action-transfer',
+    updated_at: '2026-04-21T12:00:00Z',
+  }),
+];
+
+vi.mock('@/lib/hooks/use-current-project', () => ({
+  useCurrentProjectHydration: () => mockCurrentProjectState,
+}));
+
+vi.mock('@/lib/hooks/use-projects', () => ({
+  useProjects: () => ({
+    data: {
+      items: mockProjects,
+    },
+  }),
+  useCreateProject: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteProject: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateProject: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+function renderSidebar() {
+  return render(
+    <AppIntlProvider>
+      <Sidebar />
+    </AppIntlProvider>
+  );
+}
+
 describe('Sidebar', () => {
-  it('renders 5 groups', () => {
+  beforeEach(() => {
+    localStorage.setItem('skyframe-language-preference', 'zh-CN');
+    localStorage.setItem('sidebar-collapsed', 'false');
+    localStorage.removeItem('sidebar-expanded-group');
     vi.mocked(usePathname).mockReturnValue('/');
-    render(<Sidebar />);
-    expect(screen.getByText('Quick')).toBeInTheDocument();
-    expect(screen.getByText('All Batches')).toBeInTheDocument();
-    expect(screen.getByText('Videos')).toBeInTheDocument();
-    expect(screen.getByText('Workflows')).toBeInTheDocument();
-    expect(screen.getByText('API Keys')).toBeInTheDocument();
   });
 
-  it('highlights active link exactly', () => {
-    vi.mocked(usePathname).mockReturnValue('/create/quick');
-    render(<Sidebar />);
-    const activeLink = screen.getByText('Quick').closest('a');
-    expect(activeLink?.className).toContain('bg-accent');
+  it('renders the projects group first and expands it by default', () => {
+    renderSidebar();
+
+    expect(screen.getByRole('button', { name: '收起项目分组' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '展开创作分组' })).toBeInTheDocument();
+    expect(screen.getByText('全部项目')).toBeInTheDocument();
+    expect(screen.getByText('最近项目')).toBeInTheDocument();
+    expect(screen.getAllByText('Launch Campaign').length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/projects?create=1');
   });
 
-  it('highlights active link by longest prefix (batch)', () => {
-    vi.mocked(usePathname).mockReturnValue('/batch/abc123');
-    render(<Sidebar />);
-    const activeLink = screen.getByText('Batches').closest('a');
-    expect(activeLink?.className).toContain('bg-accent');
+  it('highlights the projects overview route when browsing project center', () => {
+    vi.mocked(usePathname).mockReturnValue('/projects');
+    renderSidebar();
+
+    const activeLink = screen.getByText('全部项目').closest('a');
+    expect(activeLink?.className).toContain('bg-primary/10');
   });
 
-  it('highlights active link by longest prefix (library)', () => {
-    vi.mocked(usePathname).mockReturnValue('/library/videos/xyz');
-    render(<Sidebar />);
-    const activeLink = screen.getByText('Videos').closest('a');
-    expect(activeLink?.className).toContain('bg-accent');
+  it('keeps stored groups open and shows recent projects plus continue create', () => {
+    localStorage.setItem('sidebar-expanded-group', JSON.stringify(['projects', 'library']));
+    renderSidebar();
+
+    expect(screen.getByRole('button', { name: '收起项目分组' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '收起资源库分组' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '继续创作' })).toHaveAttribute('href', '/create/quick');
   });
 
-  it('can collapse', () => {
-    vi.mocked(usePathname).mockReturnValue('/');
-    render(<Sidebar />);
-    const collapseBtn = screen.getByTitle('Collapse sidebar');
-    fireEvent.click(collapseBtn);
-    expect(screen.queryByText('Create')).not.toBeInTheDocument();
+  it('can collapse the entire sidebar', () => {
+    renderSidebar();
+
+    fireEvent.click(screen.getByRole('button', { name: '收起侧边栏' }));
+
+    expect(screen.queryByText('项目')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '展开侧边栏' })).toBeInTheDocument();
   });
 });

@@ -23,7 +23,8 @@ vi.mock('@/lib/hooks/use-projects', () => ({
 describe('ProjectSwitcher', () => {
   it('renders select project text when no project is selected', () => {
     render(<ProjectSwitcher isCollapsed={false} />);
-    expect(screen.getByText('shell.projectSwitcher.selectProject')).toBeInTheDocument();
+    expect(screen.getByTestId('project-switcher-trigger')).toBeInTheDocument();
+    expect(screen.getByTestId('project-switcher')).toHaveTextContent('选择项目');
   });
 
   it('renders trigger button when collapsed', () => {
@@ -33,6 +34,6 @@ describe('ProjectSwitcher', () => {
 
   it('does not show project name text when collapsed', () => {
     render(<ProjectSwitcher isCollapsed={true} />);
-    expect(screen.queryByText('shell.projectSwitcher.selectProject')).not.toBeInTheDocument();
+    expect(screen.queryByText('选择项目')).not.toBeInTheDocument();
   });
 });

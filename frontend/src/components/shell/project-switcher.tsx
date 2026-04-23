@@ -192,11 +192,14 @@ export function ProjectSwitcher({ isCollapsed }: ProjectSwitcherProps) {
               <Plus className="h-3 w-3" />
               {t('projectSwitcher.newProject' as Parameters<typeof t>[0])}
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 gap-2 text-xs" asChild>
-              <Link href="/projects" onClick={() => setIsOpen(false)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-2 text-xs"
+              render={<Link href="/projects" onClick={() => setIsOpen(false)} />}
+            >
                 <Settings2 className="h-3 w-3" />
-                {t('projectSwitcher.manageAll' as Parameters<typeof t>[0])}
-              </Link>
+              {t('projectSwitcher.manageAll' as Parameters<typeof t>[0])}
             </Button>
           </div>
         </div>
