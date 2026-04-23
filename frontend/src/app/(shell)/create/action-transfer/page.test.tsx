@@ -20,6 +20,11 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => mockSearchParams,
 }));
 
+async function selectPoseWorkflow(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('combobox', { name: '舞蹈复刻方案' }));
+  await user.click(await screen.findByRole('option', { name: '舞蹈复刻方案' }));
+}
+
 describe('ActionTransferPage', () => {
   beforeEach(async () => {
     resetMockApiState();
@@ -37,8 +42,7 @@ describe('ActionTransferPage', () => {
     renderWithQueryClient(<ActionTransferPage />);
 
     await screen.findByRole('heading', { name: '舞蹈复刻' });
-    await user.click(screen.getByRole('combobox', { name: '舞蹈复刻方案' }));
-    await user.click(await screen.findByText('舞蹈复刻方案'));
+    await selectPoseWorkflow(user);
     await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     expect(await screen.findByText('生成结果')).toBeInTheDocument();
@@ -52,8 +56,7 @@ describe('ActionTransferPage', () => {
     renderWithQueryClient(<ActionTransferPage />);
 
     await screen.findByRole('heading', { name: '舞蹈复刻' });
-    await user.click(screen.getByRole('combobox', { name: '舞蹈复刻方案' }));
-    await user.click(await screen.findByText('舞蹈复刻方案'));
+    await selectPoseWorkflow(user);
     await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     await waitFor(() => {
@@ -88,8 +91,7 @@ describe('ActionTransferPage', () => {
     renderWithQueryClient(<ActionTransferPage />);
 
     await screen.findByRole('heading', { name: '舞蹈复刻' });
-    await user.click(screen.getByRole('combobox', { name: '舞蹈复刻方案' }));
-    await user.click(await screen.findByText('舞蹈复刻方案'));
+    await selectPoseWorkflow(user);
     await user.click(screen.getByRole('button', { name: '生成视频' }));
 
     expect(await screen.findByText('排队中')).toBeInTheDocument();
