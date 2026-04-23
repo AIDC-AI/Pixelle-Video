@@ -1,42 +1,65 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Sparkles,
-  User,
-  Image as ImageIcon,
   Activity,
-  PenTool,
-  ListOrdered,
-  List,
-  Library,
-  Mic,
-  Music,
-  FileText,
-  Settings2,
-  LayoutTemplate,
+  BarChart3,
   Box,
-  Key,
-  Palette,
-  HardDrive,
-  Info,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Zap,
+  Cloud,
+  FileText,
+  FolderKanban,
+  HardDrive,
+  Image as ImageIcon,
+  Info,
+  Key,
   LayoutDashboard,
+  LayoutTemplate,
+  Library,
+  List,
+  ListOrdered,
+  Mic,
+  Music,
+  Palette,
+  PenTool,
   PlusCircle,
   Server,
-  Cloud,
-  Settings
+  Settings,
+  Settings2,
+  Sparkles,
+  User,
+  Zap,
 } from 'lucide-react';
-import { readSidebarCollapsedPreference, SIDEBAR_PREFERENCE_EVENT, writeSidebarCollapsedPreference } from '@/lib/preferences';
-import { cn } from '@/lib/utils';
-import { useAppTranslations } from '@/lib/i18n';
-import { ProjectSwitcher } from '@/components/shell/project-switcher';
 
-const MENU_GROUPS = [
+import { useCurrentProjectHydration } from '@/lib/hooks/use-current-project';
+import { useProjects } from '@/lib/hooks/use-projects';
+import { useAppTranslations } from '@/lib/i18n';
+import {
+  readSidebarCollapsedPreference,
+  readSidebarExpandedGroupPreference,
+  SIDEBAR_PREFERENCE_EVENT,
+  type SidebarExpandedGroupPreference,
+  writeSidebarCollapsedPreference,
+  writeSidebarExpandedGroupPreference,
+} from '@/lib/preferences';
+import { cn } from '@/lib/utils';
+
+export type NavItem = {
+  href: string;
+  icon: typeof Sparkles;
+  itemKey: string;
+};
+
+export type NavGroup = {
+  groupKey: Exclude<SidebarExpandedGroupPreference, 'projects'>;
+  items: NavItem[];
+};
+
+export const NAV_GROUPS: NavGroup[] = [
   {
     groupKey: 'create',
     items: [
@@ -83,86 +106,263 @@ const MENU_GROUPS = [
       { href: '/settings', icon: Settings, itemKey: 'settingsOverview' },
       { href: '/settings/keys', icon: Key, itemKey: 'apiKeys' },
       { href: '/settings/appearance', icon: Palette, itemKey: 'appearance' },
+      { href: '/settings/usage', icon: BarChart3, itemKey: 'usage' },
       { href: '/settings/storage', icon: HardDrive, itemKey: 'storage' },
       { href: '/settings/about', icon: Info, itemKey: 'about' },
     ],
   },
 ];
 
+const DEFAULT_EXPANDED_GROUPS: SidebarExpandedGroupPreference[] = ['projects'];
+
+function isLinkActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function getCreateHref(pipelineHint?: string | null): string {
+  switch (pipelineHint) {
+    case 'quick':
+      return '/create/quick';
+    case 'digital-human':
+      return '/create/digital-human';
+    case 'i2v':
+      return '/create/i2v';
+    case 'action-transfer':
+      return '/create/action-transfer';
+    case 'custom':
+      return '/create/custom';
+    default:
+      return '/create';
+  }
+}
+
+function SidebarItem({
+  active,
+  collapsed,
+  href,
+  icon: Icon,
+  label,
+}: {
+  active: boolean;
+  collapsed: boolean;
+  href: string;
+  icon: typeof Sparkles;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      title={collapsed ? label : undefined}
+      className={cn(
+        'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+        active
+          ? 'bg-primary/10 font-medium text-primary'
+          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+        collapsed ? 'justify-center px-2' : undefined
+      )}
+    >
+      <Icon className="size-4 shrink-0" />
+      <span className={collapsed ? 'sr-only' : undefined}>{label}</span>
+    </Link>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const t = useAppTranslations('shell');
+  const { currentProject, currentProjectId } = useCurrentProjectHydration();
+  const { data: projectsData } = useProjects();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<SidebarExpandedGroupPreference[]>(DEFAULT_EXPANDED_GROUPS);
 
   useEffect(() => {
     const syncPreference = () => {
       setIsCollapsed(readSidebarCollapsedPreference());
+      const storedGroups = readSidebarExpandedGroupPreference();
+      setExpandedGroups(storedGroups.length > 0 ? storedGroups : DEFAULT_EXPANDED_GROUPS);
     };
 
     syncPreference();
     window.addEventListener(SIDEBAR_PREFERENCE_EVENT, syncPreference as EventListener);
-    return () => window.removeEventListener(SIDEBAR_PREFERENCE_EVENT, syncPreference as EventListener);
+
+    return () => {
+      window.removeEventListener(SIDEBAR_PREFERENCE_EVENT, syncPreference as EventListener);
+    };
   }, []);
 
+  const projects = useMemo(
+    () =>
+      [...(projectsData?.items ?? [])]
+        .sort((left, right) => (right.updated_at ?? '').localeCompare(left.updated_at ?? ''))
+        .slice(0, 3),
+    [projectsData?.items]
+  );
+
   const toggleCollapse = () => {
-    const nextState = !isCollapsed;
-    setIsCollapsed(nextState);
-    writeSidebarCollapsedPreference(nextState);
+    const nextValue = !isCollapsed;
+    setIsCollapsed(nextValue);
+    writeSidebarCollapsedPreference(nextValue);
   };
 
-  const allItems = MENU_GROUPS.flatMap(g => g.items);
-  const activeHref = allItems
-    .filter(item => pathname === item.href || pathname.startsWith(item.href + '/'))
-    .reduce((longest, current) => current.href.length > longest.href.length ? current : longest, { href: '' }).href;
+  const toggleGroup = (group: SidebarExpandedGroupPreference) => {
+    const nextGroups = expandedGroups.includes(group)
+      ? expandedGroups.filter((item) => item !== group)
+      : [...expandedGroups, group];
+    setExpandedGroups(nextGroups);
+    writeSidebarExpandedGroupPreference(nextGroups);
+  };
+
+  const isExpanded = (group: SidebarExpandedGroupPreference) => !isCollapsed && expandedGroups.includes(group);
+  const continueHref = getCreateHref(currentProject?.pipeline_hint);
 
   return (
     <aside
       className={cn(
-        "flex flex-col border-r bg-card/50 backdrop-blur-sm transition-all duration-150 ease-out",
-        isCollapsed ? "w-16" : "w-[260px]"
+        'flex h-full flex-col border-r border-border/70 bg-card/50 backdrop-blur-sm transition-[width] duration-[var(--duration-fast)] ease-[var(--ease-out)]',
+        isCollapsed ? 'w-16' : 'w-[280px]'
       )}
     >
-      <div className="flex flex-col flex-1 py-6 overflow-y-auto overflow-x-hidden">
-        <ProjectSwitcher isCollapsed={isCollapsed} />
-        {MENU_GROUPS.map((group, i) => (
-          <div key={i} className="mb-8 px-4">
-            {!isCollapsed && (
-              <h4 className="px-2 mb-3 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-                {t(`sidebar.groups.${group.groupKey}` as Parameters<typeof t>[0])}
-              </h4>
+      <div className="flex-1 overflow-y-auto px-3 py-4">
+        <div>
+          <div>
+            {!isCollapsed ? (
+              <button
+                type="button"
+                aria-expanded={isExpanded('projects')}
+                aria-label={t(
+                  isExpanded('projects') ? 'sidebar.actions.collapseGroup' : 'sidebar.actions.expandGroup',
+                  { group: t('sidebar.groups.projects') }
+                )}
+                className="flex w-full items-center justify-between gap-2 px-1 text-left"
+                onClick={() => toggleGroup('projects')}
+              >
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    {t('sidebar.groups.projects')}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {currentProject?.name ?? t('projectSwitcher.selectProject')}
+                  </p>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    'size-4 text-muted-foreground transition-transform',
+                    isExpanded('projects') ? 'rotate-0' : '-rotate-90'
+                  )}
+                />
+              </button>
+            ) : (
+              <div className="flex justify-center">
+                <FolderKanban className="size-5 text-muted-foreground" />
+              </div>
             )}
-            <nav className="flex flex-col gap-2">
-              {group.items.map((item) => {
-                const isActive = item.href === activeHref;
-                return (
+
+            {isExpanded('projects') ? (
+              <div className="mt-3 space-y-3">
+                <SidebarItem
+                  active={isLinkActive(pathname, '/projects')}
+                  collapsed={false}
+                  href="/projects"
+                  icon={FolderKanban}
+                  label={t('sidebar.items.projectsOverview')}
+                />
+                <div className="space-y-2 px-1">
+                  <p className="text-xs font-medium text-muted-foreground">{t('sidebar.projects.recent')}</p>
+                  <div className="space-y-1">
+                    {projects.map((project) => (
+                      <Link
+                        key={project.id}
+                        href={`/projects/${project.id}`}
+                        className={cn(
+                          'block truncate rounded-md px-2 py-1.5 text-sm transition-colors',
+                          project.id === currentProjectId
+                            ? 'bg-accent text-accent-foreground'
+                            : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                        )}
+                      >
+                        {project.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-2 px-1">
                   <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors",
-                      isActive
-                        ? "bg-primary/10 text-primary font-medium"
-                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                      isCollapsed && "justify-center"
-                    )}
-                    title={isCollapsed ? t(`sidebar.items.${item.itemKey}` as Parameters<typeof t>[0]) : undefined}
+                    href="/projects?create=1"
+                    className="rounded-md border border-border/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
                   >
-                    <item.icon className="w-4 h-4 shrink-0" />
-                    {!isCollapsed && <span>{t(`sidebar.items.${item.itemKey}` as Parameters<typeof t>[0])}</span>}
+                    {t('sidebar.projects.new')}
                   </Link>
-                );
-              })}
-            </nav>
+                  <Link
+                    href={continueHref}
+                    className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                  >
+                    {t('sidebar.projects.continueCreate')}
+                  </Link>
+                </div>
+              </div>
+            ) : null}
           </div>
-        ))}
+
+          {NAV_GROUPS.map((group) => {
+            const expanded = isExpanded(group.groupKey);
+            const groupLabel = t(`sidebar.groups.${group.groupKey}` as Parameters<typeof t>[0]);
+
+            return (
+              <div key={group.groupKey} className="mt-6">
+                {!isCollapsed ? (
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    aria-label={t(
+                      expanded ? 'sidebar.actions.collapseGroup' : 'sidebar.actions.expandGroup',
+                      { group: groupLabel }
+                    )}
+                    className="flex w-full items-center justify-between gap-2 px-1 text-left"
+                    onClick={() => toggleGroup(group.groupKey)}
+                  >
+                    <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      {groupLabel}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'size-4 text-muted-foreground transition-transform',
+                        expanded ? 'rotate-0' : '-rotate-90'
+                      )}
+                    />
+                  </button>
+                ) : (
+                  <p className="sr-only">{groupLabel}</p>
+                )}
+
+                {(expanded || isCollapsed) ? (
+                  <nav className={cn('mt-2 flex flex-col gap-1', isCollapsed ? 'mt-0' : undefined)}>
+                    {group.items.map((item) => (
+                      <SidebarItem
+                        key={item.href}
+                        active={isLinkActive(pathname, item.href)}
+                        collapsed={isCollapsed}
+                        href={item.href}
+                        icon={item.icon}
+                        label={t(`sidebar.items.${item.itemKey}` as Parameters<typeof t>[0])}
+                      />
+                    ))}
+                  </nav>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <div className="p-4 border-t">
+
+      <div className="border-t border-border/70 p-3">
         <button
+          type="button"
           onClick={toggleCollapse}
-          className="flex w-full items-center justify-center p-2 rounded-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-          title={isCollapsed ? t('sidebar.actions.expand') : t('sidebar.actions.collapse')}
+          aria-label={t(isCollapsed ? 'sidebar.actions.expand' : 'sidebar.actions.collapse')}
+          title={t(isCollapsed ? 'sidebar.actions.expand' : 'sidebar.actions.collapse')}
+          className="flex w-full items-center justify-center rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
         >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          {isCollapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
         </button>
       </div>
     </aside>

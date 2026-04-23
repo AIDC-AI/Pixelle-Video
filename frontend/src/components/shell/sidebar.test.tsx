@@ -70,7 +70,7 @@ describe('Sidebar', () => {
   });
 
   it('renders the projects group first and expands it by default', () => {
-    renderSidebar();
+    const { container } = renderSidebar();
 
     expect(screen.getByRole('button', { name: '收起项目分组' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '展开创作分组' })).toBeInTheDocument();
@@ -78,6 +78,20 @@ describe('Sidebar', () => {
     expect(screen.getByText('最近项目')).toBeInTheDocument();
     expect(screen.getAllByText('Launch Campaign').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/projects?create=1');
+    expect(container.querySelector('.rounded-2xl')).not.toBeInTheDocument();
+  });
+
+  it('separates groups with headings and spacing instead of card borders', () => {
+    const { container } = renderSidebar();
+
+    const createGroupButton = screen.getByRole('button', { name: '展开创作分组' });
+    const createGroup = createGroupButton.parentElement;
+
+    expect(createGroup?.className).toContain('mt-6');
+    expect(createGroup?.className).not.toContain('border');
+    expect(createGroup?.className).not.toContain('bg-background');
+    expect(createGroupButton).toHaveTextContent('创作');
+    expect(container.querySelector('[class*="backdrop-blur-sm"] [class*="rounded-2xl"]')).not.toBeInTheDocument();
   });
 
   it('highlights the projects overview route when browsing project center', () => {
