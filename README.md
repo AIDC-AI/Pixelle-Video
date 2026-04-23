@@ -434,3 +434,5 @@ Pixelle-Video 的设计受到以下优秀开源项目的启发：
 
 [![Star History Chart](https://api.star-history.com/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.com/#AIDC-AI/Pixelle-Video&Date)
 
+
+Test push flow Thu Apr 23 15:17:23 +07 2026
