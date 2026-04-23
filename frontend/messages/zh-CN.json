@@ -1,0 +1,1293 @@
+{
+  "common": {
+    "cancel": "取消",
+    "confirm": "确认",
+    "close": "关闭",
+    "save": "保存",
+    "delete": "删除",
+    "create": "创建",
+    "edit": "编辑",
+    "preview": "预览",
+    "loading": "加载中...",
+    "copyLink": "复制链接",
+    "download": "下载",
+    "regenerate": "重新生成",
+    "useInQuick": "用于 Quick",
+    "viewJson": "查看 JSON",
+    "copySucceeded": "链接已复制到剪贴板"
+  },
+  "brand": {
+    "name": "像影",
+    "productName": "像影 Pixelle",
+    "browserTitle": "像影 Pixelle · AI 视频创作平台",
+    "browserDescription": "AI 视频创作平台"
+  },
+  "shell": {
+    "sidebar": {
+      "groups": {
+        "projects": "项目",
+        "create": "创作",
+        "batch": "批处理",
+        "library": "资源库",
+        "advanced": "高级",
+        "system": "系统"
+      },
+      "items": {
+        "projectsOverview": "全部项目",
+        "createOverview": "概览",
+        "quick": "快速创作",
+        "digitalHuman": "数字人",
+        "i2v": "图片转视频",
+        "actionTransfer": "动作迁移",
+        "customAsset": "自定义资产",
+        "batches": "批处理总览",
+        "allBatches": "全部批处理",
+        "newBatch": "新建批处理",
+        "taskQueue": "任务队列",
+        "videos": "视频",
+        "images": "图片",
+        "voices": "语音",
+        "bgm": "背景音乐",
+        "styles": "风格",
+        "scripts": "脚本",
+        "workflows": "工作流库",
+        "selfHost": "本地",
+        "runningHub": "RunningHub",
+        "templates": "模板",
+        "modelPresets": "模型预设",
+        "settingsOverview": "概览",
+        "apiKeys": "API 密钥",
+        "appearance": "外观",
+        "usage": "用量",
+        "storage": "存储",
+        "about": "关于"
+      },
+      "actions": {
+        "expand": "展开侧边栏",
+        "collapse": "收起侧边栏",
+        "expandGroup": "展开{group}分组",
+        "collapseGroup": "收起{group}分组"
+      },
+      "projects": {
+        "recent": "最近项目",
+        "new": "新建项目",
+        "continueCreate": "继续创作"
+      }
+    },
+  "topbar": {
+    "project": {
+      "select": "选择项目",
+        "new": "新建项目",
+        "dialogTitle": "创建新项目",
+        "namePlaceholder": "项目名称",
+        "created": "项目创建成功",
+        "createFailed": "创建项目失败"
+      },
+      "actions": {
+        "cancel": "取消",
+        "create": "创建",
+        "search": "搜索或输入命令...",
+        "toggleTheme": "切换主题",
+        "notifications": "通知",
+      "userMenu": "用户菜单"
+    }
+  },
+  "commandPalette": {
+    "label": "命令菜单",
+    "placeholder": "搜索页面，输入 > 执行命令，@ 切换项目...",
+    "empty": "未找到结果。",
+    "groups": {
+      "recent": "最近使用",
+      "commands": "命令",
+      "projects": "项目"
+    },
+    "types": {
+      "page": "页面",
+      "command": "命令",
+      "project": "项目"
+    },
+    "commands": {
+      "themeLight": "切换到浅色主题",
+      "themeDark": "切换到深色主题",
+      "themeSystem": "使用系统主题",
+      "languageChinese": "切换语言为中文",
+      "languageEnglish": "切换语言为英文",
+      "shortcutHelp": "打开快捷键帮助"
+    }
+  },
+  "dropOverlay": {
+    "title": "松手上传文件",
+    "description": "文件会自动发送到当前创作或素材页面。",
+    "wrongPage": "请在创建或素材页面上传文件。",
+    "noFiles": "未检测到可上传文件。",
+    "createNoTarget": "当前创作页面没有兼容的上传字段。",
+    "librarySuccess": "已上传 {count} 个文件。",
+    "libraryFailed": "文件上传失败。"
+  },
+  "emptyProjects": {
+      "title": "可清理 {count} 个空项目",
+      "description": "这些项目没有关联任务，并且创建时间已经超过 24 小时。",
+      "maybeLater": "稍后再说",
+      "cleanUp": "立即清理",
+      "cleanedUp": "已清理 {count} 个空项目。",
+      "noneSelected": "没有选中可清理的空项目。"
+    },
+    "projectSwitcher": {
+      "selectProject": "选择项目",
+      "noProject": "暂无项目",
+      "searchPlaceholder": "搜索项目...",
+      "newProject": "新建项目",
+      "manageAll": "管理全部",
+      "rename": "重命名",
+      "delete": "删除",
+      "deleteConfirmTitle": "删除项目",
+      "deleteConfirmDescription": "确定要删除项目 \"{name}\" 吗？关联的 {taskCount} 个任务也会被删除。",
+      "deleteConfirmDescriptionEmpty": "确定要删除项目 \"{name}\" 吗？",
+      "deleted": "项目已删除",
+      "projectNameRequired": "请输入项目名称",
+      "createTitle": "创建新项目",
+      "createSubmit": "创建",
+      "renameTitle": "重命名项目",
+      "renameSubmit": "保存"
+    }
+  },
+  "createHero": {
+    "title": "你想创作什么视频？",
+    "description": "输入一个想法，或者选择下方的专业流水线，让引擎为你自动化生成完整的视频。",
+    "quickTitle": "快速创作",
+    "quickDescription": "最快速的视频生成方式。输入创意描述，系统自动编写脚本、配音并生成分镜视频。",
+    "quickTime": "约 2-5 分钟",
+    "digitalHumanTitle": "数字人",
+    "digitalHumanDescription": "数字人播报生成。选择虚拟主播，输入文本，一键生成口型同步的播报视频。",
+    "digitalHumanTime": "约 5-10 分钟",
+    "i2vTitle": "图片转视频",
+    "i2vDescription": "图片转视频。上传一张或多张图片，使用高级动画模型让静态图像动起来。",
+    "i2vTime": "约 3-8 分钟",
+    "actionTransferTitle": "动作迁移",
+    "actionTransferDescription": "动作迁移视频。提供动作视频和目标形象，将动作完美复刻到新形象上。",
+    "actionTransferTime": "约 10-20 分钟",
+    "customTitle": "自定义资产",
+    "customDescription": "自定义资产生成。按需生成独立的配音、配乐、背景图片或短视频片段。",
+    "customTime": "约 1-3 分钟"
+  },
+  "create": {
+    "workbench": {
+      "projectBar": {
+        "current": "当前项目",
+        "switchProject": "切换项目",
+        "newProject": "新建项目",
+        "openProject": "打开项目列表",
+        "empty": "还没有项目，先创建一个"
+      },
+      "recentTasks": {
+        "title": "最近任务",
+        "empty": "暂无最近任务",
+        "emptyNoProject": "选择项目后可查看最近任务",
+        "loading": "加载中…",
+        "taskLabel": "任务",
+        "error": "最近任务加载失败"
+      }
+    }
+  },
+  "createCommon": {
+    "optional": "可选",
+    "close": "关闭",
+    "time": "耗时",
+    "projectRequiredTitle": "未选择项目",
+    "projectRequiredDescription": "这个流水线需要归属于某个项目。请先前往项目中心选择或创建项目，然后再试一次。",
+    "goToProjects": "前往项目中心",
+    "generationFailed": "生成失败",
+    "reconfigure": "重新配置",
+    "taskCancelled": "任务已取消",
+    "taskCancelledDescription": "生成任务已经停止。",
+    "startOver": "重新开始",
+    "runninghub": {
+      "instanceType": "RunningHub 实例类型",
+      "description": "仅在使用 RunningHub 工作流时显示。留在“平台默认”会沿用设置里的默认值或平台自动选择。",
+      "options": {
+        "auto": "平台默认 / 自动",
+        "plus": "Plus (48GB VRAM)"
+      }
+    }
+  },
+  "projects": {
+    "loading": "加载项目中...",
+    "breadcrumb": "全部项目",
+    "confirmDelete": "确定删除这个项目吗？",
+    "page": {
+      "title": "项目中心",
+      "description": "在这里统一查看、管理和继续你的项目。",
+      "searchPlaceholder": "搜索项目名称、ID 或工作流",
+      "sortLabel": "排序",
+      "sort": {
+        "updated": "最近更新",
+        "created": "创建时间",
+        "name": "名称",
+        "tasks": "任务数"
+      }
+    },
+    "tabs": {
+      "overview": "总览",
+      "batches": "批处理",
+      "tasks": "任务",
+      "videos": "视频",
+      "images": "图片",
+      "voices": "语音",
+      "bgm": "背景音乐",
+      "scripts": "脚本"
+    },
+    "labels": {
+      "current": "当前项目",
+      "quickDefault": "Quick",
+      "tasks": "{count} 个任务"
+    },
+    "actions": {
+      "openWorkbench": "打开工作台",
+      "continueCreate": "继续创作",
+      "setCurrent": "设为当前项目"
+    },
+    "dialogs": {
+      "createTitle": "创建新项目",
+      "renameTitle": "重命名项目"
+    },
+    "toasts": {
+      "created": "项目创建成功",
+      "renamed": "项目已重命名",
+      "deleted": "项目已删除"
+    },
+    "stats": {
+      "tasks": "任务",
+      "batches": "批处理",
+      "videos": "视频",
+      "images": "图片",
+      "voices": "语音",
+      "bgm": "背景音乐",
+      "scripts": "脚本",
+      "running": "运行中"
+    },
+    "recent": {
+      "batches": "最近批处理",
+      "tasks": "最近任务",
+      "videos": "最近视频",
+      "assets": "资源摘要"
+    },
+    "empty": {
+      "title": "还没有项目",
+      "description": "先创建一个项目，再开始创作或整理资源。",
+      "filtered": "没有匹配的项目。",
+      "recentBatches": "暂无最近批处理。",
+      "recentTasks": "暂无最近任务。",
+      "recentVideos": "暂无最近视频。",
+      "recentAssets": "暂无最近资源。",
+      "tabBatches": "这个项目下还没有批处理。",
+      "tabTasks": "这个项目下还没有任务。",
+      "tabVideos": "这个项目下还没有视频。",
+      "tabImages": "这个项目下还没有图片。",
+      "tabVoices": "这个项目下还没有语音。",
+      "tabBgm": "这个项目下还没有背景音乐。",
+      "tabScripts": "这个项目下还没有脚本。"
+    },
+    "meta": {
+      "createdAt": "创建于 {value}",
+      "updatedAt": "更新于 {value}",
+      "lastTask": "最近任务 {value}"
+    }
+  },
+  "createRoutes": {
+    "timeEstimate": "耗时",
+    "shared": {
+      "uploaded": "已上传",
+      "missing": "缺失",
+      "notSelected": "未选择",
+      "generateVideo": "生成视频"
+    },
+    "digitalHuman": {
+      "title": "数字人",
+      "description": "上传人像，选择可选语音工作流，然后生成主持人口播视频。",
+      "sections": {
+        "presenterSetup": "主持人设置"
+      },
+      "fields": {
+        "portraitImage": "人像图片",
+        "narration": "旁白",
+        "voiceWorkflow": "配音方案"
+      },
+      "placeholders": {
+        "narration": "输入数字人需要播报的旁白内容。",
+        "voiceWorkflow": "使用系统默认配音方案"
+      },
+      "actions": {
+        "useDefaultWorkflow": "使用系统默认配音方案"
+      },
+      "status": {
+        "waitingNarration": "等待输入旁白",
+        "defaultVoice": "默认语音"
+      },
+      "validation": {
+        "narration": "旁白不能为空。",
+        "portrait": "请上传人像图片。"
+      }
+    },
+    "i2v": {
+      "title": "图片转视频",
+      "description": "上传源图片，定义运动方式，并生成一段短视频。",
+      "sections": {
+        "motionSetup": "运动设置"
+      },
+      "fields": {
+        "sourceImage": "源图片",
+        "motionPrompt": "运动提示词",
+        "mediaWorkflow": "画面方案"
+      },
+      "placeholders": {
+        "motionPrompt": "描述运动、镜头运动或需要施加的变化。",
+        "mediaWorkflow": "选择画面方案"
+      },
+      "status": {
+        "waitingMotionPrompt": "等待输入运动提示词"
+      },
+      "validation": {
+        "mediaWorkflow": "请选择画面方案。",
+        "motionPrompt": "运动提示词不能为空。",
+        "sourceImage": "请上传源图片。"
+      }
+    },
+    "actionTransfer": {
+      "title": "动作迁移",
+      "description": "把驱动视频和目标图片配对，将动作迁移到新的生成片段中。",
+      "sections": {
+        "motionInputs": "动作输入"
+      },
+      "fields": {
+        "driverVideo": "驱动视频",
+        "targetImage": "目标图片",
+        "poseWorkflow": "动作方案"
+      },
+      "placeholders": {
+        "poseWorkflow": "选择动作方案"
+      },
+      "validation": {
+        "driverVideo": "请上传驱动视频。",
+        "poseWorkflow": "请选择动作方案。",
+        "targetImage": "请上传目标图片。"
+      }
+    },
+    "custom": {
+      "title": "自定义资产",
+      "description": "按场景独立配置媒体、旁白和时长，构建多场景资产生成任务。",
+      "sections": {
+        "sceneBuilder": "场景构建器"
+      },
+      "actions": {
+        "addScene": "添加场景",
+        "removeScene": "删除场景"
+      },
+      "fields": {
+        "sceneMedia": "场景媒体",
+        "sceneNarration": "场景旁白",
+        "durationSeconds": "时长（秒）"
+      },
+      "placeholders": {
+        "sceneNarration": "描述该场景的旁白或配音内容。"
+      },
+      "sceneLabel": "场景 {index}",
+      "sceneDescription": "上传媒体、填写旁白并设置该场景的时长。",
+      "sceneMediaLabel": "场景 {index} 媒体",
+      "summary": {
+        "sceneCount": "{count} 个场景",
+        "sceneDetail": "当前已配置 {count} 个场景，每个场景包含媒体、旁白和时长。"
+      },
+      "validation": {
+        "duration": "时长至少为 1 秒。",
+        "media": "场景媒体不能为空。",
+        "narration": "场景旁白不能为空。",
+        "scenes": "至少需要一个场景。"
+      }
+    }
+  },
+  "quickIntent": {
+    "placeholder": "描述你的创意，比如：用像素风介绍宇宙大爆炸...",
+    "submit": "生成"
+  },
+  "configSummary": {
+    "title": "配置摘要",
+    "items": "{count} 项",
+    "fields": "{count} 个字段"
+  },
+  "taskProgress": {
+    "title": "任务进度",
+    "pending": "排队中",
+    "running": "生成中",
+    "completed": "已完成",
+    "failed": "失败",
+    "cancelTask": "取消任务"
+  },
+  "videoResult": {
+    "title": "生成结果",
+    "duration": "时长: {duration}s",
+    "size": "大小: {size} MB",
+    "copyLink": "复制链接",
+    "downloadVideo": "下载视频",
+    "regenerate": "基于此重生成",
+    "copySuccess": "链接已复制到剪贴板"
+  },
+  "quick": {
+    "title": "快速创作",
+    "description": "最快的视频生成方式，AI 自动完成文案、配音与画面。",
+    "basicConfig": "基础配置",
+    "titleLabel": "视频标题",
+    "titlePlaceholder": "输入一个吸引人的标题...",
+    "topicLabel": "创意描述",
+    "topicPlaceholder": "描述您想生成的视频主题或创意细节...",
+    "ttsLabel": "配音方案",
+    "ttsPlaceholder": "选择配音方案",
+    "mediaLabel": "画面方案",
+    "mediaPlaceholder": "选择画面方案",
+    "bgmLabel": "背景音乐",
+    "bgmPlaceholder": "从资源库选择背景音乐（可选）",
+    "styleLabel": "风格方案",
+    "stylePlaceholder": "选择风格方案（可选）",
+    "styleNone": "不使用风格预设",
+    "bgmModeLabel": "背景音乐来源",
+    "bgmModes": {
+      "none": "不使用背景音乐",
+      "default": "使用风格默认曲目",
+      "custom": "从资源库选择"
+    },
+    "bgmStyleDefault": "当前风格默认曲目",
+    "bgmDefaultHint": "当前风格默认使用：{name}",
+    "styleHelp": "决定整体视觉氛围、提示词前缀以及默认曲目。",
+    "ttsHelp": "决定旁白如何生成，以及默认音色或配音服务来自哪里。",
+    "mediaHelp": "决定画面或短视频镜头使用哪套生成方案。",
+    "bgmModeHelpNone": "不添加背景音乐，适合只保留人声或原始音频的场景。",
+    "bgmModeHelpDefault": "跟随当前风格自动带入默认曲目，最快完成配乐。",
+    "bgmModeHelpCustom": "从资源库手动选择一首背景音乐覆盖当前默认值。",
+    "bgmHelpCustom": "从资源库挑一首已经准备好的背景音乐。",
+    "bgmHelpNone": "当前不会为视频添加背景音乐。",
+    "summary": {
+      "style": "当前风格",
+      "styleNone": "未使用风格方案",
+      "tts": "配音方案",
+      "media": "画面方案",
+      "bgm": "背景音乐",
+      "bgmDefault": "跟随“{style}”默认曲目",
+      "bgmAuto": "使用风格默认曲目",
+      "bgmNone": "不使用背景音乐",
+      "notSelected": "尚未选择",
+      "runninghubInstanceType": "运行规格"
+    },
+    "runninghubInstancePlus": "Plus（48GB 显存）",
+    "runninghubInstanceAuto": "平台默认 / 自动",
+    "advancedConfig": "高级配置",
+    "narrationLabel": "自定义旁白",
+    "narrationPlaceholder": "留空则由 AI 自动生成文案...",
+    "promptPrefixLabel": "图像提示词词缀",
+    "promptPrefixPlaceholder": "附加给所有画面生成的 Prompt...",
+    "generate": "生成视频",
+    "generating": "生成中...",
+    "projectRequiredTitle": "未选择项目",
+    "projectRequiredDescription": "视频生成需要归属于一个项目。请在页面顶部的项目切换器中选择或创建一个项目后再重试。",
+    "projectRequiredConfirm": "知道了",
+    "failedTitle": "生成失败",
+    "cancelledTitle": "任务已取消",
+    "cancelledMessage": "生成任务已停止。",
+    "reconfigure": "重新配置",
+    "restart": "重新开始",
+    "requestFailed": "请求失败，请稍后再试。",
+    "mediaPreviewTitle": "媒体测试预览",
+    "mediaPreviewDescription": "在正式提交前，先试听配音、测试画面和短视频效果。",
+    "audioPreview": "试听配音",
+    "imagePreview": "测试图片",
+    "videoPreview": "测试视频",
+    "previewPending": "预览生成中...",
+    "previewFailed": "预览生成失败",
+    "previewUnavailable": "当前表单信息不足，暂时无法生成预览。",
+    "previewNotReady": "先填写必要字段后再预览。",
+    "previewImageAlt": "模板图片预览",
+    "previewVideoLabel": "短视频预览",
+    "previewAudioLabel": "音频试听"
+  },
+  "templates": {
+    "title": "模板画廊",
+    "description": "从运行时模板画廊中选择一个样式，查看静态缩略图，并在提交前做一次实时渲染预览。",
+    "emptyTitle": "暂无模板",
+    "emptyDescription": "模板目录当前为空。",
+    "previewMissing": "暂无静态预览图",
+    "resolutionBadge": "{width} × {height}",
+    "resolutionDescription": "适用于 {width} × {height} 画布尺寸。",
+    "templateFile": "模板文件：{file}",
+    "paramMeta": "类型：{type} · 默认值：{defaultValue}",
+    "paramTypes": {
+      "number": "数字",
+      "boolean": "开关",
+      "select": "选项",
+      "text": "文本"
+    },
+    "orientation": {
+      "all": "全部",
+      "portrait": "竖屏",
+      "landscape": "横屏",
+      "square": "方形"
+    },
+    "livePreviewTitle": "实时模板预览",
+    "livePreviewDescription": "用示例标题和文案渲染当前模板，验证布局和可读性。",
+    "renderPreview": "实时预览",
+    "customParams": "模板参数",
+    "noCustomParams": "该模板没有暴露自定义参数。",
+    "loadingPreview": "正在渲染模板预览..."
+  },
+  "presets": {
+    "title": "预设库",
+    "description": "管理常用创作配置，区分内建预设和个人预设，并直接带回对应的创作流程。",
+    "builtinTab": "内建预设",
+    "userTab": "我的预设",
+    "builtinSourceBadge": "内建预设",
+    "userSourceBadge": "我的预设",
+    "emptyBuiltin": "暂无内建预设",
+    "emptyUser": "还没有个人预设",
+    "emptyDescription": "创建一个预设，把常用配置保存下来。",
+    "name": "名称",
+    "pipeline": "流水线",
+    "descriptionLabel": "描述",
+    "created": "创建时间",
+    "actions": "操作",
+    "noDescription": "无描述",
+    "createPreset": "新建预设",
+    "editPreset": "编辑预设",
+    "presetJsonTitle": "预设配置 JSON",
+    "presetJsonDescription": "查看当前预设保存的配置内容。",
+    "fields": {
+      "name": "预设名称",
+      "pipeline": "适用流程",
+      "description": "适用说明",
+      "payloadTemplate": "配置模板"
+    },
+    "fieldDescriptions": {
+      "name": "给这个预设起一个清晰名称，创建页里会直接展示。",
+      "pipeline": "选择这套配置主要服务的创作流程。",
+      "description": "说明什么时候适合使用这套预设。",
+      "payloadTemplate": "填写要复用的 JSON 配置对象，创建任务时会自动带入。"
+    },
+    "namePlaceholder": "例如：品牌发布短视频",
+    "pipelinePlaceholder": "选择这个预设适用的创作流程",
+    "descriptionPlaceholder": "说明这个预设适合什么场景",
+    "payloadPlaceholder": "粘贴这个预设要复用的 JSON 配置模板",
+    "deleteConfirmTitle": "删除预设？",
+    "deleteConfirmDescription": "此操作会永久删除该个人预设。",
+    "saveSuccess": "预设已保存。",
+    "deleteSuccess": "预设已删除。"
+  },
+  "workflows": {
+    "overview": {
+      "title": "生成方案库",
+      "description": "按用途查看所有可用生成方案。首屏优先展示中文名称、适用场景和来源，技术文件名会下沉到详情页。",
+      "tabs": {
+        "tts": {
+          "label": "配音方案",
+          "description": "用于生成旁白、语音和口播音频的方案。"
+        },
+        "media": {
+          "label": "画面方案",
+          "description": "用于生成画面、镜头或短视频片段的方案。"
+        },
+        "image": {
+          "label": "图像处理",
+          "description": "用于单张图像生成、封面图和静态图像处理的方案。"
+        }
+      },
+      "emptyTitle": "暂无工作流",
+      "emptyDescription": "当前分类下还没有可用工作流。"
+    },
+    "card": {
+      "source": {
+        "selfHost": "本地",
+        "runningHub": "RunningHub"
+      },
+      "type": {
+        "tts": "配音方案",
+        "media": "画面方案"
+      },
+      "viewDetails": "查看详情"
+    },
+    "selfHost": {
+      "title": "本地工作流",
+      "description": "运行在你自己的本地运行时栈中的 ComfyUI 服务。",
+      "emptyTitle": "暂无本地工作流",
+      "emptyDescription": "接入本地工作流来源后，这里会自动展示。"
+    },
+    "runningHub": {
+      "title": "RunningHub 工作流",
+      "description": "通过 RunningHub 连接器提供的云端工作流端点。",
+      "emptyTitle": "暂无 RunningHub 工作流",
+      "emptyDescription": "接入云端工作流来源后，这里会自动展示。"
+    }
+  },
+  "workflowDetail": {
+    "loading": "正在加载工作流详情...",
+    "notFoundTitle": "未找到工作流",
+    "notFoundDescription": "资源目录中没有这个工作流。",
+    "backToWorkflows": "返回生成方案库",
+    "selfhost": "本地",
+    "runninghub": "RunningHub",
+    "editable": "可编辑",
+    "readonly": "只读",
+    "downloadJson": "下载技术配置",
+    "editJson": "技术配置",
+    "editJsonDescription": "需要调整节点、参数或接入方式时，再编辑这份技术配置。",
+    "saveJson": "保存技术配置",
+    "metadata": "元数据",
+    "usage": "用途说明",
+    "whenToUse": "适用场景",
+    "technicalInfo": "技术信息",
+    "developerInfo": "开发者信息",
+    "developerInfoDescription": "仅在排查、对接或编辑方案时查看这些技术字段。",
+    "technicalName": "技术名称",
+    "technicalPath": "技术路径",
+    "keyParameters": "关键参数",
+    "metadataJson": "查看元数据",
+    "rawNodeIds": "查看节点编号",
+    "key": "技术 Key",
+    "workflowId": "工作流 ID",
+    "source": "来源",
+    "descriptionFallback": "这个方案暂时还没有补充完整说明，可以先看来源、关键参数和适用场景再决定是否使用。",
+    "noParameters": "当前没有可展示的关键参数。",
+    "saveSuccess": "工作流已保存。",
+    "editorPlaceholder": "在这里编辑完整的工作流 JSON..."
+  },
+  "library": {
+    "filters": {
+      "project": "项目",
+      "allProjects": "全部项目",
+      "unassigned": "未分配"
+    },
+    "actions": {
+      "goToCreate": "前往创作",
+      "loadMore": "加载更多",
+      "loadingMore": "加载中…",
+      "download": "下载",
+      "reuse": "复用",
+      "copy": "复制"
+    },
+    "fallback": {
+      "loadingLibrary": "正在加载资源库…",
+      "loadingImages": "正在加载图片…",
+      "loadingVoices": "正在加载语音…",
+      "loadingBgm": "正在加载 BGM…",
+      "loadingScripts": "正在加载脚本…",
+      "loadingStyles": "正在加载风格…"
+    },
+    "shared": {
+      "created": "创建时间",
+      "size": "大小",
+      "unknown": "未知"
+    },
+    "videos": {
+      "title": "视频",
+      "description": "浏览各项目的生成视频，并重新打开它们用于复用或排障。",
+      "pipelinePending": "生成方式待识别",
+      "emptyTitle": "还没有生成视频",
+      "emptyProjectTitle": "这个项目还没有生成视频",
+      "emptyDescription": "先创建一个新视频，逐步建立可复用的视频资源库。",
+      "emptyProjectDescription": "{project} 目前还没有已完成或已索引的视频。"
+    },
+    "images": {
+      "title": "图片",
+      "description": "浏览生成的静帧与人像素材，并直接在图片转视频流程中复用。",
+      "openAsset": "打开图片资产 {id}",
+      "noPromptSnapshot": "没有提示词快照",
+      "emptyTitle": "还没有索引图片",
+      "emptyProjectTitle": "这个项目还没有图片",
+      "emptyDescription": "通过任意流水线创建或上传图片后，这里会逐渐形成可复用的图片库。",
+      "emptyProjectDescription": "{project} 目前没有已索引的图片资产。",
+      "dialog": {
+        "title": "复用图片资产",
+        "description": "查看更大的预览，复制原始提示词，或直接跳回图片转视频流程。",
+        "promptSnapshot": "提示词快照",
+        "noPromptStored": "这个资产没有保存提示词快照。",
+        "copyPrompt": "复制提示词",
+        "promptCopied": "提示词已复制。",
+        "reuseInI2v": "在图片转视频中复用"
+      }
+    },
+    "voices": {
+      "title": "语音",
+      "description": "查看生成的语音轨道，直接试听，并使用相同旁白设置重新打开数字人流程。",
+      "unknownVoice": "未命名配音方案",
+      "noTranscript": "没有文本快照",
+      "emptyTitle": "还没有索引语音资产",
+      "emptyProjectTitle": "这个项目还没有语音资产",
+      "emptyDescription": "当流程生成配音结果后，这里会自动展示。",
+      "columns": {
+        "voice": "配音方案",
+        "duration": "时长",
+        "preview": "预览",
+        "size": "大小",
+        "created": "创建时间",
+        "actions": "操作"
+      }
+    },
+    "bgm": {
+      "title": "背景音乐",
+      "description": "在内建曲目和个人资源库之间切换，先听后选，再把曲目直接带回快速创作。",
+      "sourceLabel": "资源来源",
+      "styleFilterLabel": "关联风格",
+      "allStyles": "全部风格",
+      "sources": {
+        "builtin": "内建资源",
+        "history": "我的资源库"
+      },
+      "emptyBuiltinTitle": "没有可用的内建曲目。",
+      "emptyHistoryTitle": "还没有个人 BGM 历史。",
+      "emptyDescription": "内建曲目来自共享资源目录；你自己的复用曲目会在生成历史被索引后出现在这里。",
+      "columns": {
+        "track": "曲目",
+        "duration": "时长",
+        "size": "大小",
+        "source": "来源",
+        "created": "创建时间",
+        "actions": "操作"
+      },
+      "actions": {
+        "useInQuick": "用于 Quick",
+        "openLinkedStyle": "打开关联风格"
+      }
+    },
+    "styles": {
+      "title": "风格",
+      "description": "管理 Quick 使用的风格库，包括内建风格和你自己的自定义风格。",
+      "createStyle": "新建风格",
+      "createTitle": "新建风格",
+      "editTitle": "编辑风格",
+      "cloneTitle": "克隆风格",
+      "editorDescription": "编辑风格的基础信息、创意层文本和运行时配置。",
+      "builtinTab": "内建风格",
+      "customTab": "我的风格",
+      "builtinBadge": "内建",
+      "customBadge": "自定义",
+      "searchPlaceholder": "按名称、ID、场景或语气搜索风格",
+      "sceneFilterLabel": "场景筛选",
+      "allScenes": "全部场景",
+      "emptyBuiltin": "暂无内建风格",
+      "emptyCustom": "还没有自定义风格",
+      "emptyDescription": "创建一个风格，把常用的分析层、音频层和运行配置沉淀下来。",
+      "detailTitle": "风格详情",
+      "detailDescription": "查看风格的音频预览、创意层文本和配置快照。",
+      "previewBgm": "预览 BGM",
+      "analysisLayer": "分析创意层",
+      "audioLayer": "音频同步创意层",
+      "referenceConfig": "参考配置",
+      "runtimeConfig": "运行时配置",
+      "emptyLayer": "该部分暂无内容。",
+      "noPreview": "暂无预览音频",
+      "noDescription": "暂无描述",
+      "useInQuick": "用于 Quick",
+      "clone": "克隆",
+      "invalidJson": "JSON 格式无效，请检查后再保存。",
+      "saveSuccess": "风格已保存。",
+      "saveFailed": "保存风格失败。",
+      "deleteTitle": "删除风格？",
+      "deleteDescription": "此操作会永久删除该自定义风格。",
+      "deleteSuccess": "风格已删除。",
+      "deleteFailed": "删除风格失败。",
+      "columns": {
+        "name": "名称",
+        "scene": "场景",
+        "tone": "语气",
+        "preview": "预览",
+        "actions": "操作"
+      },
+      "fields": {
+        "id": "风格 ID",
+        "name": "风格名称",
+        "description": "描述",
+        "scene": "场景",
+        "tone": "语气",
+        "analysis": "分析创意层",
+        "audio": "音频同步创意层",
+        "referenceConfig": "参考配置 JSON",
+        "runtimeConfig": "运行时配置 JSON"
+      }
+    },
+    "scripts": {
+      "title": "脚本",
+      "description": "集中管理旁白草稿、提示词草稿和完整脚本，再带着内容重新打开快速创作。",
+      "emptyTitle": "还没有索引脚本历史",
+      "emptyProjectTitle": "这个项目还没有脚本历史",
+      "emptyDescription": "在生成流程或辅助写作流程完成后，这里会自动保存旁白和提示词历史。",
+      "columns": {
+        "summary": "摘要",
+        "type": "类型",
+        "created": "创建时间",
+        "pipeline": "流水线",
+        "actions": "操作"
+      },
+      "scriptCopied": "脚本已复制。",
+      "viewFullScript": "查看完整内容",
+      "hideFullScript": "收起完整内容"
+    }
+  },
+  "libraryVideoDetail": {
+    "loading": "正在加载视频详情...",
+    "notFoundTitle": "无法读取视频详情",
+    "notFoundDescription": "当前库索引和任务缓存里都找不到这个视频。",
+    "backToLibrary": "返回视频库",
+    "unknownCreatedAt": "未知创建时间",
+    "copySuccess": "视频链接已复制。",
+    "video": "视频",
+    "snapshot": "创作摘要",
+    "metadata": "基本信息",
+    "storyboard": "分镜详情",
+    "noSnapshot": "这个视频没有可用的生成快照。",
+    "noVideo": "当前还没有可预览的视频文件。",
+    "taskId": "任务编号",
+    "project": "项目",
+    "duration": "时长",
+    "fileSize": "文件大小",
+    "frames": "分镜数",
+    "created": "创建时间",
+    "pipeline": "生成方式",
+    "storedPath": "存储路径",
+    "unassigned": "未分配",
+    "deleteTitle": "删除这个视频？",
+    "deleteDescription": "该操作会删除历史记录和关联产物文件，无法撤销。",
+    "confirmDelete": "确认删除",
+    "cancelTask": "取消任务？",
+    "cancelTaskDescription": "该任务仍在运行，当前只能执行取消，而不是删除。",
+    "confirmCancel": "确认取消",
+    "cancelSuccess": "任务已取消。",
+    "deleteSuccess": "视频已删除。",
+    "storyboardEmpty": "当前没有可展示的分镜详情。",
+    "sceneLabel": "场景 {index}",
+    "narration": "旁白",
+    "prompt": "画面提示词",
+    "audio": "音频",
+    "image": "图片",
+    "videoSegment": "视频片段",
+    "composedFrame": "合成帧",
+    "segmentDuration": "片段时长",
+    "summary": {
+      "style": "当前风格",
+      "tts": "配音方案",
+      "media": "画面方案",
+      "bgm": "背景音乐",
+      "scenes": "场景数量",
+      "runninghub": "运行规格",
+      "notSelected": "尚未选择",
+      "bgmCustom": "已选资源库曲目",
+      "bgmDefault": "使用风格默认曲目",
+      "sceneCount": "{count} 个场景",
+      "runninghubAuto": "平台默认 / 自动",
+      "runninghubPlus": "Plus（48GB 显存）"
+    }
+  },
+  "settings": {
+    "fallback": {
+      "loadingSettings": "正在加载设置…"
+    },
+    "page": {
+      "breadcrumb": "设置",
+      "title": "设置",
+      "description": "管理模型与工作台连接、界面偏好，以及资源存放位置。",
+      "backendUnavailableTitle": "后端设置暂不可用",
+      "backendUnavailableDescription": "在 `/api/settings` 恢复可访问之前，工作台会先显示安全的默认值。"
+    },
+    "tabs": {
+      "keys": {
+        "label": "接口与凭证",
+        "description": "服务地址、访问密钥和默认连接配置。"
+      },
+      "appearance": {
+        "label": "外观",
+        "description": "主题、语言和侧边栏行为。"
+      },
+      "storage": {
+        "label": "资源存放",
+        "description": "生成结果位置、空间占用和清理工具。"
+      },
+      "about": {
+        "label": "关于",
+        "description": "版本、健康状态与项目链接。"
+      }
+    },
+    "keys": {
+      "projectDefaults": {
+        "title": "默认创作设置",
+        "description": "当新任务没有单独指定时，会优先使用这些默认值。",
+        "fields": {
+          "projectName": "默认项目名称",
+          "defaultTemplate": "默认画面模板"
+        },
+        "fieldDescriptions": {
+          "projectName": "新建任务时默认带入这个项目名称，方便快速开始。",
+          "defaultTemplate": "未单独指定时，新的画面渲染会优先使用这个模板。"
+        }
+      },
+      "llm": {
+        "title": "大模型服务",
+        "description": "先验证当前填写的服务地址、访问密钥和模型是否可用，再决定是否保存。",
+        "fields": {
+          "apiKey": "访问密钥",
+          "baseUrl": "服务地址",
+          "model": "默认模型"
+        },
+        "fieldDescriptions": {
+          "apiKey": "用于连接 OpenAI 兼容的大模型服务。",
+          "baseUrl": "通常是提供方的 OpenAI 风格接口地址。",
+          "model": "默认用于生成文案、提示词和结构化输出。"
+        },
+        "actions": {
+          "verify": "验证大模型连接"
+        },
+        "details": {
+          "modelCount": "可用模型数",
+          "selectedModel": "当前模型",
+          "selectedModelAvailable": "当前模型可用"
+        }
+      },
+      "comfyui": {
+        "title": "本地 ComfyUI",
+        "description": "检查本地 ComfyUI 是否可连通，以及当前凭证是否有效。",
+        "fields": {
+          "endpoint": "服务地址",
+          "apiKey": "访问密钥"
+        },
+        "fieldDescriptions": {
+          "endpoint": "通常是本机或局域网里的 ComfyUI 地址。",
+          "apiKey": "如果服务开启鉴权，请在这里填写。"
+        },
+        "actions": {
+          "verify": "验证 ComfyUI 连接"
+        },
+        "details": {
+          "authApplied": "已附带认证",
+          "authRequired": "需要认证"
+        },
+        "placeholders": {
+          "maskedOnSave": "保存后会自动掩码"
+        }
+      },
+      "runninghub": {
+        "title": "RunningHub 云端服务",
+        "description": "验证 RunningHub 的访问密钥，并设置默认的并发和运行规格。",
+        "fields": {
+          "apiKey": "访问密钥",
+          "concurrency": "并发任务上限",
+          "instanceType": "默认运行规格"
+        },
+        "fieldDescriptions": {
+          "apiKey": "用于访问 RunningHub 提供的云端生成功能。",
+          "concurrency": "限制同时提交到 RunningHub 的任务数量。",
+          "instanceType": "仅在创建任务时没有单独指定时生效。"
+        },
+        "actions": {
+          "verify": "验证 RunningHub"
+        },
+        "details": {
+          "apiType": "API 类型",
+          "currentTasks": "当前任务数",
+          "remainingCredits": "剩余额度",
+          "remainingBalance": "剩余余额"
+        },
+        "placeholders": {
+          "maskedOnSave": "保存后会自动掩码"
+        },
+        "options": {
+          "auto": "平台默认 / 自动",
+          "plus": "Plus (48GB VRAM)"
+        }
+      },
+      "validation": {
+        "hint": "只检查当前草稿，不会自动保存。",
+        "idleDescription": "还没有执行验证。",
+        "staleDescription": "配置已变更，需要重新验证。",
+        "resultTitle": "检查结果",
+        "status": {
+          "idle": "未验证",
+          "stale": "需重新验证",
+          "success": "已验证",
+          "warning": "需关注",
+          "error": "验证失败"
+        },
+        "rows": {
+          "endpoint": "检查地址",
+          "reachable": "可达性",
+          "authenticated": "认证状态",
+          "statusCode": "接口状态",
+          "responseTime": "响应耗时",
+          "errorCode": "错误代号"
+        },
+        "boolean": {
+          "yes": "是",
+          "no": "否"
+        },
+        "notAvailable": "未返回",
+        "responseTimeMs": "{count} 毫秒"
+      }
+    },
+    "appearance": {
+      "title": "外观",
+      "description": "这些偏好只保存在当前浏览器中。",
+      "fields": {
+        "theme": "主题",
+        "language": "语言",
+        "sidebarCollapse": "侧边栏折叠偏好"
+      },
+      "theme": {
+        "dark": "深色",
+        "light": "浅色",
+        "system": "跟随系统"
+      },
+      "languageDescription": "切换客户端界面语言，并持久化到本地存储。",
+      "languagePlaceholder": "选择语言",
+      "sidebar": {
+        "collapsed": "默认折叠",
+        "expanded": "默认展开"
+      }
+    },
+    "storage": {
+      "runtimePathsTitle": "资源存放位置",
+      "runtimePathsDescription": "这里展示生成文件实际存放在哪里。路径本身为只读。",
+      "pathLabels": {
+        "output": "生成结果",
+        "temp": "临时缓存",
+        "uploads": "上传素材"
+      },
+      "pathDescriptions": {
+        "output": "最终生成的视频、图片和导出文件。",
+        "temp": "中间文件与临时缓存，可按需清理。",
+        "uploads": "你上传到工作台的源文件。"
+      },
+      "pathStats": "{count} 个文件 · {size}",
+      "missing": "缺失",
+      "statsTitle": "空间占用",
+      "statsDescription": "查看当前运行目录占用了多少空间。",
+      "loading": "正在读取空间占用...",
+      "totalStorage": "当前总占用：{size}",
+      "cleanTemporaryFiles": "清理临时缓存",
+      "cleanupDescription": "清理操作会在后端支持时移除失败任务临时文件和超过 30 天的回收站内容，生成结果、上传素材和已保存预设不会被删除。",
+      "cleanupDialog": {
+        "title": "确认清理存储",
+        "description": "这会移除失败任务临时文件、过期回收站内容等安全清理目标，不会删除生成结果或上传的源素材。",
+        "cancel": "取消",
+        "confirm": "确认清理"
+      }
+    },
+    "about": {
+      "buildHealthTitle": "构建与健康状态",
+      "buildHealthDescription": "版本数据来自 `/health` 与本地前端包元数据。",
+      "linksTitle": "链接",
+      "linksDescription": "源码、文档和反馈入口。",
+      "healthUnavailable": "后端健康状态信息暂时不可用。",
+      "notReported": "未上报",
+      "notSet": "未设置",
+      "degraded": "降级",
+      "rows": {
+        "product": "产品",
+        "frontendVersion": "前端版本",
+        "nodeVersion": "Node.js 版本",
+        "backendVersion": "后端版本",
+        "service": "服务名",
+        "gitSha": "Git SHA",
+        "healthStatus": "健康状态",
+        "license": "许可证"
+      },
+      "links": {
+        "github": "GitHub",
+        "docs": "文档",
+        "feedback": "反馈",
+        "license": "许可证",
+        "checkUpdates": "检查更新"
+      },
+      "updateCurrent": "当前已是最新已知前端版本（{version}）。"
+    },
+    "buttons": {
+      "showSecret": "显示 {label}",
+      "hideSecret": "隐藏 {label}",
+      "check": "检查",
+      "checking": "检查中…",
+      "verifying": "验证中…",
+      "cleaning": "清理中…",
+      "save": "保存",
+      "saving": "保存中…"
+    },
+    "footer": {
+      "unsavedChanges": "你还有本地未保存的更改。",
+      "synced": "当前所有设置已同步。"
+    },
+    "toasts": {
+      "saved": "设置已保存。",
+      "saveFailed": "保存设置失败。",
+      "connectionCheckFailed": "连接检查失败。",
+      "cleanupSuccess": "已删除 {count} 个文件，释放 {size}。",
+      "cleanupFailed": "清理临时文件失败。"
+    }
+  },
+  "batch": {
+    "actions": {
+      "newBatch": "新建批处理",
+      "createBatch": "创建批处理",
+      "viewAll": "查看全部",
+      "view": "查看",
+      "cancel": "取消",
+      "cancelBatch": "取消批处理",
+      "deleteBatch": "删除批处理",
+      "download": "下载",
+      "keep": "保留",
+      "backToAllBatches": "返回全部批处理",
+      "goToCreate": "前往创作"
+    },
+    "shared": {
+      "filters": {
+        "project": "项目",
+        "status": "状态",
+        "allProjects": "全部项目",
+        "allStatuses": "全部状态",
+        "unassigned": "未分配",
+        "from": "开始日期",
+        "to": "结束日期"
+      },
+      "progress": {
+        "success": "成功 {count}",
+        "failed": "失败 {count}",
+        "cancelled": "取消 {count}",
+        "total": "总计 {count}"
+      }
+    },
+    "overview": {
+      "title": "批处理总览",
+      "description": "查看批处理整体吞吐情况，并深入检查最新批次的进度与结果。",
+      "progressComplete": "已完成 {percent}%",
+      "kpis": {
+        "total": "批处理总数",
+        "inProgress": "进行中",
+        "completed": "已完成",
+        "failedOrPartial": "失败 / 部分完成"
+      },
+      "recentTitle": "最近批次",
+      "recentDescription": "跨全部项目的最近五次批处理提交。",
+      "emptyTitle": "还没有批处理",
+      "emptyDescription": "创建第一个批处理后，就可以在这里统一监控成组任务的进度和结果。"
+    },
+    "list": {
+      "title": "全部批处理",
+      "description": "查看所有批处理，按状态或项目筛选，并直接进入监控视图。",
+      "emptyTitle": "没有匹配当前筛选条件的批处理",
+      "emptyDescription": "{project} 当前没有可见的批处理。",
+      "columns": {
+        "name": "名称",
+        "pipeline": "流水线",
+        "total": "总数",
+        "succeeded": "成功",
+        "failed": "失败",
+        "cancelled": "取消",
+        "status": "状态",
+        "created": "创建时间",
+        "actions": "操作"
+      }
+    },
+    "queue": {
+      "title": "任务队列",
+      "description": "统一监控项目中的待处理、运行中、已完成、失败和已取消任务。",
+      "emptyTitle": "没有匹配的任务",
+      "emptyDescription": "{project} 中没有符合 {status} 的任务。",
+      "currentFilters": "当前筛选条件",
+      "taskIdCopied": "任务 ID 已复制。",
+      "copyTaskId": "复制任务 ID",
+      "columns": {
+        "taskId": "任务 ID",
+        "status": "状态",
+        "pipeline": "流水线",
+        "progress": "进度",
+        "created": "创建时间",
+        "actions": "操作"
+      }
+    },
+    "detail": {
+      "notFoundTitle": "未找到批处理",
+      "notFoundDescription": "请求的批处理不存在，或者已经被移除。",
+      "createdLabel": "创建于",
+      "downloadOutputs": "下载输出",
+      "columns": {
+        "taskId": "任务 ID",
+        "status": "状态",
+        "progress": "进度",
+        "runtime": "运行时长",
+        "actions": "操作"
+      },
+      "emptyTitle": "还没有子任务",
+      "emptyDescription": "这个批处理目前还没有可监控的子任务。",
+      "outputsTitle": "成功输出",
+      "outputsDescription": "已完成任务的直接下载链接。ZIP 打包将在后续阶段提供。",
+      "completedLabel": "完成于",
+      "cancelDialogTitle": "要取消这个批处理吗？",
+      "cancelDialogDescription": "这会取消未完成的子任务，并把该批处理从活动列表中移除。",
+      "deleteDialogTitle": "要删除这个批处理吗？",
+      "deleteDialogDescription": "这会软删除批处理记录。由于该批处理已经结束，子任务不会被联动处理。"
+    },
+    "new": {
+      "title": "新建批处理",
+      "description": "选择创作流程，设置共享参数，然后手动添加任务行或从 CSV 批量导入。",
+      "steps": {
+        "pipelineTitle": "1. 选择流水线",
+        "pipelineDescription": "选择这个批处理所有任务都会使用的创作流程。",
+        "settingsTitle": "2. 批处理设置",
+        "settingsDescription": "命名这个批处理，并选择生成任务归属的项目。",
+        "rowsTitle": "3. 添加批处理行",
+        "rowsDescription": "{pipeline} 的每一行都代表一条待生成任务。界面里会显示中文说明；CSV 导入仍需使用原始字段 key。最多支持 {limit} 行。"
+      },
+      "fields": {
+        "batchName": "批处理名称",
+        "targetProject": "目标项目"
+      },
+      "source": {
+        "manual": "手动添加",
+        "csv": "CSV 导入"
+      },
+      "actions": {
+        "downloadTemplate": "下载模板",
+        "addRow": "添加行",
+        "switchToCsv": "切换到 CSV 导入",
+        "submitBatch": "提交批处理",
+        "submitting": "提交中…"
+      },
+      "columns": {
+        "validation": "校验",
+        "actions": "操作"
+      },
+      "validation": {
+        "valid": "有效"
+      },
+      "customCsvOnly": "自定义资产批处理目前只支持 CSV 导入，因为每一行都包含 scenes 场景数组。",
+      "csv": {
+        "uploadTitle": "上传 CSV",
+        "uploadDescription": "表头名称必须与 {pipeline} 的请求字段 key 完全一致。",
+        "fileLabel": "CSV 文件",
+        "emptyState": "上传 CSV 后，可在提交前先预览并校验每一行。"
+      },
+      "summary": {
+        "title": "提交摘要",
+        "readyDescription": "{pipeline} 已有 {count} 行有效数据，可以提交。",
+        "invalidDescription": "{pipeline} 当前有 {count} 行有效数据，请先修复无效行再提交。",
+        "validRows": "{count} 行有效数据"
+      },
+      "toasts": {
+        "customRequiresCsv": "自定义资产批处理目前必须通过 CSV 导入。",
+        "needValidRows": "请至少添加一行有效数据后再提交。",
+        "resolveInvalidRows": "提交前请先修复无效行。",
+        "submitted": "批处理已提交。",
+        "submitFailed": "提交批处理失败。"
+      }
+    },
+    "toasts": {
+      "taskCancelled": "任务已取消。",
+      "batchCancelled": "批处理已取消。",
+      "batchDeleted": "批处理已删除。"
+    },
+    "fallback": {
+      "loadingBatches": "正在加载批处理…",
+      "loadingQueue": "正在加载任务队列…",
+      "loadingBatchDetail": "正在加载批处理详情…",
+      "loadingBatchBuilder": "正在加载批处理构建器…"
+    }
+  }
+}
