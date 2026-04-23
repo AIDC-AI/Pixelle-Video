@@ -428,7 +428,7 @@ function localizeFieldDefinition(field: PipelineFieldDefinition): PipelineFieldD
     case 'motion_prompt':
       return { ...field, label: '运动提示词', placeholder: '描述希望出现的运动效果' };
     case 'driver_video':
-      return { ...field, label: '驱动视频 URL', placeholder: 'https://example.com/driver.mp4' };
+      return { ...field, label: '舞蹈视频 URL', placeholder: 'https://example.com/driver.mp4' };
     case 'target_image':
       return { ...field, label: '目标图片 URL', placeholder: 'https://example.com/target.png' };
     case 'pose_workflow':

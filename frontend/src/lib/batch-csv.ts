@@ -38,9 +38,9 @@ function csvLabel(key: string): string {
     source_image: '源图片 URL',
     motion_prompt: '运动提示词',
     media_workflow: '画面方案',
-    driver_video: '驱动视频 URL',
+    driver_video: '舞蹈视频 URL',
     target_image: '目标图片 URL',
-    pose_workflow: '动作方案',
+    pose_workflow: '舞蹈复刻方案',
     scenes: '场景列表',
   }[key] ?? key;
 }

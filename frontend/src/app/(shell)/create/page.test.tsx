@@ -97,7 +97,7 @@ describe('Create Workbench Page', () => {
     expect(screen.getByText('快速创作')).toBeInTheDocument();
     expect(screen.getByText('数字人')).toBeInTheDocument();
     expect(screen.getByText('图片转视频')).toBeInTheDocument();
-    expect(screen.getByText('动作迁移')).toBeInTheDocument();
+    expect(screen.getByText('舞蹈复刻')).toBeInTheDocument();
     expect(screen.getByText('自定义资产')).toBeInTheDocument();
   });
 

@@ -18,7 +18,7 @@ This repository now ships only the Next.js workbench and the FastAPI API by defa
 | 快速生成 | `/create/quick` | 主题到视频主流程 |
 | 数字人口播 | `/create/digital-human` | 复用同一后端任务系统 |
 | 图生视频 | `/create/i2v` | 支持图片上传与重生成回流 |
-| 动作迁移 | `/create/action-transfer` | 支持视频+图片输入 |
+| 舞蹈复刻 | `/create/action-transfer` | 支持视频+图片输入 |
 | 自定义素材 | `/create/custom` | 支持多 scene 素材批量配置 |
 | 历史记录 | `/library/videos` | 新版支持项目筛选、详情和重生成 |
 | 批量队列 | `/batch/queue` | 新版补充了批量总览、列表、新建、详情 |

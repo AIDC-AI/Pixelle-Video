@@ -73,7 +73,7 @@ docker compose up -d
 
 ## 📋 最近更新
 
-- ✅ **2026-01-26**: 新增「动作迁移」模块，上传参考视频和图片进行动作迁移
+- ✅ **2026-01-26**: 新增「舞蹈复刻」模块，上传参考视频和图片进行舞蹈复刻
 - ✅ **2026-01-14**: 新增「数字人口播」和「图生视频」流水线，新增多语言 TTS 音色支持
 - ✅ **2026-01-06**: 新增 RunningHub 48G 显存机器调用支持
 - ✅ **2025-12-28**: 支持 RunningHub 并发限制可配置，优化 LLM 返回结构化数据的逻辑
@@ -130,7 +130,7 @@ Pixelle-Video 采用模块化设计，整个视频生成流程清晰简洁：
 <p align="center"><b>卡通视频</b></p>
 </td>
 <td width="33%">
-<h3>💃 动作迁移</h3>
+<h3>💃 舞蹈复刻</h3>
 <video src="https://github.com/user-attachments/assets/7b1240bc-e965-434c-b343-118ec4793d4f" controls width="100%"></video>
 <p align="center"><b>跳舞小猫</b></p>
 </td>

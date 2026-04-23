@@ -212,7 +212,7 @@ uv run uvicorn api.app:app --host 0.0.0.0 --port 8000
 
 - BGM 解析优先级为：**显式请求值 > 风格默认值 > 当前系统默认值**
 - `bgm_mode=none` 会显式禁用默认 BGM
-- Digital Human / I2V / Action Transfer / Custom Async 也支持任务级 `bgm_mode`、`bgm_path`、`bgm_volume`
+- Digital Human / I2V / 舞蹈复刻 / Custom Async 也支持任务级 `bgm_mode`、`bgm_path`、`bgm_volume`
 
 ## 更多信息
 

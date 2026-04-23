@@ -79,7 +79,7 @@ describe('resource-display Chinese labels', () => {
     expect(getWorkflowReferenceDescription('selfhost/image_flux.json')).toBe('用于生成单张画面、封面图或静态素材。');
     expect(getWorkflowReferenceDescription('selfhost/video_wan2.2.json')).toBe('用于生成短视频镜头或动态片段。');
     expect(getWorkflowReferenceDescription('selfhost/i2v_ltx2.json')).toBe('用于把单张图片转换为短视频动态镜头。');
-    expect(getWorkflowReferenceDescription('selfhost/af_scail.json')).toBe('用于动作迁移、姿态驱动或镜头动作重定向。');
+    expect(getWorkflowReferenceDescription('selfhost/af_scail.json')).toBe('用于舞蹈复刻、姿态驱动或镜头动作重定向。');
     expect(getWorkflowReferenceDescription('unknown.json')).toBe('用于像影 Pixelle 的生成流程。');
   });
 

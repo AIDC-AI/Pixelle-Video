@@ -110,7 +110,7 @@ describe('batch-csv', () => {
 
   it('revalidates a row after inline edits', () => {
     const row = parseBatchCsv('action_transfer', 'driver_video,target_image,pose_workflow\ninvalid-url,https://example.com/target.png,selfhost/pose.json').rows[0];
-    expect(row?.errors[0]).toContain('驱动视频 URL');
+    expect(row?.errors[0]).toContain('舞蹈视频 URL');
 
     const updated = updateParsedCsvRow('action_transfer', row!, 'driver_video', 'https://example.com/driver.mp4');
     expect(updated.errors).toEqual([]);

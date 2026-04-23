@@ -79,11 +79,11 @@ describe('Batch New Page', () => {
     renderWithQueryClient(<Page />);
     await screen.findByRole('heading', { name: '新建批处理' });
 
-    await user.click(screen.getByRole('button', { name: /动作迁移/ }));
+    await user.click(screen.getByRole('button', { name: /舞蹈复刻/ }));
     await user.click(screen.getByRole('button', { name: 'CSV 导入' }));
     await user.upload(screen.getByLabelText('CSV 文件'), new File([csv], 'action-transfer.csv', { type: 'text/csv' }));
 
-    expect(await screen.findByText('驱动视频 URL必须是有效 URL。')).toBeInTheDocument();
+    expect(await screen.findByText('舞蹈视频 URL必须是有效 URL。')).toBeInTheDocument();
   });
 
   it('forces custom asset batches into csv mode', async () => {
