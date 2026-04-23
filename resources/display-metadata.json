@@ -1,0 +1,130 @@
+{
+  "workflow_defaults": {
+    "tts_edge.json": {
+      "display_name_zh": "Edge 配音方案",
+      "description_zh": "适合快速生成通用旁白，响应快，适合作为默认配音方案。",
+      "display_category": "tts",
+      "display_category_zh": "配音方案",
+      "display_tags": ["通用旁白", "快速生成"]
+    },
+    "tts_index2.json": {
+      "display_name_zh": "IndexTTS 2 配音方案",
+      "description_zh": "适合更稳定的语音合成输出，适用于常规解说与讲述场景。",
+      "display_category": "tts",
+      "display_category_zh": "配音方案",
+      "display_tags": ["稳定输出", "解说旁白"]
+    },
+    "tts_spark.json": {
+      "display_name_zh": "Spark 配音方案",
+      "description_zh": "适合需要更鲜明音色风格的云端配音场景。",
+      "display_category": "tts",
+      "display_category_zh": "配音方案",
+      "display_tags": ["云端方案", "风格音色"]
+    },
+    "image_flux.json": {
+      "display_name_zh": "Flux 画面方案",
+      "description_zh": "适合生成通用单张画面、封面图和分镜首帧。",
+      "display_category": "image",
+      "display_category_zh": "图像处理",
+      "display_tags": ["通用图像", "封面画面"]
+    },
+    "image_flux2.json": {
+      "display_name_zh": "Flux 2 画面方案",
+      "description_zh": "适合需要更强细节表现的单张画面生成场景。",
+      "display_category": "image",
+      "display_category_zh": "图像处理",
+      "display_tags": ["细节强化", "单张画面"]
+    },
+    "image_qwen.json": {
+      "display_name_zh": "Qwen 画面方案",
+      "description_zh": "适合中文语义理解较强的图像生成场景。",
+      "display_category": "image",
+      "display_category_zh": "图像处理",
+      "display_tags": ["中文语义", "图像生成"]
+    },
+    "image_qwen_chinese_cartoon.json": {
+      "display_name_zh": "Qwen 中文卡通画面方案",
+      "description_zh": "适合偏中文语境和卡通风格的图像生成。",
+      "display_category": "image",
+      "display_category_zh": "图像处理",
+      "display_tags": ["卡通风格", "中文内容"]
+    },
+    "image_sd3.5.json": {
+      "display_name_zh": "SD 3.5 画面方案",
+      "description_zh": "适合写实或通用视觉风格的单张画面生成。",
+      "display_category": "image",
+      "display_category_zh": "图像处理",
+      "display_tags": ["写实风格", "单张画面"]
+    },
+    "image_sdxl.json": {
+      "display_name_zh": "SDXL 画面方案",
+      "description_zh": "适合高分辨率图像和封面图生成。",
+      "display_category": "image",
+      "display_category_zh": "图像处理",
+      "display_tags": ["高分辨率", "封面图"]
+    },
+    "image_Z-image.json": {
+      "display_name_zh": "Z-Image 画面方案",
+      "description_zh": "适合偏创意风格的单张画面生成。",
+      "display_category": "image",
+      "display_category_zh": "图像处理",
+      "display_tags": ["创意画面", "图像生成"]
+    },
+    "image_nano_banana.json": {
+      "display_name_zh": "Nano Banana 画面方案",
+      "description_zh": "适合轻量级图像生成或验证场景。",
+      "display_category": "image",
+      "display_category_zh": "图像处理",
+      "display_tags": ["轻量验证", "图像生成"]
+    },
+    "video_wan2.1_fusionx.json": {
+      "display_name_zh": "Wan 2.1 FusionX 视频方案",
+      "description_zh": "适合通用短视频镜头与动态片段生成。",
+      "display_category": "media",
+      "display_category_zh": "画面方案",
+      "display_tags": ["短视频片段", "动态镜头"]
+    },
+    "video_wan2.2.json": {
+      "display_name_zh": "Wan 2.2 视频方案",
+      "description_zh": "适合通用视频镜头生成和动态扩展。",
+      "display_category": "media",
+      "display_category_zh": "画面方案",
+      "display_tags": ["视频镜头", "动态扩展"]
+    },
+    "video_qwen_wan2.2.json": {
+      "display_name_zh": "Qwen Wan 2.2 视频方案",
+      "description_zh": "适合中文语义驱动的视频镜头生成。",
+      "display_category": "media",
+      "display_category_zh": "画面方案",
+      "display_tags": ["中文语义", "视频镜头"]
+    },
+    "video_Z_image_wan2.2.json": {
+      "display_name_zh": "Z-Image Wan 2.2 视频方案",
+      "description_zh": "适合带有更强风格化表达的视频片段生成。",
+      "display_category": "media",
+      "display_category_zh": "画面方案",
+      "display_tags": ["风格化", "视频片段"]
+    },
+    "i2v_LTX2.json": {
+      "display_name_zh": "LTX 2 图片转视频方案",
+      "description_zh": "适合把单张图片转换成短视频动态镜头。",
+      "display_category": "media",
+      "display_category_zh": "画面方案",
+      "display_tags": ["图片转视频", "动态镜头"]
+    },
+    "af_scail.json": {
+      "display_name_zh": "Scail 动作迁移方案",
+      "description_zh": "适合动作迁移和驱动视频重定向场景。",
+      "display_category": "media",
+      "display_category_zh": "画面方案",
+      "display_tags": ["动作迁移", "驱动视频"]
+    },
+    "af_mock.json": {
+      "display_name_zh": "动作迁移测试方案",
+      "description_zh": "适合本地调试或验证动作迁移流程。",
+      "display_category": "media",
+      "display_category_zh": "画面方案",
+      "display_tags": ["本地测试", "动作迁移"]
+    }
+  }
+}

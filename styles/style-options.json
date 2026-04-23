@@ -1,0 +1,156 @@
+[
+  {
+    "value": "1000",
+    "label": "1000 通用解说（推荐）",
+    "scene": "万能型解说",
+    "tone": "自然流畅",
+    "bgm": "style-1000-bgm.mp3"
+  },
+  {
+    "value": "1001",
+    "label": "1001 短视频复刻",
+    "scene": "翻拍热门短视频",
+    "tone": "还原原作",
+    "bgm": "style-1001-bgm.mp3"
+  },
+  {
+    "value": "1002",
+    "label": "1002 商品评测",
+    "scene": "数码、家电评测",
+    "tone": "理性客观",
+    "bgm": "style-1002-bgm.mp3"
+  },
+  {
+    "value": "1003",
+    "label": "1003 TikTok带货",
+    "scene": "电商产品展示",
+    "tone": "热情感染",
+    "bgm": "style-1003-bgm.mp3"
+  },
+  {
+    "value": "1004",
+    "label": "1004 长视频精剪",
+    "scene": "长视频提炼精华",
+    "tone": "紧凑高效",
+    "bgm": "style-1004-bgm.mp3"
+  },
+  {
+    "value": "1005",
+    "label": "1005 搞笑混剪",
+    "scene": "搞笑素材混剪",
+    "tone": "幽默欢乐",
+    "bgm": "style-1005-bgm.mp3"
+  },
+  {
+    "value": "1006",
+    "label": "1006 综艺解说",
+    "scene": "综艺节目解说",
+    "tone": "轻松活泼",
+    "bgm": "style-1006-bgm.mp3"
+  },
+  {
+    "value": "1007",
+    "label": "1007 游戏解说",
+    "scene": "游戏攻略、实况",
+    "tone": "激情热血",
+    "bgm": "style-1007-bgm.mp3"
+  },
+  {
+    "value": "1008",
+    "label": "1008 演讲访谈",
+    "scene": "演讲、访谈节目",
+    "tone": "沉稳专业",
+    "bgm": "style-1008-bgm.mp3"
+  },
+  {
+    "value": "1009",
+    "label": "1009 纪实故事",
+    "scene": "真实事件、人物故事",
+    "tone": "娓娓道来",
+    "bgm": "style-1009-bgm.mp3"
+  },
+  {
+    "value": "1010",
+    "label": "1010 历史纪录",
+    "scene": "历史、人文纪录",
+    "tone": "厚重深沉",
+    "bgm": "style-1010-bgm.mp3"
+  },
+  {
+    "value": "1011",
+    "label": "1011 自然萌趣",
+    "scene": "动物、自然生态",
+    "tone": "萌趣可爱",
+    "bgm": "style-1011-bgm.mp3"
+  },
+  {
+    "value": "1012",
+    "label": "1012 儿童动画",
+    "scene": "儿童内容、动画配音",
+    "tone": "活泼可爱",
+    "bgm": "style-1012-bgm.mp3"
+  },
+  {
+    "value": "1013",
+    "label": "1013 毒舌影评",
+    "scene": "犀利点评、吐槽",
+    "tone": "辛辣直接",
+    "bgm": "style-1013-bgm.mp3"
+  },
+  {
+    "value": "1014",
+    "label": "1014 顾我电影风格",
+    "scene": "电影解说、影评",
+    "tone": "深度专业",
+    "bgm": "style-1014-bgm.mp3"
+  },
+  {
+    "value": "1015",
+    "label": "1015 深度拉片",
+    "scene": "专业拉片分析",
+    "tone": "学术专业",
+    "bgm": "style-1015-bgm.mp3"
+  },
+  {
+    "value": "1016",
+    "label": "1016 美食纪录片",
+    "scene": "美食、舌尖风格",
+    "tone": "诱人深情",
+    "bgm": "style-1016-bgm.mp3"
+  },
+  {
+    "value": "1017",
+    "label": "1017 治愈风景",
+    "scene": "风景、旅行、治愈",
+    "tone": "温柔深情",
+    "bgm": "style-1017-bgm.mp3"
+  },
+  {
+    "value": "1018",
+    "label": "1018 文案配画",
+    "scene": "文案配合画面",
+    "tone": "诗意唯美",
+    "bgm": "style-1018-bgm.mp3"
+  },
+  {
+    "value": "1019",
+    "label": "1019 黑帮狠人",
+    "scene": "黑帮、犯罪题材",
+    "tone": "硬汉冷峻",
+    "bgm": "style-1019-bgm.mp3"
+  },
+  {
+    "value": "1020",
+    "label": "1020 English Narration",
+    "scene": "英文通用解说",
+    "tone": "专业清晰",
+    "bgm": "style-1020-bgm.mp3"
+  },
+  {
+    "value": "1021",
+    "label": "1021 动物世界",
+    "scene": "动物纪录片、自然生态纪录",
+    "tone": "低沉诗意",
+    "bgm": "style-1021-bgm.mp3"
+  }
+]
