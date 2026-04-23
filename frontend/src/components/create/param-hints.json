@@ -1,0 +1,242 @@
+[
+  {
+    "key": "quick.title",
+    "title": "Video Title",
+    "description": "Use a concrete, viewer-facing title instead of an internal note.",
+    "range": "8-60 chars",
+    "recommended": "Name the promised outcome or hook.",
+    "tip": "A good title improves library scanning later."
+  },
+  {
+    "key": "quick.topic",
+    "title": "Creative Brief",
+    "description": "Give the system enough context to build scenes, narration, and visual tone.",
+    "range": "40-400 chars",
+    "recommended": "Include audience, angle, and payoff.",
+    "tip": "If you already know the narration, move it to the advanced narration field."
+  },
+  {
+    "key": "quick.tts_workflow",
+    "title": "Voice Workflow",
+    "description": "Choose the narration pipeline that matches latency and voice quality needs.",
+    "range": "1 workflow",
+    "recommended": "Use local for fast drafts, cloud for final polish.",
+    "tip": "RunningHub voice workflows may benefit from selecting a stronger instance type."
+  },
+  {
+    "key": "quick.media_workflow",
+    "title": "Media Workflow",
+    "description": "This controls the visual rendering strategy for the storyboard and final video.",
+    "range": "1 workflow",
+    "recommended": "Pick the simplest workflow that still fits the motion style.",
+    "tip": "Changing this has a bigger runtime impact than changing BGM."
+  },
+  {
+    "key": "quick.bgm_path",
+    "title": "Background Music",
+    "description": "Leave empty to keep style defaults or no music, depending on the selected style.",
+    "range": "0-1 track",
+    "recommended": "Only override when the default track clearly mismatches the brief.",
+    "tip": "Custom BGM is best for branded or campaign-specific output."
+  },
+  {
+    "key": "quick.narration",
+    "title": "Custom Narration",
+    "description": "Overrides topic-based script generation and uses your text verbatim.",
+    "range": "20-600 chars",
+    "recommended": "Use this when timing or wording must stay fixed.",
+    "tip": "If this field is set, the request switches to fixed narration mode."
+  },
+  {
+    "key": "quick.prompt_prefix",
+    "title": "Prompt Prefix",
+    "description": "Adds a reusable visual style cue before image prompt generation.",
+    "range": "5-120 chars",
+    "recommended": "Keep it focused on mood, lens, and composition.",
+    "tip": "Shorter prefixes are easier to combine with style defaults."
+  },
+  {
+    "key": "digital-human.portrait_url",
+    "title": "Portrait Source",
+    "description": "Use a stable, front-facing portrait with clean lighting and little motion blur.",
+    "range": "1 image",
+    "recommended": "Square or portrait crops usually work best.",
+    "tip": "Busy backgrounds make lip sync and compositing less reliable."
+  },
+  {
+    "key": "digital-human.narration",
+    "title": "Narration",
+    "description": "Keep sentences short enough for natural speech pacing and facial sync.",
+    "range": "1-8 sentences",
+    "recommended": "Write the script as spoken language, not as on-screen copy.",
+    "tip": "Comma-heavy text often sounds slower than expected."
+  },
+  {
+    "key": "digital-human.voice_workflow",
+    "title": "Voice Workflow",
+    "description": "Optional voice synthesis override for presenter videos.",
+    "range": "0-1 workflow",
+    "recommended": "Leave empty when the default voice stack is already validated.",
+    "tip": "Cloud voice workflows can increase queue time."
+  },
+  {
+    "key": "digital-human.bgm_mode",
+    "title": "Music Mode",
+    "description": "Choose whether the presenter clip should ship silent or with a selected track.",
+    "range": "none/custom",
+    "recommended": "Keep silent for talking-head reviews, add music for publish-ready drafts.",
+    "tip": "Music can make QA harder when checking lip sync."
+  },
+  {
+    "key": "digital-human.bgm_path",
+    "title": "Music Track",
+    "description": "Only used when custom music mode is selected.",
+    "range": "0-1 track",
+    "recommended": "Choose low-density tracks that do not compete with speech.",
+    "tip": "Sparse intros are safer when narration starts immediately."
+  },
+  {
+    "key": "digital-human.runninghub_instance_type",
+    "title": "Instance Type",
+    "description": "Relevant only when the selected voice workflow runs on RunningHub.",
+    "range": "auto/plus",
+    "recommended": "Use auto for drafts, plus for heavy or premium workflows.",
+    "tip": "Higher tiers improve reliability more than raw speed for bursty queues."
+  },
+  {
+    "key": "i2v.source_image",
+    "title": "Source Image",
+    "description": "Use a clean still frame with clear subject separation and intentional framing.",
+    "range": "1 image",
+    "recommended": "High-contrast edges produce cleaner motion.",
+    "tip": "Tiny source images amplify artifacts after motion synthesis."
+  },
+  {
+    "key": "i2v.motion_prompt",
+    "title": "Motion Prompt",
+    "description": "Describe camera movement, subject motion, and emotional pacing in one pass.",
+    "range": "15-180 chars",
+    "recommended": "Mention both motion direction and intensity.",
+    "tip": "Subtle motion is easier to stabilize than large body movement."
+  },
+  {
+    "key": "i2v.media_workflow",
+    "title": "Motion Workflow",
+    "description": "Determines how aggressively the system turns still imagery into motion.",
+    "range": "1 workflow",
+    "recommended": "Pick a workflow tuned for the target shot type.",
+    "tip": "Changing workflows matters more than changing the wording of the prompt."
+  },
+  {
+    "key": "i2v.bgm_mode",
+    "title": "Music Mode",
+    "description": "Choose whether the resulting clip should stay silent or include a selected track.",
+    "range": "none/custom",
+    "recommended": "Stay silent when evaluating motion quality.",
+    "tip": "Music is easier to add later than motion artifacts are to remove."
+  },
+  {
+    "key": "i2v.bgm_path",
+    "title": "Music Track",
+    "description": "Only used when custom music mode is enabled.",
+    "range": "0-1 track",
+    "recommended": "Match beat density to the speed of the requested motion.",
+    "tip": "Fast tracks make slow motion clips feel flat."
+  },
+  {
+    "key": "i2v.runninghub_instance_type",
+    "title": "Instance Type",
+    "description": "Only shown for RunningHub workflows that need remote GPU capacity.",
+    "range": "auto/plus",
+    "recommended": "Auto is usually enough for exploratory shots.",
+    "tip": "Reserve plus for heavier pipelines or when queues are unstable."
+  },
+  {
+    "key": "action-transfer.driver_video",
+    "title": "Driver Video",
+    "description": "Use a clip with clear body motion and minimal occlusion.",
+    "range": "1 video",
+    "recommended": "Medium shots with stable framing transfer best.",
+    "tip": "Fast cuts or handheld shake reduce motion consistency."
+  },
+  {
+    "key": "action-transfer.target_image",
+    "title": "Target Image",
+    "description": "Choose a clean subject image that can accept the transferred pose sequence.",
+    "range": "1 image",
+    "recommended": "Front-facing, well-lit portraits are the safest baseline.",
+    "tip": "Complex hair edges and props raise cleanup cost."
+  },
+  {
+    "key": "action-transfer.pose_workflow",
+    "title": "Pose Workflow",
+    "description": "Controls how motion is extracted from the driver and applied to the target.",
+    "range": "1 workflow",
+    "recommended": "Use the dedicated pose workflow when motion fidelity matters.",
+    "tip": "Wrong workflow choice is the fastest path to jitter and broken limbs."
+  },
+  {
+    "key": "action-transfer.bgm_mode",
+    "title": "Music Mode",
+    "description": "Decides whether the motion clip is silent or backed by a selected track.",
+    "range": "none/custom",
+    "recommended": "Keep silent during pose QA.",
+    "tip": "Audio tends to hide visual problems in quick reviews."
+  },
+  {
+    "key": "action-transfer.bgm_path",
+    "title": "Music Track",
+    "description": "Only used when custom BGM is selected.",
+    "range": "0-1 track",
+    "recommended": "Choose tracks with steady rhythm to match repeated motion.",
+    "tip": "Overly dramatic builds can overpower short transfer clips."
+  },
+  {
+    "key": "action-transfer.runninghub_instance_type",
+    "title": "Instance Type",
+    "description": "Appears for RunningHub-based pose workflows.",
+    "range": "auto/plus",
+    "recommended": "Default to auto unless the workflow is known to be memory-heavy.",
+    "tip": "Plus is mostly useful for larger or more complex remote pipelines."
+  },
+  {
+    "key": "custom.scene_media",
+    "title": "Scene Media",
+    "description": "Each scene needs a valid image or video source that matches the narration beat.",
+    "range": "1 asset per scene",
+    "recommended": "Keep consecutive scenes visually distinct.",
+    "tip": "Mixed image/video scenes are fine as long as durations stay intentional."
+  },
+  {
+    "key": "custom.scene_narration",
+    "title": "Scene Narration",
+    "description": "Write narration per scene, not a full script block for the entire video.",
+    "range": "5-160 chars",
+    "recommended": "Keep one idea per scene.",
+    "tip": "Shorter scene narration makes pacing easier to debug."
+  },
+  {
+    "key": "custom.scene_duration",
+    "title": "Scene Duration",
+    "description": "Controls how long each scene stays on screen before the next cut.",
+    "range": "1-15 sec",
+    "recommended": "Start around 4-6 seconds for narration-led scenes.",
+    "tip": "Very short durations often clip narration tails."
+  },
+  {
+    "key": "custom.bgm_mode",
+    "title": "Music Mode",
+    "description": "Choose whether the stitched custom sequence should ship silent or with a track.",
+    "range": "none/custom",
+    "recommended": "Use music only after scene timing feels stable.",
+    "tip": "Silence makes per-scene pacing issues easier to hear."
+  },
+  {
+    "key": "custom.bgm_path",
+    "title": "Music Track",
+    "description": "Optional track for the stitched video.",
+    "range": "0-1 track",
+    "recommended": "Pick tracks that can survive many hard cuts.",
+    "tip": "Tracks with gentle intros and outros are easier to loop under multiple scenes."
+  }
+]

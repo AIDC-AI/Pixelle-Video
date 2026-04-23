@@ -85,3 +85,4 @@ repositories/
 .superpowers/
 frontend/.playwright-runtime/
 frontend/test-results/
+.gstack/

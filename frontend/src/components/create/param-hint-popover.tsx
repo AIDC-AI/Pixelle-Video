@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import hints from '@/data/param-hints.json';
+import hints from './param-hints.json';
 
 import { cn } from '@/lib/utils';
 
