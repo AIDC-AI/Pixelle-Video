@@ -184,10 +184,12 @@ class PublisherService:
         if sys.platform == "win32":
             # Use PowerShell Start-Process so Chrome is fully detached from the
             # Python/Streamlit process tree and can bind the debug port properly.
-            args_str = " ".join(f'"{a}"' if " " in a else a for a in cmd[1:])
+            # -ArgumentList must be comma-separated quoted strings, NOT a single
+            # space-joined string, otherwise all flags arrive as one argument.
+            args_ps = ",".join(f'"{a}"' for a in cmd[1:])
+            ps_cmd = f'Start-Process -FilePath "{exe}" -ArgumentList {args_ps}'
             subprocess.Popen(
-                ["powershell", "-NoProfile", "-Command",
-                 f'Start-Process -FilePath "{exe}" -ArgumentList {args_str}'],
+                ["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 creationflags=subprocess.CREATE_NO_WINDOW,
@@ -198,9 +200,11 @@ class PublisherService:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-        # Give Chrome a moment to bind the port, then return.
-        # Caller is responsible for polling / showing a "check" button.
-        time.sleep(3)
+        # Give Chrome time to bind the debug port before returning.
+        for _ in range(10):
+            time.sleep(0.5)
+            if cls.is_debug_port_open("127.0.0.1", port):
+                return exe
         return exe
 
     def init_driver(self):

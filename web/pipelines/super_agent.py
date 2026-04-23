@@ -905,6 +905,17 @@ class SuperAgentPipelineUI(PipelineUI):
             host, port = PublisherService.parse_address(addr)
             port_open = PublisherService.is_debug_port_open(host, port)
 
+            # Show persistent launch feedback (survives st.rerun)
+            _launch_msg = st.session_state.pop("sa_chrome_launch_msg", None)
+            if _launch_msg:
+                lvl, msg = _launch_msg
+                if lvl == "success":
+                    st.success(msg)
+                elif lvl == "warning":
+                    st.warning(msg)
+                else:
+                    st.error(msg)
+
             if port_open:
                 st.success(tr("super_agent.step7.chrome_connected", address=addr))
             else:
@@ -1234,18 +1245,24 @@ class SuperAgentPipelineUI(PipelineUI):
         try:
             exe = PublisherService.launch_chrome_debug(port=port, chrome_path=driver_path)
             if PublisherService.is_debug_port_open("127.0.0.1", port):
-                st.success(tr("super_agent.step7.launch_success", path=exe))
+                st.session_state["sa_chrome_launch_msg"] = (
+                    "success", f"Chrome 已启动并连接：{exe}"
+                )
             else:
                 manual_cmd = PublisherService._make_manual_cmd(exe, port)
-                st.warning(
-                    f"Chrome 已启动，正在等待调试端口就绪…\n\n"
-                    f"如果仍未连接，请手动在 CMD 中运行：\n```\n{manual_cmd}\n```"
+                st.session_state["sa_chrome_launch_msg"] = (
+                    "warning",
+                    f"Chrome 已启动但调试端口尚未就绪，请稍等几秒后刷新页面。\n\n"
+                    f"或手动在 CMD 中运行：\n{manual_cmd}",
                 )
-            st.rerun()
         except FileNotFoundError:
-            st.error(tr("super_agent.step7.chrome_not_found"))
+            st.session_state["sa_chrome_launch_msg"] = (
+                "error", tr("super_agent.step7.chrome_not_found")
+            )
         except Exception as e:
-            st.error(str(e))
+            st.session_state["sa_chrome_launch_msg"] = ("error", str(e))
+            logger.exception(e)
+        st.rerun()
 
     def _do_test_publish(self):
         """Test browser driver connection."""
