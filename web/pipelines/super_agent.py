@@ -1248,35 +1248,120 @@ class SuperAgentPipelineUI(PipelineUI):
                     st.error(tr("super_agent.step5.srt_extract_audio_failed"))
                     return
 
-                srt_prompt = (
-                    "请根据这段音频内容，生成对应的 SRT 格式字幕。"
-                    "严格按照 SRT 格式输出（序号、时间轴、文本），不要添加其他内容。"
+                script_text = st.session_state.get(
+                    "sa_rewritten_script",
+                    st.session_state.get("sa_original_script", ""),
                 )
-                try:
-                    result = run_async(
-                        pixelle_video.llm(srt_prompt, max_tokens=4096)
+                timing_audio = (
+                    audio_tmp if os.path.exists(audio_tmp)
+                    else st.session_state.get("sa_audio_path", "")
+                )
+                duration = _get_audio_duration(timing_audio) or 0.0
+
+                async def _srt_via_llm():
+                    """
+                    Generate SRT from video audio using the same LLM config as the
+                    rest of the pipeline.
+
+                    Priority:
+                    1. Multimodal audio upload  → model transcribes directly into SRT.
+                       Works even when there is no script text (pure video upload case).
+                    2. Text prompt (script + duration) → model formats existing script.
+                       Only attempted when script text is available.
+                    Raises if neither path produces a result.
+                    """
+                    from openai import AsyncOpenAI
+                    from pixelle_video.config import config_manager
+
+                    llm_cfg = config_manager.config.llm
+                    client_kwargs = {"api_key": llm_cfg.api_key or "dummy-key"}
+                    if llm_cfg.base_url:
+                        client_kwargs["base_url"] = llm_cfg.base_url
+                    model = llm_cfg.model or "qwen-plus"
+                    client = AsyncOpenAI(**client_kwargs)
+
+                    srt_instruction = (
+                        "请为这段音频生成对应的 SRT 格式字幕。\n"
+                        "要求：\n"
+                        "1. 严格按照 SRT 格式输出（序号 / 时间轴 HH:MM:SS,mmm --> HH:MM:SS,mmm / 字幕文本），块间空一行。\n"
+                        "2. 每条字幕不超过 20 个汉字，在标点处自然断句。\n"
+                        "3. 只输出 SRT 内容，不要添加任何说明。"
                     )
-                    if result and result.strip():
-                        st.session_state["sa_srt_content"] = result.strip()
-                        st.rerun()
-                except Exception:
-                    script_text = st.session_state.get(
-                        "sa_rewritten_script",
-                        st.session_state.get("sa_original_script", ""),
-                    )
-                    if script_text.strip():
-                        lines = [
-                            ln.strip()
-                            for ln in script_text.strip().splitlines()
-                            if ln.strip()
-                        ]
-                        st.session_state["sa_srt_content"] = _build_srt_from_lines(
-                            lines,
-                            audio_path=st.session_state.get("sa_audio_path", ""),
+
+                    # ── 路径 1：多模态音频上传（有无脚本均可用） ─────────────
+                    try:
+                        logger.info(f"Uploading audio for SRT transcription: {timing_audio}")
+                        with open(timing_audio, "rb") as af:
+                            file_obj = await client.files.create(file=af, purpose="file-extract")
+                        messages = [{
+                            "role": "user",
+                            "content": [
+                                {"type": "audio", "audio": {"file_id": file_obj.id}},
+                                {"type": "text", "text": srt_instruction},
+                            ],
+                        }]
+                        resp = await client.chat.completions.create(
+                            model=model, messages=messages, max_tokens=4096
                         )
+                        result = (resp.choices[0].message.content or "").strip()
+                        if result:
+                            logger.info("SRT generated via multimodal audio upload")
+                            return result
+                    except Exception as _mm_err:
+                        logger.warning(f"Multimodal audio SRT failed ({_mm_err})")
+
+                    # ── 路径 2：纯文字 prompt（仅当 session 里有脚本文本时） ──
+                    if script_text.strip():
+                        logger.info("Falling back to text-prompt SRT generation")
+                        duration_hint = f"音频总时长：{duration:.1f} 秒\n" if duration else ""
+                        text_prompt = (
+                            f"请将以下文案按照标准 SRT 字幕格式进行分割和格式化。\n"
+                            f"{duration_hint}"
+                            f"要求：\n"
+                            f"1. 严格按照 SRT 格式输出（序号 / 时间轴 HH:MM:SS,mmm --> HH:MM:SS,mmm / 字幕文本），块间空一行。\n"
+                            f"2. 每条字幕不超过 20 个汉字，在标点处自然断句。\n"
+                            f"3. 时间轴总长度不超过 {duration:.1f} 秒，均匀分布。\n"
+                            f"4. 只输出 SRT 内容，不要添加任何说明。\n\n"
+                            f"文案内容：\n{script_text}"
+                        )
+                        resp = await client.chat.completions.create(
+                            model=model,
+                            messages=[{"role": "user", "content": text_prompt}],
+                            max_tokens=4096,
+                        )
+                        result = (resp.choices[0].message.content or "").strip()
+                        if result:
+                            return result
+
+                    raise RuntimeError(
+                        "无法生成字幕：当前模型不支持音频输入，且 Session 中无文案文本。\n"
+                        "请先在步骤 1-2 中输入文案，或在配置中使用支持音频的模型（如 qwen-audio-turbo）。"
+                    )
+
+                try:
+                    result = run_async(_srt_via_llm())
+                    st.session_state["sa_srt_content"] = result
+                    st.rerun()
+                except RuntimeError as _no_path_err:
+                    # Neither multimodal nor text path worked — try local fallback or show error
+                    if script_text.strip():
+                        logger.warning("LLM SRT failed, using _build_srt_from_lines as last resort")
+                        lines = [ln.strip() for ln in script_text.splitlines() if ln.strip()]
+                        st.session_state["sa_srt_content"] = _build_srt_from_lines(lines, audio_path=timing_audio)
                         st.rerun()
                     else:
-                        st.warning(tr("super_agent.step5.srt_no_script"))
+                        st.error(str(_no_path_err))
+                except Exception as _llm_err:
+                    logger.warning(f"LLM SRT failed ({_llm_err}), using _build_srt_from_lines")
+                    if script_text.strip():
+                        lines = [ln.strip() for ln in script_text.splitlines() if ln.strip()]
+                        st.session_state["sa_srt_content"] = _build_srt_from_lines(lines, audio_path=timing_audio)
+                        st.rerun()
+                    else:
+                        st.error(
+                            f"字幕生成失败：{_llm_err}\n\n"
+                            "请先在步骤 1-2 中输入文案，或使用支持音频输入的模型（如 qwen-audio-turbo）。"
+                        )
 
             except Exception as e:
                 st.error(tr("super_agent.step5.error", error=str(e)))
