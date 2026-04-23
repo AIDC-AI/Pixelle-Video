@@ -79,9 +79,16 @@
 
 ### 5. 数据流
 
-- `useCurrentProjectStore`（zustand + persist）继续作为全局状态源
+- `useCurrentProjectStore`（zustand + persist）只存 `currentProjectId`（string）
+- `useCurrentProjectHydration` hook 负责从项目列表 resolve 出完整 Project 对象 — project-switcher 使用此 hook
 - `useProjects()` / `useCreateProject()` / `useDeleteProject()` / `useUpdateProject()` 全部复用
 - 项目面板搜索为纯前端过滤
+
+### 6. 实现细节补充
+
+- **面板定位**：使用 shadcn/ui 的 `Popover` 组件（内置 click outside 关闭 + Portal 渲染），锚定在项目切换按钮上
+- **自动创建后高亮**：项目列表项加 `data-project-id` 属性，新建成功后对目标项添加 `animate-highlight` CSS class（背景色闪烁 1.5s 后消失），不用 toast
+- **topbar 里的 `useCurrentProjectHydration` import**：移除，该 hook 转由 project-switcher 使用
 
 ### 6. 边界情况
 
