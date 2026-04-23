@@ -220,6 +220,10 @@ class TaskManager:
         if not task:
             return False
         
+        # Do not cancel already-terminal tasks
+        if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
+            return False
+
         # Cancel future if running
         future = self._task_futures.get(task_id)
         if future and not future.done():
