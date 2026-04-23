@@ -33,6 +33,10 @@ async def run(
     source_image: str,
     motion_prompt: str,
     media_workflow: str,
+    bgm_mode: str = "none",
+    bgm_path: Optional[str] = None,
+    bgm_volume: float = 0.3,
+    runninghub_instance_type: Optional[str] = None,
     project_id: Optional[str] = None,
     progress_callback: ProgressCallback = None,
     task_id_override: Optional[str] = None,
@@ -42,6 +46,10 @@ async def run(
         "source_image": source_image,
         "motion_prompt": motion_prompt,
         "media_workflow": media_workflow,
+        "bgm_mode": bgm_mode,
+        "bgm_path": bgm_path,
+        "bgm_volume": bgm_volume,
+        "runninghub_instance_type": runninghub_instance_type,
         "project_id": project_id,
     }
     mock_result = await maybe_create_mock_result(
@@ -69,11 +77,11 @@ async def run(
         else str(workflow_path)
     )
 
-    kit = await core._get_or_create_comfykit()
-    video_result = await kit.execute(
-        workflow_input,
-        {"image": source_image, "prompt": motion_prompt},
-    )
+    async with core._comfykit_session(runninghub_instance_type=runninghub_instance_type) as kit:
+        video_result = await kit.execute(
+            workflow_input,
+            {"image": source_image, "prompt": motion_prompt},
+        )
 
     generated_video_url = None
     if hasattr(video_result, "videos") and video_result.videos:
@@ -92,6 +100,17 @@ async def run(
         response = await client.get(generated_video_url)
         response.raise_for_status()
         Path(final_video_path).write_bytes(response.content)
+
+    if bgm_mode in {"default", "custom"} and bgm_path:
+        bgm_video_path = os.path.join(task_dir, "final_with_bgm.mp4")
+        core.video.concat_videos(
+            videos=[final_video_path],
+            output=bgm_video_path,
+            bgm_path=bgm_path,
+            bgm_volume=bgm_volume,
+            bgm_mode=bgm_mode,
+        )
+        final_video_path = bgm_video_path
 
     storyboard = Storyboard(
         title="Image To Video",

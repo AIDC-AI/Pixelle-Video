@@ -107,7 +107,12 @@ class VideoService:
         method: Literal["demuxer", "filter"] = "demuxer",
         bgm_path: Optional[str] = None,
         bgm_volume: float = 0.2,
-        bgm_mode: Literal["once", "loop"] = "loop"
+        bgm_mode: Literal["default", "custom", "none", "once", "loop"] = "none",
+        loop: bool = True,
+        fade_in_seconds: float = 0.0,
+        fade_out_seconds: float = 0.0,
+        ducking_enabled: bool = False,
+        ducking_db: float = 7.0,
     ) -> str:
         """
         Concatenate multiple videos into one
@@ -123,9 +128,16 @@ class VideoService:
                 - Filename (e.g., "default.mp3", "happy.mp3"): Use built-in BGM from bgm/ folder
                 - Custom path: Use custom BGM file
             bgm_volume: BGM volume level (0.0-1.0), default 0.2
-            bgm_mode: BGM playback mode
-                - "once": Play BGM once
-                - "loop": Loop BGM to match video duration
+            bgm_mode: BGM source mode
+                - "none": Disable BGM
+                - "default": Use the caller-resolved default BGM path
+                - "custom": Use the caller-provided BGM path
+                - "once"/"loop": Backward-compatible aliases for custom BGM playback
+            loop: Whether to loop BGM to match the video duration
+            fade_in_seconds: BGM fade-in duration
+            fade_out_seconds: BGM fade-out duration
+            ducking_enabled: Lower BGM under the original audio when available
+            ducking_db: Ducking ratio hint
         
         Returns:
             Path to the output video file
@@ -141,8 +153,14 @@ class VideoService:
         """
         if not videos:
             raise ValueError("Videos list cannot be empty")
-        
-        if len(videos) == 1:
+
+        if bgm_mode in {"once", "loop"}:
+            loop = bgm_mode == "loop"
+            bgm_mode = "custom" if bgm_path else "none"
+
+        should_add_bgm = bgm_mode in {"default", "custom"} and bool(bgm_path)
+
+        if len(videos) == 1 and not should_add_bgm:
             logger.info(f"Only one video provided, copying to {output}")
             shutil.copy(videos[0], output)
             return output
@@ -150,19 +168,27 @@ class VideoService:
         logger.info(f"Concatenating {len(videos)} videos using {method} method")
         
         # Step 1: Concatenate videos
-        if bgm_path:
+        if should_add_bgm:
             # If BGM needed, concatenate to temp file first
             temp_output = output.replace('.mp4', '_no_bgm.mp4')
-            concat_result = self._concat_demuxer(videos, temp_output) if method == "demuxer" else self._concat_filter(videos, temp_output)
+            if len(videos) == 1:
+                shutil.copy(videos[0], temp_output)
+                concat_result = temp_output
+            else:
+                concat_result = self._concat_demuxer(videos, temp_output) if method == "demuxer" else self._concat_filter(videos, temp_output)
             
             # Step 2: Add BGM
-            logger.info(f"Adding BGM: {bgm_path} (volume={bgm_volume}, mode={bgm_mode})")
+            logger.info(f"Adding BGM: {bgm_path} (volume={bgm_volume}, mode={bgm_mode}, loop={loop})")
             final_result = self._add_bgm_to_video(
                 video=concat_result,
                 bgm_path=bgm_path,
                 output=output,
                 volume=bgm_volume,
-                mode=bgm_mode
+                loop=loop,
+                fade_in_seconds=fade_in_seconds,
+                fade_out_seconds=fade_out_seconds,
+                ducking_enabled=ducking_enabled,
+                ducking_db=ducking_db,
             )
             
             # Clean up temp file
@@ -690,6 +716,8 @@ class VideoService:
         loop: bool = True,
         fade_in: float = 0.0,
         fade_out: float = 0.0,
+        ducking_enabled: bool = False,
+        ducking_db: float = 7.0,
     ) -> str:
         """
         Add background music to video
@@ -701,7 +729,9 @@ class VideoService:
             bgm_volume: BGM volume relative to original (0.0 to 1.0+)
             loop: If True, loop BGM to match video duration
             fade_in: BGM fade-in duration in seconds
-            fade_out: BGM fade-out duration in seconds (not yet implemented)
+            fade_out: BGM fade-out duration in seconds
+            ducking_enabled: Reduce BGM underneath the source audio when available
+            ducking_db: Ducking ratio hint passed to FFmpeg sidechain compression
         
         Returns:
             Path to the output video file
@@ -714,7 +744,7 @@ class VideoService:
             - If loop=True, BGM repeats until video ends
             - Fade effects are applied to BGM only
         """
-        logger.info(f"Adding BGM to video (volume={bgm_volume}, loop={loop})")
+        logger.info(f"Adding BGM to video (volume={bgm_volume}, loop={loop}, ducking={ducking_enabled})")
         
         try:
             input_video = ffmpeg.input(video)
@@ -731,30 +761,57 @@ class VideoService:
             # Apply fade effects if specified
             if fade_in > 0:
                 bgm_audio = bgm_audio.filter('afade', type='in', duration=fade_in)
-            # Note: fade_out at the end requires knowing the duration, which is complex
-            # For now, we skip fade_out in this implementation
-            # A more advanced implementation would need to:
-            # 1. Get video duration
-            # 2. Calculate fade_out start time
-            # 3. Apply fade filter with specific start_time
-            
-            # Mix original audio with BGM
-            mixed_audio = ffmpeg.filter(
-                [input_video.audio, bgm_audio],
-                'amix',
-                inputs=2,
-                duration='first'  # Use video's duration
-            )
-            
+            if fade_out > 0:
+                video_duration = self._get_video_duration(video)
+                fade_start = max(video_duration - fade_out, 0.0)
+                bgm_audio = bgm_audio.filter('afade', type='out', start_time=fade_start, duration=fade_out)
+
+            video_duration = self._get_video_duration(video)
+
+            if self.has_audio_stream(video):
+                original_audio = input_video.audio
+                if ducking_enabled:
+                    ducked_bgm = ffmpeg.filter(
+                        [bgm_audio, original_audio],
+                        'sidechaincompress',
+                        threshold=0.05,
+                        ratio=max(ducking_db, 1.0),
+                        attack=20,
+                        release=400,
+                    )
+                    mixed_audio = ffmpeg.filter(
+                        [original_audio, ducked_bgm],
+                        'amix',
+                        inputs=2,
+                        duration='first',
+                    )
+                else:
+                    mixed_audio = ffmpeg.filter(
+                        [original_audio, bgm_audio],
+                        'amix',
+                        inputs=2,
+                        duration='first',
+                    )
+            else:
+                if ducking_enabled:
+                    logger.debug("Skipping ducking because the source video has no audio stream")
+                mixed_audio = bgm_audio.filter('atrim', duration=video_duration) if video_duration > 0 else bgm_audio
+
+            output_kwargs = {
+                'vcodec': 'copy',
+                'acodec': 'aac',
+                'audio_bitrate': '192k',
+            }
+            if video_duration > 0:
+                output_kwargs['t'] = video_duration
+
             (
                 ffmpeg
                 .output(
                     input_video.video,
                     mixed_audio,
                     output,
-                    vcodec='copy',
-                    acodec='aac',
-                    audio_bitrate='192k'
+                    **output_kwargs,
                 )
                 .overwrite_output()
                 .run(capture_stdout=True, capture_stderr=True)
@@ -773,7 +830,11 @@ class VideoService:
         bgm_path: str,
         output: str,
         volume: float = 0.2,
-        mode: Literal["once", "loop"] = "loop"
+        loop: bool = True,
+        fade_in_seconds: float = 0.0,
+        fade_out_seconds: float = 0.0,
+        ducking_enabled: bool = False,
+        ducking_db: float = 7.0,
     ) -> str:
         """
         Internal helper to add BGM to video with path resolution
@@ -783,7 +844,7 @@ class VideoService:
             bgm_path: BGM path (can be preset name or custom path)
             output: Output file path
             volume: BGM volume (0.0-1.0)
-            mode: "once" or "loop"
+            loop: Whether to loop the BGM
         
         Returns:
             Path to output video
@@ -794,15 +855,16 @@ class VideoService:
         # Resolve BGM path (raises FileNotFoundError if not found)
         resolved_bgm = self._resolve_bgm_path(bgm_path)
         
-        # Add BGM using existing method
-        loop = (mode == "loop")
         return self.add_bgm(
             video=video,
             bgm=resolved_bgm,
             output=output,
             bgm_volume=volume,
             loop=loop,
-            fade_in=0.0
+            fade_in=fade_in_seconds,
+            fade_out=fade_out_seconds,
+            ducking_enabled=ducking_enabled,
+            ducking_db=ducking_db,
         )
     
     def _get_unique_temp_path(self, prefix: str, original_filename: str) -> str:
@@ -1004,4 +1066,3 @@ class VideoService:
             error_msg = e.stderr.decode() if e.stderr else str(e)
             logger.error(f"FFmpeg error padding video: {error_msg}")
             raise RuntimeError(f"Failed to pad video: {error_msg}")
-

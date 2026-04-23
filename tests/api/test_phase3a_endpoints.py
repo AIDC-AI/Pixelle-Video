@@ -356,6 +356,9 @@ def test_resources_workflow_detail_and_preset_listing(client):
     assert workflow_body["key"] == "selfhost/tts_edge.json"
     assert workflow_body["editable"] is True
     assert workflow_body["metadata"]["node_count"] >= 0
+    assert workflow_body["display_name_zh"]
+    assert workflow_body["description_zh"]
+    assert workflow_body["display_category_zh"] == "配音方案"
 
     missing_response = client.get("/api/resources/workflows/missing-workflow.json")
     assert missing_response.status_code == 404

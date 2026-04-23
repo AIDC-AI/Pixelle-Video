@@ -20,7 +20,7 @@ Refactored to use LinearVideoPipeline (Template Method Pattern).
 
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Callable, Literal, List
+from typing import Optional, Callable, Literal, List, Any
 import asyncio
 import shutil
 
@@ -40,6 +40,7 @@ from pixelle_video.utils.content_generators import (
     generate_narrations_from_topic,
     split_narration_script,
     generate_image_prompts,
+    refine_narrations,
 )
 from pixelle_video.utils.os_util import (
     create_task_output_dir,
@@ -73,6 +74,78 @@ class StandardPipeline(LinearVideoPipeline):
     - "generate": LLM generates narrations from topic
     - "fixed": Use provided script as-is (each line = one narration)
     """
+
+    def _resolve_style_snapshot(self, ctx: PipelineContext) -> dict[str, Any] | None:
+        style_id = ctx.params.get("style_id")
+        registry = getattr(self.core, "styles", None)
+        if registry is None or not style_id:
+            return None
+        return registry.get_style(style_id)
+
+    def _resolve_runtime_defaults(self, ctx: PipelineContext) -> None:
+        style_snapshot = self._resolve_style_snapshot(ctx)
+        ctx.style_snapshot = style_snapshot
+        runtime_config = style_snapshot.get("runtime_config", {}) if style_snapshot else {}
+        ctx.resolved_runtime_config = dict(runtime_config)
+
+        if runtime_config.get("template") and not ctx.params.get("frame_template"):
+            ctx.params["frame_template"] = runtime_config["template"]
+
+        if runtime_config.get("prompt_prefix") and not ctx.params.get("prompt_prefix"):
+            ctx.params["prompt_prefix"] = runtime_config["prompt_prefix"]
+
+        if runtime_config.get("tts_binding") and not ctx.params.get("tts_workflow") and not ctx.params.get("voice_id"):
+            binding = runtime_config["tts_binding"]
+            if binding.get("type") == "workflow":
+                ctx.params["tts_workflow"] = binding.get("value")
+            elif binding.get("type") == "edge_voice":
+                ctx.params["voice_id"] = binding.get("value")
+
+        bgm_mode = ctx.params.get("bgm_mode", "none")
+        resolved_bgm = None
+        if bgm_mode == "none":
+            ctx.params["bgm_path"] = None
+        elif bgm_mode == "custom":
+            resolved_bgm = ctx.params.get("bgm_path")
+        elif bgm_mode == "default":
+            resolved_bgm = runtime_config.get("bgm")
+            ctx.params["bgm_path"] = resolved_bgm
+        elif ctx.params.get("bgm_path"):
+            # Backward-compatible requests that still pass only bgm_path.
+            ctx.params["bgm_mode"] = "custom"
+            resolved_bgm = ctx.params["bgm_path"]
+        elif runtime_config.get("bgm"):
+            # New UI may omit bgm_mode while selecting a style; use the style default.
+            ctx.params["bgm_mode"] = "default"
+            ctx.params["bgm_path"] = runtime_config.get("bgm")
+            resolved_bgm = runtime_config.get("bgm")
+        else:
+            ctx.params["bgm_mode"] = "none"
+            ctx.params["bgm_path"] = None
+
+        bgm_mix = runtime_config.get("bgm_mix") or {}
+        ctx.params["resolved_bgm"] = resolved_bgm
+        ctx.params["bgm_loop"] = bool(bgm_mix.get("loop", True))
+        ctx.params["bgm_fade_in_seconds"] = float(bgm_mix.get("fade_in_seconds", 0.0) or 0.0)
+        ctx.params["bgm_fade_out_seconds"] = float(bgm_mix.get("fade_out_seconds", 0.0) or 0.0)
+        ctx.params["bgm_ducking_enabled"] = bool(bgm_mix.get("ducking_enabled", False))
+        ctx.params["bgm_ducking_db"] = float(bgm_mix.get("ducking_db", 7.0) or 7.0)
+
+        if style_snapshot:
+            ctx.params["style_id"] = style_snapshot["id"]
+            ctx.params["style_name"] = style_snapshot["name"]
+            ctx.params["resolved_runtime_config"] = ctx.resolved_runtime_config
+            ctx.params["reference_snapshot"] = style_snapshot.get("reference_config") or {}
+
+    def _analysis_guidance(self, ctx: PipelineContext) -> Optional[str]:
+        if not ctx.style_snapshot:
+            return None
+        return ctx.style_snapshot.get("analysis_creative_layer") or None
+
+    def _audio_sync_guidance(self, ctx: PipelineContext) -> Optional[str]:
+        if not ctx.style_snapshot:
+            return None
+        return ctx.style_snapshot.get("audio_sync_creative_layer") or None
     
     # ==================== Lifecycle Methods ====================
 
@@ -104,6 +177,8 @@ class StandardPipeline(LinearVideoPipeline):
             ctx.final_video_path = get_task_final_video_path(task_id)
             logger.info(f"   Will copy final video to: {output_path}")
 
+        self._resolve_runtime_defaults(ctx)
+
     async def generate_content(self, ctx: PipelineContext):
         """Step 2: Generate or process script/narrations."""
         mode = ctx.params.get("mode", "generate")
@@ -111,6 +186,7 @@ class StandardPipeline(LinearVideoPipeline):
         n_scenes = ctx.params.get("n_scenes", 5)
         min_words = ctx.params.get("min_narration_words", 5)
         max_words = ctx.params.get("max_narration_words", 20)
+        analysis_guidance = self._analysis_guidance(ctx)
         
         if mode == "generate":
             self._report_progress(ctx.progress_callback, "generating_narrations", 0.05)
@@ -119,7 +195,8 @@ class StandardPipeline(LinearVideoPipeline):
                 topic=text,
                 n_scenes=n_scenes,
                 min_words=min_words,
-                max_words=max_words
+                max_words=max_words,
+                creative_guidance=analysis_guidance,
             )
             logger.info(f"✅ Generated {len(ctx.narrations)} narrations")
         else:  # fixed
@@ -128,6 +205,22 @@ class StandardPipeline(LinearVideoPipeline):
             ctx.narrations = await split_narration_script(text, split_mode=split_mode)
             logger.info(f"✅ Split script into {len(ctx.narrations)} segments (mode={split_mode})")
             logger.info(f"   Note: n_scenes={n_scenes} is ignored in fixed mode")
+
+        audio_sync_guidance = self._audio_sync_guidance(ctx)
+        if ctx.narrations and (analysis_guidance or audio_sync_guidance):
+            self._report_progress(ctx.progress_callback, "refining_narrations", 0.11)
+            combined_guidance = "\n\n".join(
+                guidance.strip()
+                for guidance in (analysis_guidance, audio_sync_guidance)
+                if guidance and guidance.strip()
+            )
+            ctx.narrations = await refine_narrations(
+                self.llm,
+                ctx.narrations,
+                combined_guidance,
+                language=ctx.resolved_runtime_config.get("language", "zh-CN"),
+            )
+            logger.info(f"✅ Refined {len(ctx.narrations)} narrations with style guidance")
 
     async def determine_title(self, ctx: PipelineContext):
         """Step 3: Determine or generate video title."""
@@ -139,6 +232,7 @@ class StandardPipeline(LinearVideoPipeline):
         title = ctx.params.get("title")
         mode = ctx.params.get("mode", "generate")
         text = ctx.input_text
+        analysis_guidance = self._analysis_guidance(ctx)
         
         if title:
             ctx.title = title
@@ -146,10 +240,20 @@ class StandardPipeline(LinearVideoPipeline):
         else:
             self._report_progress(ctx.progress_callback, "generating_title", 0.01)
             if mode == "generate":
-                ctx.title = await generate_title(self.llm, text, strategy="auto")
+                ctx.title = await generate_title(
+                    self.llm,
+                    text,
+                    strategy="auto",
+                    creative_guidance=analysis_guidance,
+                )
                 logger.info(f"   Title: '{ctx.title}' (auto-generated)")
             else:  # fixed
-                ctx.title = await generate_title(self.llm, text, strategy="llm")
+                ctx.title = await generate_title(
+                    self.llm,
+                    text,
+                    strategy="llm",
+                    creative_guidance=analysis_guidance,
+                )
                 logger.info(f"   Title: '{ctx.title}' (LLM-generated)")
 
     async def plan_visuals(self, ctx: PipelineContext):
@@ -176,6 +280,17 @@ class StandardPipeline(LinearVideoPipeline):
             prompt_prefix = ctx.params.get("prompt_prefix")
             min_words = ctx.params.get("min_image_prompt_words", 30)
             max_words = ctx.params.get("max_image_prompt_words", 60)
+            visual_guidance = None
+            if ctx.style_snapshot:
+                visual_guidance = "\n".join(
+                    part
+                    for part in [
+                        f"Style name: {ctx.style_snapshot['name']}",
+                        f"Scene: {ctx.style_snapshot.get('scene')}" if ctx.style_snapshot.get("scene") else "",
+                        f"Tone: {ctx.style_snapshot.get('tone')}" if ctx.style_snapshot.get("tone") else "",
+                    ]
+                    if part
+                )
             
             # Override prompt_prefix if provided
             original_prefix = None
@@ -203,7 +318,8 @@ class StandardPipeline(LinearVideoPipeline):
                     narrations=ctx.narrations,
                     min_words=min_words,
                     max_words=max_words,
-                    progress_callback=image_prompt_progress
+                    progress_callback=image_prompt_progress,
+                    creative_guidance=visual_guidance,
                 )
                 
                 # Apply prompt prefix
@@ -269,6 +385,7 @@ class StandardPipeline(LinearVideoPipeline):
             media_width=ctx.params.get("media_width"),
             media_height=ctx.params.get("media_height"),
             media_workflow=ctx.params.get("media_workflow"),
+            runninghub_instance_type=ctx.params.get("runninghub_instance_type"),
             frame_template=ctx.params.get("frame_template") or "1080x1920/default.html",
             template_params=ctx.params.get("template_params")
         )
@@ -420,7 +537,12 @@ class StandardPipeline(LinearVideoPipeline):
             output=ctx.final_video_path,
             bgm_path=ctx.params.get("bgm_path"),
             bgm_volume=ctx.params.get("bgm_volume", 0.2),
-            bgm_mode=ctx.params.get("bgm_mode", "loop")
+            bgm_mode=ctx.params.get("bgm_mode", "none"),
+            loop=ctx.params.get("bgm_loop", True),
+            fade_in_seconds=ctx.params.get("bgm_fade_in_seconds", 0.0),
+            fade_out_seconds=ctx.params.get("bgm_fade_out_seconds", 0.0),
+            ducking_enabled=ctx.params.get("bgm_ducking_enabled", False),
+            ducking_db=ctx.params.get("bgm_ducking_db", 7.0),
         )
         
         storyboard.final_video_path = final_video_path
@@ -481,6 +603,12 @@ class StandardPipeline(LinearVideoPipeline):
             input_with_title["text"] = ctx.input_text # Ensure text is included
             if not input_with_title.get("title"):
                 input_with_title["title"] = storyboard.title
+            if ctx.style_snapshot:
+                input_with_title["style_id"] = ctx.style_snapshot["id"]
+                input_with_title["style_name"] = ctx.style_snapshot["name"]
+                input_with_title["resolved_bgm"] = ctx.params.get("resolved_bgm")
+                input_with_title["resolved_runtime_config"] = ctx.resolved_runtime_config
+                input_with_title["reference_snapshot"] = ctx.style_snapshot.get("reference_config") or {}
             
             metadata = {
                 "task_id": task_id,
@@ -502,6 +630,11 @@ class StandardPipeline(LinearVideoPipeline):
                     "llm_base_url": self.core.config.get("llm", {}).get("base_url", "unknown"),
                     "comfyui_url": self.core.config.get("comfyui", {}).get("comfyui_url", "unknown"),
                     "runninghub_enabled": bool(self.core.config.get("comfyui", {}).get("runninghub_api_key")),
+                    "reference_voice_id": (
+                        ctx.style_snapshot.get("reference_config", {}).get("voice_id")
+                        if ctx.style_snapshot
+                        else None
+                    ),
                 }
             }
             

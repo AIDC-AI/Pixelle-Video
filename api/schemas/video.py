@@ -60,6 +60,10 @@ class VideoGenerateRequest(BaseModel):
     # === Media Parameters ===
     # Note: media_width and media_height are auto-determined from template meta tags
     media_workflow: Optional[str] = Field(None, description="Custom media workflow (image or video)")
+    runninghub_instance_type: Optional[str] = Field(
+        None,
+        description="Optional RunningHub instance type override for this job (for example: 'plus' or 'auto')."
+    )
     
     # === Video Parameters ===
     video_fps: int = Field(30, ge=15, le=60, description="Video FPS")
@@ -78,9 +82,14 @@ class VideoGenerateRequest(BaseModel):
     )
     
     # === Image Style ===
+    style_id: Optional[str] = Field(None, description="Optional style id resolved from /api/resources/styles")
     prompt_prefix: Optional[str] = Field(None, description="Image style prefix")
     
     # === BGM ===
+    bgm_mode: Literal["default", "custom", "none"] = Field(
+        "none",
+        description="BGM source mode: default=use style/runtime default, custom=use bgm_path, none=disable background music",
+    )
     bgm_path: Optional[str] = Field(None, description="Background music path")
     bgm_volume: float = Field(0.3, ge=0.0, le=1.0, description="BGM volume (0.0-1.0)")
     
@@ -91,6 +100,7 @@ class VideoGenerateRequest(BaseModel):
                 "mode": "generate",
                 "n_scenes": 5,
                 "frame_template": "1080x1920/image_default.html",
+                "runninghub_instance_type": "plus",
                 "template_params": {
                     "accent_color": "#3498db",
                     "background": "https://example.com/custom-bg.jpg"

@@ -18,6 +18,7 @@ from api.routers.health import router as health_router
 from api.routers.llm import router as llm_router
 from api.routers.tts import router as tts_router
 from api.routers.image import router as image_router
+from api.routers.media import router as media_router
 from api.routers.content import router as content_router
 from api.routers.video import router as video_router
 from api.routers.tasks import router as tasks_router
@@ -29,12 +30,14 @@ from api.routers.library import router as library_router
 from api.routers.batch import router as batch_router
 from api.routers.settings import router as settings_router
 from api.routers.uploads import router as uploads_router
+from api.routers.notifications import router as notifications_router
 
 __all__ = [
     "health_router",
     "llm_router",
     "tts_router",
     "image_router",
+    "media_router",
     "content_router",
     "video_router",
     "tasks_router",
@@ -46,4 +49,5 @@ __all__ = [
     "batch_router",
     "settings_router",
     "uploads_router",
+    "notifications_router",
 ]

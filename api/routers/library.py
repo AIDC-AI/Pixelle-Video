@@ -7,7 +7,9 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from loguru import logger
 
 from api.dependencies import PixelleVideoDep
+from api.routers._display_metadata import bgm_display_metadata, script_display_metadata, style_display_metadata
 from api.routers._helpers import api_error, normalize_project_filter_query, path_to_url
+from api.schemas.base import BaseResponse
 from api.schemas.library import (
     ImageItem,
     ImageListResponse,
@@ -41,8 +43,34 @@ def _paginate_items(items: list[dict], cursor: Optional[str], limit: int) -> tup
     return page_items, next_cursor
 
 
-def _builtin_bgm_items(request: Request) -> list[dict]:
+def _style_bgm_links(pixelle_video: PixelleVideoDep) -> dict[str, dict[str, str]]:
+    registry = getattr(pixelle_video, "styles", None)
+    if registry is None:
+        return {}
+
+    links: dict[str, dict[str, str]] = {}
+    for style in registry.list_styles():
+        bgm_name = style.get("runtime_config", {}).get("bgm")
+        if not bgm_name:
+            continue
+        style_display = style_display_metadata(
+            style.get("id"),
+            style.get("name"),
+            style.get("description"),
+            style.get("scene"),
+            style.get("tone"),
+        )
+        links[str(bgm_name)] = {
+            "linked_style_id": style["id"],
+            "linked_style_name": style["name"],
+            "linked_style_display_name_zh": style_display.get("display_name_zh") or style["name"],
+        }
+    return links
+
+
+def _builtin_bgm_items(request: Request, pixelle_video: PixelleVideoDep) -> list[dict]:
     bgm_files_dict: dict[str, dict[str, object]] = {}
+    linked_styles = _style_bgm_links(pixelle_video)
     for root_dir, source, prefix in (
         (Path(get_root_path("bgm")), "builtin", "bgm"),
         (Path(get_data_path("bgm")), "history", "data/bgm"),
@@ -72,11 +100,63 @@ def _builtin_bgm_items(request: Request) -> list[dict]:
                 "duration": None,
                 "file_size": entry["file_size"],
                 "source": entry["source"],
+                "linked_style_id": linked_styles.get(str(entry["name"]), {}).get("linked_style_id"),
+                "linked_style_name": linked_styles.get(str(entry["name"]), {}).get("linked_style_name"),
+                "linked_style_display_name_zh": linked_styles.get(str(entry["name"]), {}).get("linked_style_display_name_zh"),
                 "project_id": None,
                 "batch_id": None,
             }
         )
     return builtin_items
+
+
+def _library_bgm_item_from_payload(request: Request, item: dict[str, object]) -> LibraryBGMItem:
+    display = bgm_display_metadata(
+        name=item.get("name") or Path(str(item["audio_path"])).name,
+        source=str(item.get("source", "history")),
+        linked_style_id=item.get("linked_style_id"),
+        linked_style_name=item.get("linked_style_display_name_zh") or item.get("linked_style_name"),
+    )
+    return LibraryBGMItem(
+        id=str(item["id"]),
+        name=str(item.get("name") or Path(str(item["audio_path"])).name),
+        audio_path=str(item["audio_path"]),
+        audio_url=item.get("audio_url") or _artifact_url(request, str(item.get("audio_path"))),
+        created_at=item.get("created_at"),
+        duration=item.get("duration"),
+        file_size=int(item.get("file_size", 0) or 0),
+        source=str(item.get("source", "history")),
+        display_name_zh=display.get("display_name_zh"),
+        description_zh=display.get("description_zh"),
+        source_label=display.get("source_label"),
+        linked_style_display_name_zh=display.get("linked_style_display_name_zh"),
+        technical_name=display.get("technical_name"),
+        linked_style_id=item.get("linked_style_id"),
+        linked_style_name=item.get("linked_style_name"),
+        project_id=item.get("project_id"),
+        batch_id=item.get("batch_id"),
+    )
+
+
+def _script_item_from_payload(item: dict[str, object]) -> ScriptItem:
+    display = script_display_metadata(
+        item.get("script_type", "script"),
+        item.get("pipeline"),
+    )
+    return ScriptItem(
+        id=str(item["id"]),
+        task_id=item.get("task_id"),
+        created_at=item.get("created_at"),
+        project_id=item.get("project_id"),
+        batch_id=item.get("batch_id"),
+        pipeline=item.get("pipeline"),
+        text=str(item["text"]),
+        script_type=str(item.get("script_type", "script")),
+        prompt_used=item.get("prompt_used"),
+        type_label_zh=display.get("type_label_zh"),
+        pipeline_label_zh=display.get("pipeline_label_zh"),
+        summary_zh=display.get("summary_zh"),
+    )
 
 
 @router.get("/videos", response_model=VideoListResponse)
@@ -173,6 +253,51 @@ async def get_video_detail(
             status_code=500,
             code="LIBRARY_FETCH_FAILED",
             message="Failed to fetch library video detail.",
+        ) from exc
+
+
+@router.delete("/videos/{video_id}", response_model=BaseResponse)
+async def delete_video(
+    video_id: str,
+    *,
+    pixelle_video: PixelleVideoDep,
+):
+    try:
+        history = pixelle_video.history
+        if history is None:
+            raise RuntimeError("History manager is not initialized")
+
+        payload = await history.get_video_item(video_id)
+        if payload is None:
+            raise api_error(
+                status_code=404,
+                code="LIBRARY_VIDEO_NOT_FOUND",
+                message="Video not found.",
+            )
+
+        if payload.get("status") not in {"completed", "failed", "cancelled"}:
+            raise api_error(
+                status_code=409,
+                code="LIBRARY_VIDEO_DELETE_NOT_ALLOWED",
+                message="Only completed, failed, or cancelled videos can be deleted.",
+            )
+
+        deleted = await history.delete_task(video_id)
+        if not deleted:
+            raise api_error(
+                status_code=500,
+                code="LIBRARY_VIDEO_DELETE_FAILED",
+                message="Failed to delete the video history entry.",
+            )
+        return BaseResponse(message="Video deleted.")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Delete video error: {exc}")
+        raise api_error(
+            status_code=500,
+            code="LIBRARY_VIDEO_DELETE_FAILED",
+            message="Failed to delete the video history entry.",
         ) from exc
 
 
@@ -285,6 +410,7 @@ async def list_voices(
 async def list_library_bgm(
     request: Request,
     project_id: Optional[str] = Query(None, description="Filter by project ID"),
+    style_id: Optional[str] = Query(None, description="Filter by linked style id"),
     cursor: Optional[str] = Query(None, description="Pagination cursor"),
     limit: int = Query(20, ge=1, le=100, description="Page size"),
     *,
@@ -305,23 +431,14 @@ async def list_library_bgm(
         )
         items = list(payload["items"])
         if unassigned_only or normalized_project_id is None:
-            items.extend(_builtin_bgm_items(request))
+            items.extend(_builtin_bgm_items(request, pixelle_video))
+        if style_id:
+            items = [item for item in items if item.get("linked_style_id") == style_id]
         items.sort(key=lambda item: item.get("created_at") or "", reverse=True)
         page_items, next_cursor = _paginate_items(items, cursor, limit)
         return LibraryBGMListResponse(
             items=[
-                LibraryBGMItem(
-                    id=item["id"],
-                    name=item.get("name") or Path(item["audio_path"]).name,
-                    audio_path=item["audio_path"],
-                    audio_url=item.get("audio_url") or _artifact_url(request, item.get("audio_path")),
-                    created_at=item.get("created_at"),
-                    duration=item.get("duration"),
-                    file_size=item.get("file_size", 0),
-                    source=item.get("source", "history"),
-                    project_id=item.get("project_id"),
-                    batch_id=item.get("batch_id"),
-                )
+                _library_bgm_item_from_payload(request, item)
                 for item in page_items
                 if item.get("audio_path")
             ],
@@ -361,16 +478,7 @@ async def list_scripts(
         )
         return ScriptListResponse(
             items=[
-                ScriptItem(
-                    id=item["id"],
-                    task_id=item.get("task_id"),
-                    created_at=item.get("created_at"),
-                    project_id=item.get("project_id"),
-                    batch_id=item.get("batch_id"),
-                    text=item["text"],
-                    script_type=item.get("script_type", "script"),
-                    prompt_used=item.get("prompt_used"),
-                )
+                _script_item_from_payload(item)
                 for item in payload["items"]
                 if item.get("text")
             ],

@@ -28,7 +28,8 @@ async def generate_title(
     llm_service,
     content: str,
     strategy: Literal["auto", "direct", "llm"] = "auto",
-    max_length: int = 15
+    max_length: int = 15,
+    creative_guidance: Optional[str] = None,
 ) -> str:
     """
     Generate title from content
@@ -58,7 +59,11 @@ async def generate_title(
     from pixelle_video.prompts import build_title_generation_prompt
     
     # Pass max_length to prompt so LLM knows the character limit
-    prompt = build_title_generation_prompt(content, max_length=max_length)
+    prompt = build_title_generation_prompt(
+        content,
+        max_length=max_length,
+        creative_guidance=creative_guidance,
+    )
     response = await llm_service(prompt, temperature=0.7, max_tokens=50)
     
     # Clean up response
@@ -97,7 +102,8 @@ async def generate_narrations_from_topic(
     topic: str,
     n_scenes: int = 5,
     min_words: int = 5,
-    max_words: int = 20
+    max_words: int = 20,
+    creative_guidance: Optional[str] = None,
 ) -> List[str]:
     """
     Generate narrations from topic using LLM
@@ -120,7 +126,8 @@ async def generate_narrations_from_topic(
         topic=topic,
         n_storyboard=n_scenes,
         min_words=min_words,
-        max_words=max_words
+        max_words=max_words,
+        creative_guidance=creative_guidance,
     )
     
     response = await llm_service(
@@ -155,7 +162,8 @@ async def generate_narrations_from_content(
     content: str,
     n_scenes: int = 5,
     min_words: int = 5,
-    max_words: int = 20
+    max_words: int = 20,
+    creative_guidance: Optional[str] = None,
 ) -> List[str]:
     """
     Generate narrations from user-provided content using LLM
@@ -178,7 +186,8 @@ async def generate_narrations_from_content(
         content=content,
         n_storyboard=n_scenes,
         min_words=min_words,
-        max_words=max_words
+        max_words=max_words,
+        creative_guidance=creative_guidance,
     )
     
     response = await llm_service(
@@ -273,7 +282,8 @@ async def generate_image_prompts(
     max_words: int = 60,
     batch_size: int = 10,
     max_retries: int = 3,
-    progress_callback: Optional[callable] = None
+    progress_callback: Optional[callable] = None,
+    creative_guidance: Optional[str] = None,
 ) -> List[str]:
     """
     Generate image prompts from narrations (with batching and retry)
@@ -311,7 +321,8 @@ async def generate_image_prompts(
                 prompt = build_image_prompt_prompt(
                     narrations=batch_narrations,
                     min_words=min_words,
-                    max_words=max_words
+                    max_words=max_words,
+                    creative_guidance=creative_guidance,
                 )
                 
                 response = await llm_service(
@@ -367,6 +378,44 @@ async def generate_image_prompts(
     
     logger.info(f"✅ Generated {len(all_prompts)} image prompts")
     return all_prompts
+
+
+async def refine_narrations(
+    llm_service,
+    narrations: List[str],
+    guidance: str,
+    *,
+    language: str = "zh-CN",
+) -> List[str]:
+    """
+    Refine narrations while preserving structure and scene count.
+    """
+    prompt = f"""You are refining short-video narration lines.
+
+Keep the original scene count exactly the same.
+Keep each line close to the original length.
+Preserve the original meaning and ordering.
+Follow the style guidance without inventing unrelated facts.
+Output JSON only in the shape {{"narrations": ["...", "..."]}}.
+Use {"English" if language == "en-US" else "Chinese"}.
+
+Style guidance:
+{guidance.strip()}
+
+Input narrations:
+{json.dumps({"narrations": narrations}, ensure_ascii=False, indent=2)}
+"""
+
+    response = await llm_service(
+        prompt=prompt,
+        temperature=0.6,
+        max_tokens=4000,
+    )
+    result = _parse_json(response)
+    refined = result.get("narrations")
+    if not isinstance(refined, list) or len(refined) != len(narrations):
+        raise ValueError("Narration refinement returned an invalid scene count")
+    return [str(item).strip() for item in refined]
 
 
 async def generate_video_prompts(
@@ -500,4 +549,3 @@ def _parse_json(text: str) -> dict:
     
     # If all fails, raise error
     raise json.JSONDecodeError("No valid JSON found", text, 0)
-

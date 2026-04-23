@@ -80,6 +80,13 @@ class LibraryBGMItem(BaseModel):
     duration: Optional[float] = Field(None, description="Audio duration")
     file_size: int = Field(0, description="File size in bytes")
     source: str = Field(..., description="builtin or history")
+    display_name_zh: Optional[str] = Field(None, description="Chinese-first BGM display name")
+    description_zh: Optional[str] = Field(None, description="Chinese BGM description")
+    source_label: Optional[str] = Field(None, description="Chinese source label")
+    linked_style_display_name_zh: Optional[str] = Field(None, description="Chinese linked style name")
+    technical_name: Optional[str] = Field(None, description="Original BGM filename")
+    linked_style_id: Optional[str] = Field(None, description="Associated style id when the BGM comes from a style")
+    linked_style_name: Optional[str] = Field(None, description="Associated style name when the BGM comes from a style")
     project_id: Optional[str] = Field(None, description="Linked project ID")
     batch_id: Optional[str] = Field(None, description="Linked batch ID")
 
@@ -95,9 +102,13 @@ class ScriptItem(BaseModel):
     created_at: Optional[datetime] = Field(None, description="Creation time")
     project_id: Optional[str] = Field(None, description="Linked project ID")
     batch_id: Optional[str] = Field(None, description="Linked batch ID")
+    pipeline: Optional[str] = Field(None, description="Origin pipeline slug when available")
     text: str = Field(..., description="Script or narration text")
     script_type: str = Field(..., description="script, narration, or prompt")
     prompt_used: Optional[str] = Field(None, description="Associated prompt")
+    type_label_zh: Optional[str] = Field(None, description="Chinese script type label")
+    pipeline_label_zh: Optional[str] = Field(None, description="Chinese pipeline label")
+    summary_zh: Optional[str] = Field(None, description="Chinese summary label for the record")
 
 
 class ScriptListResponse(BaseModel):

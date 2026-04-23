@@ -81,7 +81,8 @@ def build_content_narration_prompt(
     content: str,
     n_storyboard: int,
     min_words: int,
-    max_words: int
+    max_words: int,
+    creative_guidance: str | None = None,
 ) -> str:
     """
     Build content refinement narration prompt
@@ -95,10 +96,12 @@ def build_content_narration_prompt(
     Returns:
         Formatted prompt
     """
-    return CONTENT_NARRATION_PROMPT.format(
+    prompt = CONTENT_NARRATION_PROMPT.format(
         content=content,
         n_storyboard=n_storyboard,
         min_words=min_words,
         max_words=max_words
     )
-
+    if creative_guidance:
+        prompt += f"\n\n# Additional Style Guidance\n{creative_guidance.strip()}\n"
+    return prompt

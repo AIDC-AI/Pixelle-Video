@@ -248,6 +248,7 @@ def test_tasks_filter_by_project_id(client):
                 "narration": "mock narration",
                 "voice_workflow": "runninghub/tts_edge.json",
                 "project_id": "project-1",
+                "runninghub_instance_type": "plus",
             },
         ),
         (
@@ -257,6 +258,7 @@ def test_tasks_filter_by_project_id(client):
                 "motion_prompt": "make it move",
                 "media_workflow": "selfhost/i2v_mock.json",
                 "project_id": "project-1",
+                "runninghub_instance_type": "plus",
             },
         ),
         (
@@ -266,6 +268,7 @@ def test_tasks_filter_by_project_id(client):
                 "target_image": "tests/fixtures/pipelines/source.png",
                 "pose_workflow": "selfhost/af_mock.json",
                 "project_id": "project-1",
+                "runninghub_instance_type": "plus",
             },
         ),
         (
@@ -298,6 +301,37 @@ def test_new_pipeline_endpoints_submit_and_complete_tasks(client, path, payload)
     assert task is not None
     assert task.status == "completed"
     assert task.project_id == "project-1"
+    if "runninghub_instance_type" in payload:
+        assert task.request_params["runninghub_instance_type"] == payload["runninghub_instance_type"]
+    assert task.result["video_url"].startswith("http://testserver/api/files/")
+
+
+def test_standard_video_async_accepts_task_level_runninghub_instance_type(client):
+    payload = {
+        "title": "Quick demo",
+        "text": "Generate a short demo video",
+        "mode": "generate",
+        "tts_workflow": "runninghub/tts_edge.json",
+        "media_workflow": "selfhost/media_default.json",
+        "frame_template": "1080x1920/image_default.html",
+        "project_id": "project-1",
+        "runninghub_instance_type": "plus",
+    }
+
+    response = client.post("/api/video/generate/async", json=payload)
+    assert response.status_code == 200
+    task_id = response.json()["task_id"]
+
+    for _ in range(20):
+        task = task_manager.get_task(task_id)
+        if task and task.status == "completed":
+            break
+        time.sleep(0.01)
+
+    task = task_manager.get_task(task_id)
+    assert task is not None
+    assert task.status == "completed"
+    assert task.request_params["runninghub_instance_type"] == "plus"
     assert task.result["video_url"].startswith("http://testserver/api/files/")
 
 

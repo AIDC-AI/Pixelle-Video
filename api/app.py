@@ -48,6 +48,7 @@ from api.routers import (
     llm_router,
     tts_router,
     image_router,
+    media_router,
     content_router,
     video_router,
     tasks_router,
@@ -59,6 +60,7 @@ from api.routers import (
     batch_router,
     settings_router,
     uploads_router,
+    notifications_router,
 )
 
 
@@ -132,6 +134,7 @@ app.include_router(health_router)
 app.include_router(llm_router, prefix=api_config.api_prefix)
 app.include_router(tts_router, prefix=api_config.api_prefix)
 app.include_router(image_router, prefix=api_config.api_prefix)
+app.include_router(media_router, prefix=api_config.api_prefix)
 app.include_router(content_router, prefix=api_config.api_prefix)
 app.include_router(video_router, prefix=api_config.api_prefix)
 app.include_router(tasks_router, prefix=api_config.api_prefix)
@@ -143,6 +146,7 @@ app.include_router(library_router, prefix=api_config.api_prefix)
 app.include_router(batch_router, prefix=api_config.api_prefix)
 app.include_router(settings_router, prefix=api_config.api_prefix)
 app.include_router(uploads_router, prefix=api_config.api_prefix)
+app.include_router(notifications_router, prefix=api_config.api_prefix)
 
 
 @app.get("/")
@@ -157,6 +161,7 @@ async def root():
             "llm": f"{api_config.api_prefix}/llm",
             "tts": f"{api_config.api_prefix}/tts",
             "image": f"{api_config.api_prefix}/image",
+            "media": f"{api_config.api_prefix}/media",
             "content": f"{api_config.api_prefix}/content",
             "video": f"{api_config.api_prefix}/video",
             "tasks": f"{api_config.api_prefix}/tasks",
@@ -168,6 +173,7 @@ async def root():
             "batch": f"{api_config.api_prefix}/batch",
             "settings": f"{api_config.api_prefix}/settings",
             "uploads": f"{api_config.api_prefix}/uploads",
+            "notifications": f"{api_config.api_prefix}/notifications",
         }
     }
 

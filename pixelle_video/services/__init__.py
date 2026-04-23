@@ -34,6 +34,7 @@ from pixelle_video.services.video import VideoService
 from pixelle_video.services.frame_processor import FrameProcessor
 from pixelle_video.services.persistence import PersistenceService
 from pixelle_video.services.history_manager import HistoryManager
+from pixelle_video.services.style_registry import StyleRegistry
 
 # Backward compatibility alias
 ImageService = MediaService
@@ -48,5 +49,5 @@ __all__ = [
     "FrameProcessor",
     "PersistenceService",
     "HistoryManager",
+    "StyleRegistry",
 ]
-

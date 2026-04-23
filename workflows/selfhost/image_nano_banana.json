@@ -5,7 +5,7 @@
         "3",
         0
       ],
-      "model": "gemini-2.5-flash-image-preview",
+      "model": "gemini-3.1-pro",
       "seed": 42
     },
     "class_type": "GeminiImageNode",

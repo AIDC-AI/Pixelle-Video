@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -192,3 +192,93 @@ class SettingsUpdatePayload(StrictModel):
     llm: Optional[LLMSettingsUpdatePayload] = Field(None, description="LLM settings")
     comfyui: Optional[ComfyUISettingsUpdatePayload] = Field(None, description="ComfyUI settings")
     template: Optional[TemplateSettingsUpdatePayload] = Field(None, description="Template settings")
+
+
+class ComfyUICheckRequest(StrictModel):
+    comfyui_url: Optional[str] = Field(None, description="ComfyUI endpoint override")
+    comfyui_api_key: Optional[str] = Field(None, description="ComfyUI API key override")
+
+    _comfyui_url_validator = field_validator("comfyui_url", mode="before")(_validate_optional_url)
+
+
+class LLMConnectionCheckRequest(StrictModel):
+    api_key: Optional[str] = Field(None, description="LLM API key override")
+    base_url: Optional[str] = Field(None, description="LLM API base URL override")
+    model: Optional[str] = Field(None, description="LLM model override")
+
+    _base_url_validator = field_validator("base_url", mode="before")(_validate_optional_url)
+
+
+class RunningHubConnectionCheckRequest(StrictModel):
+    runninghub_api_key: Optional[str] = Field(None, description="RunningHub API key override")
+    runninghub_instance_type: Optional[str] = Field(None, description="RunningHub instance type override")
+
+
+class ProviderConnectionDiagnosticsPayload(StrictModel):
+    error_code: Optional[str] = Field(None, description="Normalized validation error code")
+    model_count: Optional[int] = Field(None, description="Available model count for LLM providers")
+    selected_model: Optional[str] = Field(None, description="Currently selected model")
+    selected_model_available: Optional[bool] = Field(None, description="Whether the selected model is available")
+    auth_applied: Optional[bool] = Field(None, description="Whether credentials were attached to the probe request")
+    auth_required: Optional[bool] = Field(None, description="Whether the upstream reported authentication as required")
+    api_type: Optional[str] = Field(None, description="RunningHub API account type")
+    current_task_nums: Optional[int] = Field(None, description="RunningHub current task count")
+    remain_num: Optional[str] = Field(None, description="Remaining RunningHub credits or quota")
+    remain_money: Optional[str] = Field(None, description="Remaining RunningHub balance")
+    currency: Optional[str] = Field(None, description="RunningHub balance currency")
+
+
+class ProviderConnectionCheckResponse(StrictModel):
+    provider: Literal["llm", "comfyui", "runninghub"] = Field(..., description="Validated provider")
+    status: Literal["success", "warning", "error"] = Field(..., description="Validation status")
+    success: bool = Field(..., description="Whether the validation fully succeeded")
+    reachable: bool = Field(..., description="Whether the upstream endpoint responded")
+    authenticated: bool = Field(..., description="Whether authentication succeeded")
+    message: str = Field(..., description="Human-readable validation result")
+    endpoint: Optional[str] = Field(None, description="Checked endpoint URL")
+    status_code: Optional[int] = Field(None, description="HTTP status code when available")
+    response_time_ms: Optional[int] = Field(None, description="Response time in milliseconds")
+    diagnostics: ProviderConnectionDiagnosticsPayload = Field(
+        default_factory=ProviderConnectionDiagnosticsPayload,
+        description="Provider-specific diagnostics",
+    )
+
+
+class ComfyUICheckResponse(ProviderConnectionCheckResponse):
+    provider: Literal["comfyui"] = Field("comfyui", description="Validated provider")
+
+
+class LLMConnectionCheckResponse(ProviderConnectionCheckResponse):
+    provider: Literal["llm"] = Field("llm", description="Validated provider")
+
+
+class RunningHubConnectionCheckResponse(ProviderConnectionCheckResponse):
+    provider: Literal["runninghub"] = Field("runninghub", description="Validated provider")
+
+
+class StoragePathStatsPayload(StrictModel):
+    key: str = Field(..., description="Storage bucket identifier")
+    path: str = Field(..., description="Runtime path")
+    exists: bool = Field(..., description="Whether the path exists")
+    file_count: int = Field(..., description="Total files under the path")
+    total_size_bytes: int = Field(..., description="Total storage size in bytes")
+
+
+class StorageStatsResponse(StrictModel):
+    success: bool = Field(True, description="Whether stats were collected")
+    message: str = Field("Storage statistics loaded", description="Human-readable result")
+    total_size_bytes: int = Field(..., description="Combined storage size")
+    paths: list[StoragePathStatsPayload] = Field(default_factory=list, description="Per-path storage stats")
+
+
+class StorageCleanupRequest(StrictModel):
+    target: str = Field("temp", description="Cleanup target, currently only temp is supported")
+
+
+class StorageCleanupResponse(StrictModel):
+    success: bool = Field(True, description="Whether cleanup completed")
+    message: str = Field("Cleanup completed", description="Human-readable result")
+    target: str = Field(..., description="Cleanup target")
+    deleted_files: int = Field(..., description="Number of deleted files")
+    deleted_directories: int = Field(..., description="Number of deleted directories")
+    reclaimed_bytes: int = Field(..., description="Disk space reclaimed in bytes")

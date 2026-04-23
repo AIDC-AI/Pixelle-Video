@@ -34,8 +34,10 @@ from api.app import app
 from api.dependencies import get_pixelle_video
 from api.tasks import task_manager
 from pixelle_video.config import config_manager
+from pixelle_video.models.media import MediaResult
 from pixelle_video.services.history_manager import HistoryManager
 from pixelle_video.services.persistence import PersistenceService
+from pixelle_video.services.style_registry import StyleRegistry
 
 
 class DummyTTS:
@@ -67,6 +69,16 @@ class DummyTTS:
 
 
 class DummyMedia:
+    async def __call__(self, **kwargs: Any) -> MediaResult:
+        media_type = kwargs.get("media_type", "image")
+        if media_type == "video":
+            return MediaResult(
+                media_type="video",
+                url="output/previews/mock-preview.mp4",
+                duration=kwargs.get("duration", 4.0),
+            )
+        return MediaResult(media_type="image", url="output/previews/mock-preview.png")
+
     def list_workflows(self) -> list[dict[str, Any]]:
         return [
             {
@@ -106,6 +118,7 @@ class DummyCore:
         self.history = HistoryManager(self.persistence)
         self.tts = DummyTTS()
         self.media = DummyMedia()
+        self.styles = StyleRegistry()
 
     async def _get_or_create_comfykit(self) -> Any:
         raise RuntimeError("ComfyKit should not be used in tests when COMFY_MOCK=1")
@@ -123,7 +136,7 @@ def dummy_core(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> DummyCore:
     monkeypatch.setenv("COMFY_MOCK", "1")
     monkeypatch.setenv("PIXELLE_VIDEO_ROOT", str(tmp_path))
 
-    for directory in ("templates", "workflows", "bgm", "resources", "data"):
+    for directory in ("templates", "workflows", "bgm", "resources", "data", "styles"):
         target = PROJECT_ROOT / directory
         link = tmp_path / directory
         if target.exists() and not link.exists():

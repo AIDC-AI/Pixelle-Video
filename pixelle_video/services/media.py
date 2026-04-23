@@ -116,6 +116,7 @@ class MediaService(ComfyBaseService):
         # ComfyUI connection (optional overrides)
         comfyui_url: Optional[str] = None,
         runninghub_api_key: Optional[str] = None,
+        runninghub_instance_type: Optional[str] = None,
         # Common workflow parameters
         width: Optional[int] = None,
         height: Optional[int] = None,
@@ -227,20 +228,21 @@ class MediaService(ComfyBaseService):
         
         # 4. Execute workflow using shared ComfyKit instance from core
         try:
-            # Get shared ComfyKit instance (lazy initialization + config hot-reload)
-            kit = await self.core._get_or_create_comfykit()
-            
-            # Determine what to pass to ComfyKit based on source
-            if workflow_info["source"] == "runninghub" and "workflow_id" in workflow_info:
-                # RunningHub: pass workflow_id (ComfyKit will use runninghub backend)
-                workflow_input = workflow_info["workflow_id"]
-                logger.info(f"Executing RunningHub workflow: {workflow_input}")
-            else:
-                # Selfhost: pass file path (ComfyKit will use local ComfyUI)
-                workflow_input = workflow_info["path"]
-                logger.info(f"Executing selfhost workflow: {workflow_input}")
-            
-            result = await kit.execute(workflow_input, workflow_params)
+            instance_override = (
+                runninghub_instance_type if workflow_info["source"] == "runninghub" else None
+            )
+            async with self.core._comfykit_session(runninghub_instance_type=instance_override) as kit:
+                # Determine what to pass to ComfyKit based on source
+                if workflow_info["source"] == "runninghub" and "workflow_id" in workflow_info:
+                    # RunningHub: pass workflow_id (ComfyKit will use runninghub backend)
+                    workflow_input = workflow_info["workflow_id"]
+                    logger.info(f"Executing RunningHub workflow: {workflow_input}")
+                else:
+                    # Selfhost: pass file path (ComfyKit will use local ComfyUI)
+                    workflow_input = workflow_info["path"]
+                    logger.info(f"Executing selfhost workflow: {workflow_input}")
+                
+                result = await kit.execute(workflow_input, workflow_params)
             
             # 5. Handle result based on specified media_type
             if result.status != "completed":

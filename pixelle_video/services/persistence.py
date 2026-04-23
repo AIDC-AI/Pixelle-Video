@@ -588,6 +588,155 @@ class PersistenceService:
             except Exception as e:
                 logger.error(f"Failed to save presets index: {e}")
 
+    def _task_sort_key(self, item: Dict[str, Any]) -> str:
+        return str(item.get("completed_at") or item.get("created_at") or "")
+
+    def _artifact_sort_key(self, item: Dict[str, Any]) -> str:
+        return str(item.get("created_at") or "")
+
+    def _infer_pipeline_hint_from_input(self, input_payload: Dict[str, Any]) -> Optional[str]:
+        if input_payload.get("scenes"):
+            return "custom"
+        if input_payload.get("portrait_url") and input_payload.get("narration"):
+            return "digital-human"
+        if input_payload.get("driver_video") and input_payload.get("target_image"):
+            return "action-transfer"
+        if input_payload.get("source_image") and input_payload.get("motion_prompt"):
+            return "i2v"
+        if input_payload:
+            return "quick"
+        return None
+
+    def _resolve_project_preview(self, project: Dict[str, Any], index: Dict[str, Any]) -> Dict[str, Any]:
+        last_task_id = project.get("last_task_id")
+        tasks = list(index.get("tasks", []))
+        artifacts = list(index.get("artifacts", []))
+
+        if last_task_id:
+            last_task = next(
+                (item for item in tasks if item.get("task_id") == last_task_id and item.get("video_path")),
+                None,
+            )
+            if last_task is not None:
+                return {
+                    "preview_url": last_task.get("video_path"),
+                    "preview_kind": "video",
+                }
+
+        project_tasks = [
+            item
+            for item in tasks
+            if item.get("project_id") == project.get("id") and item.get("video_path")
+        ]
+        project_tasks.sort(key=self._task_sort_key, reverse=True)
+        if project_tasks:
+            return {
+                "preview_url": project_tasks[0].get("video_path"),
+                "preview_kind": "video",
+            }
+
+        project_images = [
+            item
+            for item in artifacts
+            if item.get("project_id") == project.get("id") and item.get("kind") == "image" and item.get("image_path")
+        ]
+        project_images.sort(key=self._artifact_sort_key, reverse=True)
+        if project_images:
+            return {
+                "preview_url": project_images[0].get("image_path"),
+                "preview_kind": "image",
+            }
+
+        return {"preview_url": None, "preview_kind": None}
+
+    def _hydrate_project(self, project: Dict[str, Any], index: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        resolved_index = index or self._load_index()
+        payload = dict(project)
+        linked_tasks = [
+            item for item in resolved_index.get("tasks", [])
+            if item.get("project_id") == payload.get("id")
+        ]
+        linked_tasks.sort(key=self._task_sort_key, reverse=True)
+        payload["task_count"] = len(linked_tasks)
+        if linked_tasks:
+            payload["last_task_id"] = linked_tasks[0].get("task_id")
+            metadata_path = self.get_metadata_path(str(linked_tasks[0].get("task_id")))
+            if metadata_path.exists():
+                try:
+                    with metadata_path.open("r", encoding="utf-8") as f:
+                        metadata = json.load(f)
+                    inferred_hint = self._infer_pipeline_hint_from_input(metadata.get("input", {}))
+                    if inferred_hint:
+                        payload["pipeline_hint"] = inferred_hint
+                except Exception:
+                    pass
+        payload.update(self._resolve_project_preview(payload, resolved_index))
+        return payload
+
+    def _sync_project_summary_unlocked(
+        self,
+        data: Dict[str, Any],
+        project_id: str,
+        *,
+        last_task_id: Optional[str] = None,
+        pipeline_hint: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        index = self._load_index()
+        linked_tasks = [
+            item for item in index.get("tasks", [])
+            if item.get("project_id") == project_id
+        ]
+        linked_tasks.sort(key=self._task_sort_key, reverse=True)
+
+        if last_task_id is None and linked_tasks:
+            last_task_id = str(linked_tasks[0].get("task_id"))
+
+        if pipeline_hint is None and linked_tasks:
+            latest_metadata = None
+            latest_task_id = linked_tasks[0].get("task_id")
+            if latest_task_id:
+                metadata_path = self.get_metadata_path(str(latest_task_id))
+                if metadata_path.exists():
+                    try:
+                        with metadata_path.open("r", encoding="utf-8") as f:
+                            latest_metadata = json.load(f)
+                    except Exception:
+                        latest_metadata = None
+            if latest_metadata is not None:
+                pipeline_hint = self._infer_pipeline_hint_from_input(latest_metadata.get("input", {}))
+
+        for project in data.get("projects", []):
+            if project["id"] != project_id:
+                continue
+            project["task_count"] = len(linked_tasks)
+            project["last_task_id"] = last_task_id
+            if pipeline_hint:
+                project["pipeline_hint"] = pipeline_hint
+            project["updated_at"] = datetime.now().isoformat()
+            return dict(project)
+        return None
+
+    def _touch_project_updated_at_unlocked(self, data: Dict[str, Any], project_id: Optional[str]) -> Optional[Dict[str, Any]]:
+        if not project_id:
+            return None
+        for project in data.get("projects", []):
+            if project["id"] != project_id:
+                continue
+            project["updated_at"] = datetime.now().isoformat()
+            return dict(project)
+        return None
+
+    async def _touch_project_updated_at(self, project_id: Optional[str]) -> Optional[Dict[str, Any]]:
+        if not project_id:
+            return None
+        with self._state_lock:
+            data = self._load_projects_index()
+            project = self._touch_project_updated_at_unlocked(data, project_id)
+            if project is None:
+                return None
+            self._save_projects_index(data)
+            return self._hydrate_project(project)
+
     async def create_project(
         self,
         name: str,
@@ -610,18 +759,22 @@ class PersistenceService:
             data = self._load_projects_index()
             data.setdefault("projects", []).append(project)
             self._save_projects_index(data)
-        return project
+        return self._hydrate_project(project)
 
     async def list_projects(self, include_deleted: bool = False) -> List[Dict[str, Any]]:
+        index = self._load_index()
         projects = self._load_projects_index().get("projects", [])
         if not include_deleted:
             projects = [item for item in projects if item.get("deleted_at") is None]
         projects.sort(key=lambda item: item.get("updated_at") or "", reverse=True)
-        return projects
+        return [self._hydrate_project(project, index) for project in projects]
 
     async def get_project(self, project_id: str) -> Optional[Dict[str, Any]]:
         projects = self._load_projects_index().get("projects", [])
-        return next((item for item in projects if item["id"] == project_id), None)
+        project = next((item for item in projects if item["id"] == project_id), None)
+        if project is None:
+            return None
+        return self._hydrate_project(project)
 
     async def update_project(self, project_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         with self._state_lock:
@@ -634,7 +787,7 @@ class PersistenceService:
                         project[key] = value
                 project["updated_at"] = datetime.now().isoformat()
                 self._save_projects_index(data)
-                return project
+                return self._hydrate_project(project)
         return None
 
     async def delete_project(self, project_id: str, cascade: bool = False) -> Optional[Dict[str, Any]]:
@@ -654,7 +807,7 @@ class PersistenceService:
                         for task in list(index.get("tasks", []))
                         if task.get("project_id") == project_id
                     ]
-                deleted_project = dict(project)
+                deleted_project = self._hydrate_project(project, index=self._load_index())
                 break
             else:
                 return None
@@ -663,6 +816,76 @@ class PersistenceService:
             await self.delete_task(task_id)
 
         return deleted_project
+
+    async def get_project_overview(self, project_id: str) -> Optional[Dict[str, Any]]:
+        project = await self.get_project(project_id)
+        if project is None:
+            return None
+
+        index = self._load_index()
+        batches = [
+            batch
+            for batch in self._load_batches_index().get("batches", [])
+            if batch.get("project_id") == project_id and batch.get("deleted_at") is None
+        ]
+        tasks = [
+            item for item in index.get("tasks", [])
+            if item.get("project_id") == project_id
+        ]
+        tasks.sort(key=self._task_sort_key, reverse=True)
+
+        task_status_counts = {
+            "pending_task_count": sum(1 for item in tasks if item.get("status") == "pending"),
+            "running_task_count": sum(1 for item in tasks if item.get("status") == "running"),
+            "completed_task_count": sum(1 for item in tasks if item.get("status") == "completed"),
+            "failed_task_count": sum(1 for item in tasks if item.get("status") == "failed"),
+            "cancelled_task_count": sum(1 for item in tasks if item.get("status") == "cancelled"),
+        }
+
+        project_artifacts = [
+            item for item in index.get("artifacts", [])
+            if item.get("project_id") == project_id
+        ]
+        project_artifacts.sort(key=self._artifact_sort_key, reverse=True)
+
+        recent_task_ids = [str(item["task_id"]) for item in tasks[:5] if item.get("task_id")]
+        recent_tasks = [
+            snapshot
+            for task_id in recent_task_ids
+            if (snapshot := await self._load_task_snapshot(task_id)) is not None
+        ]
+
+        hydrated_batches = [await self._hydrate_batch(batch) for batch in batches]
+        hydrated_batches.sort(key=lambda item: item.get("updated_at") or "", reverse=True)
+
+        recent_videos = (await self.list_video_items(project_id=project_id, limit=5)).get("items", [])
+        recent_images = (await self.list_library_items(kind="image", project_id=project_id, limit=5)).get("items", [])
+        recent_voices = (await self.list_library_items(kind="voice", project_id=project_id, limit=5)).get("items", [])
+        recent_bgm = (await self.list_library_items(kind="bgm", project_id=project_id, limit=5)).get("items", [])
+        recent_scripts = (await self.list_library_items(kind="script", project_id=project_id, limit=5)).get("items", [])
+
+        return {
+            "project": project,
+            "stats": {
+                "batch_count": len(batches),
+                "task_count": len(tasks),
+                **task_status_counts,
+                "video_count": sum(1 for item in tasks if item.get("video_path")),
+                "image_count": sum(1 for item in project_artifacts if item.get("kind") == "image"),
+                "voice_count": sum(1 for item in project_artifacts if item.get("kind") == "voice"),
+                "bgm_count": sum(1 for item in project_artifacts if item.get("kind") == "bgm"),
+                "script_count": sum(1 for item in project_artifacts if item.get("kind") == "script"),
+            },
+            "recent": {
+                "batches": hydrated_batches[:5],
+                "tasks": recent_tasks,
+                "videos": recent_videos,
+                "images": recent_images,
+                "voices": recent_voices,
+                "bgm": recent_bgm,
+                "scripts": recent_scripts,
+            },
+        }
 
     async def create_batch(
         self,
@@ -694,6 +917,7 @@ class PersistenceService:
             data = self._load_batches_index()
             data.setdefault("batches", []).append(batch)
             self._save_batches_index(data)
+        await self._touch_project_updated_at(project_id)
         return batch
 
     async def get_batch(self, batch_id: str) -> Optional[Dict[str, Any]]:
@@ -711,8 +935,12 @@ class PersistenceService:
                         batch[key] = value
                 batch["updated_at"] = datetime.now().isoformat()
                 self._save_batches_index(data)
-                return batch
-        return None
+                result = dict(batch)
+                break
+            else:
+                return None
+        await self._touch_project_updated_at(result.get("project_id"))
+        return result
 
     async def delete_batch(self, batch_id: str) -> Optional[Dict[str, Any]]:
         with self._state_lock:
@@ -723,8 +951,12 @@ class PersistenceService:
                 batch["deleted_at"] = datetime.now().isoformat()
                 batch["updated_at"] = batch["deleted_at"]
                 self._save_batches_index(data)
-                return dict(batch)
-        return None
+                deleted_batch = dict(batch)
+                break
+            else:
+                return None
+        await self._touch_project_updated_at(deleted_batch.get("project_id"))
+        return deleted_batch
 
     async def list_batches(
         self,
@@ -774,6 +1006,17 @@ class PersistenceService:
                 presets.append(preset)
             self._save_presets_index(data)
         return preset
+
+    async def delete_preset(self, name: str) -> bool:
+        with self._state_lock:
+            data = self._load_presets_index()
+            presets = data.setdefault("presets", [])
+            next_presets = [item for item in presets if item.get("name") != name]
+            if len(next_presets) == len(presets):
+                return False
+            data["presets"] = next_presets
+            self._save_presets_index(data)
+        return True
 
     async def _load_task_snapshot(self, task_id: str) -> Optional[Dict[str, Any]]:
         from api.tasks import TaskType, task_manager
@@ -887,6 +1130,7 @@ class PersistenceService:
                 "task_id": task_id,
                 "project_id": project_id,
                 "batch_id": batch_id,
+                "pipeline": metadata.get("config", {}).get("pipeline"),
                 "created_at": created_at,
             }
             artifact.update(fields)
@@ -993,8 +1237,8 @@ class PersistenceService:
                         script_type="narration",
                         prompt_used=scene.get("narration"),
                     )
-        if input_payload.get("bgm_path"):
-            bgm_path = input_payload["bgm_path"]
+        bgm_path = input_payload.get("bgm_path") or input_payload.get("resolved_bgm")
+        if bgm_path:
             add_artifact(
                 "bgm",
                 f"{task_id}:bgm",
@@ -1003,6 +1247,8 @@ class PersistenceService:
                 source="history",
                 duration=metadata.get("result", {}).get("duration"),
                 file_size=Path(bgm_path).stat().st_size if Path(bgm_path).exists() else 0,
+                linked_style_id=input_payload.get("style_id"),
+                linked_style_name=input_payload.get("style_name"),
             )
 
         return artifacts
@@ -1014,19 +1260,13 @@ class PersistenceService:
 
         with self._state_lock:
             data = self._load_projects_index()
-            linked_tasks = [
-                item for item in self._load_index().get("tasks", [])
-                if item.get("project_id") == project_id and item.get("status") == "completed"
-            ]
-
-            for project in data.get("projects", []):
-                if project["id"] != project_id:
-                    continue
-                project["task_count"] = len(linked_tasks)
-                project["last_task_id"] = task_id
-                project["updated_at"] = datetime.now().isoformat()
-                break
-            else:
+            synced_project = self._sync_project_summary_unlocked(
+                data,
+                str(project_id),
+                last_task_id=task_id,
+                pipeline_hint=self._infer_pipeline_hint_from_input(metadata.get("input", {})),
+            )
+            if synced_project is None:
                 return
 
             self._save_projects_index(data)
@@ -1184,7 +1424,10 @@ class PersistenceService:
         limit: int = 20,
     ) -> Dict[str, Any]:
         index = self._load_index()
-        items = list(index.get("tasks", []))
+        items = [
+            item for item in index.get("tasks", [])
+            if item.get("video_path")
+        ]
 
         if unassigned_only:
             items = [item for item in items if item.get("project_id") is None]
@@ -1294,6 +1537,8 @@ class PersistenceService:
         """
         try:
             import shutil
+
+            project_id: Optional[str] = None
             
             task_dir = self.get_task_dir(task_id)
             if task_dir.exists():
@@ -1303,6 +1548,9 @@ class PersistenceService:
             # Update index
             index = self._load_index()
             tasks = index.get("tasks", [])
+            removed_task = next((task for task in tasks if task["task_id"] == task_id), None)
+            if removed_task is not None:
+                project_id = removed_task.get("project_id")
             tasks = [t for t in tasks if t["task_id"] != task_id]
             index["tasks"] = tasks
             artifacts = index.get("artifacts", [])
@@ -1310,6 +1558,11 @@ class PersistenceService:
                 artifact for artifact in artifacts if artifact.get("task_id") != task_id
             ]
             self._save_index(index)
+
+            if project_id:
+                data = self._load_projects_index()
+                if self._sync_project_summary_unlocked(data, str(project_id)) is not None:
+                    self._save_projects_index(data)
             
             return True
         except Exception as e:

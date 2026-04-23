@@ -56,6 +56,9 @@ from api.schemas.projects import (
     Project,
     ProjectCreateRequest,
     ProjectListResponse,
+    ProjectOverviewRecent,
+    ProjectOverviewResponse,
+    ProjectOverviewStats,
     ProjectUpdateRequest,
 )
 from api.schemas.resources import (
@@ -63,13 +66,24 @@ from api.schemas.resources import (
     BGMListResponse,
     PresetItem,
     PresetListResponse,
+    StyleDetail,
+    StyleListResponse,
+    StyleSummary,
+    StyleUpsertRequest,
     TemplateInfo,
     TemplateListResponse,
     WorkflowDetailResponse,
     WorkflowInfo,
     WorkflowListResponse,
 )
-from api.schemas.settings import SettingsPayload, SettingsUpdatePayload
+from api.schemas.settings import (
+    ComfyUICheckResponse,
+    LLMConnectionCheckResponse,
+    ProviderConnectionCheckResponse,
+    RunningHubConnectionCheckResponse,
+    SettingsPayload,
+    SettingsUpdatePayload,
+)
 from api.schemas.tts import TTSSynthesizeRequest, TTSSynthesizeResponse
 from api.schemas.uploads import UploadResponse
 from api.schemas.video import (
@@ -109,6 +123,9 @@ __all__ = [
     "ProjectCreateRequest",
     "ProjectUpdateRequest",
     "ProjectListResponse",
+    "ProjectOverviewStats",
+    "ProjectOverviewRecent",
+    "ProjectOverviewResponse",
     # Library
     "VideoItem",
     "VideoDetailResponse",
@@ -130,6 +147,10 @@ __all__ = [
     # Settings
     "SettingsPayload",
     "SettingsUpdatePayload",
+    "ProviderConnectionCheckResponse",
+    "ComfyUICheckResponse",
+    "LLMConnectionCheckResponse",
+    "RunningHubConnectionCheckResponse",
     # Uploads
     "UploadResponse",
     # Pipeline payloads
@@ -146,6 +167,10 @@ __all__ = [
     "TemplateListResponse",
     "BGMInfo",
     "BGMListResponse",
+    "StyleSummary",
+    "StyleDetail",
+    "StyleListResponse",
+    "StyleUpsertRequest",
     "PresetItem",
     "PresetListResponse",
 ]

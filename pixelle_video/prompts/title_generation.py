@@ -64,7 +64,11 @@ Requirements:
 Title:"""
 
 
-def build_title_generation_prompt(content: str, max_length: int = 15) -> str:
+def build_title_generation_prompt(
+    content: str,
+    max_length: int = 15,
+    creative_guidance: str | None = None,
+) -> str:
     """
     Build title generation prompt
     
@@ -78,8 +82,10 @@ def build_title_generation_prompt(content: str, max_length: int = 15) -> str:
     # Take first 500 chars to avoid overly long prompts
     content_preview = content[:500]
     
-    return TITLE_GENERATION_PROMPT.format(
+    prompt = TITLE_GENERATION_PROMPT.format(
         content=content_preview,
         max_length=max_length
     )
-
+    if creative_guidance:
+        prompt += f"\n\nAdditional style guidance:\n{creative_guidance.strip()}\n"
+    return prompt

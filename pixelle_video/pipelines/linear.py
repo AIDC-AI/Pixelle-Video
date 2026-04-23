@@ -57,6 +57,8 @@ class PipelineContext:
     # === Configuration & Storyboard ===
     config: Optional[StoryboardConfig] = None
     storyboard: Optional[Storyboard] = None
+    style_snapshot: Optional[Dict[str, Any]] = None
+    resolved_runtime_config: Dict[str, Any] = field(default_factory=dict)
     
     # === Output ===
     final_video_path: Optional[str] = None

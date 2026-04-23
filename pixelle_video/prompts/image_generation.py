@@ -120,7 +120,8 @@ Now, please create {narrations_count} corresponding **English** image prompts fo
 def build_image_prompt_prompt(
     narrations: List[str],
     min_words: int,
-    max_words: int
+    max_words: int,
+    creative_guidance: str | None = None,
 ) -> str:
     """
     Build image prompt generation prompt
@@ -144,10 +145,12 @@ def build_image_prompt_prompt(
         indent=2
     )
     
-    return IMAGE_PROMPT_GENERATION_PROMPT.format(
+    prompt = IMAGE_PROMPT_GENERATION_PROMPT.format(
         narrations_json=narrations_json,
         narrations_count=len(narrations),
         min_words=min_words,
         max_words=max_words
     )
-
+    if creative_guidance:
+        prompt += f"\n\n# Additional Visual Guidance\n{creative_guidance.strip()}\n"
+    return prompt

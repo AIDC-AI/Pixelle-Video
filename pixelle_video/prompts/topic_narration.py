@@ -135,7 +135,8 @@ def build_topic_narration_prompt(
     topic: str,
     n_storyboard: int,
     min_words: int,
-    max_words: int
+    max_words: int,
+    creative_guidance: str | None = None,
 ) -> str:
     """
     Build topic narration prompt
@@ -149,10 +150,12 @@ def build_topic_narration_prompt(
     Returns:
         Formatted prompt
     """
-    return TOPIC_NARRATION_PROMPT.format(
+    prompt = TOPIC_NARRATION_PROMPT.format(
         topic=topic,
         n_storyboard=n_storyboard,
         min_words=min_words,
         max_words=max_words
     )
-
+    if creative_guidance:
+        prompt += f"\n\n# Additional Style Guidance\n{creative_guidance.strip()}\n"
+    return prompt

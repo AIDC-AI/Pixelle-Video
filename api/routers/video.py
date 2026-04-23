@@ -74,7 +74,9 @@ def _build_standard_video_params(request_body: VideoGenerateRequest) -> dict[str
         "media_workflow": request_body.media_workflow,
         "video_fps": request_body.video_fps,
         "frame_template": request_body.frame_template,
+        "style_id": request_body.style_id,
         "prompt_prefix": request_body.prompt_prefix,
+        "bgm_mode": request_body.bgm_mode,
         "bgm_path": request_body.bgm_path,
         "bgm_volume": request_body.bgm_volume,
     }
@@ -87,6 +89,8 @@ def _build_standard_video_params(request_body: VideoGenerateRequest) -> dict[str
         video_params["voice_id"] = request_body.voice_id
     if request_body.template_params:
         video_params["template_params"] = request_body.template_params
+    if request_body.runninghub_instance_type is not None:
+        video_params["runninghub_instance_type"] = request_body.runninghub_instance_type
     return video_params
 
 

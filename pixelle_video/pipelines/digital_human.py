@@ -72,6 +72,7 @@ async def _synthesize_audio(
     tts_workflow: Optional[str],
     voice_workflow: Optional[str],
     ref_audio: Optional[str],
+    runninghub_instance_type: Optional[str],
 ) -> None:
     kwargs: dict[str, Any] = {
         "text": text,
@@ -84,6 +85,8 @@ async def _synthesize_audio(
     else:
         if tts_workflow or voice_workflow:
             kwargs["workflow"] = tts_workflow or voice_workflow
+            if (tts_workflow or voice_workflow or "").startswith("runninghub/") and runninghub_instance_type:
+                kwargs["runninghub_instance_type"] = runninghub_instance_type
         if ref_audio:
             kwargs["ref_audio"] = ref_audio
     await core.tts(**kwargs)
@@ -95,6 +98,9 @@ async def run(
     portrait_url: str,
     narration: str,
     voice_workflow: Optional[str] = None,
+    bgm_mode: str = "none",
+    bgm_path: Optional[str] = None,
+    bgm_volume: float = 0.3,
     project_id: Optional[str] = None,
     progress_callback: ProgressCallback = None,
     workflow_path: Optional[dict[str, str]] = None,
@@ -106,6 +112,7 @@ async def run(
     tts_speed: Optional[float] = None,
     tts_workflow: Optional[str] = None,
     ref_audio: Optional[str] = None,
+    runninghub_instance_type: Optional[str] = None,
     task_id_override: Optional[str] = None,
     **_: Any,
 ) -> VideoGenerationResult:
@@ -113,6 +120,9 @@ async def run(
         "portrait_url": portrait_url,
         "narration": narration,
         "voice_workflow": voice_workflow,
+        "bgm_mode": bgm_mode,
+        "bgm_path": bgm_path,
+        "bgm_volume": bgm_volume,
         "project_id": project_id,
         "workflow_path": workflow_path,
         "mode": mode,
@@ -123,6 +133,7 @@ async def run(
         "tts_speed": tts_speed,
         "tts_workflow": tts_workflow,
         "ref_audio": ref_audio,
+        "runninghub_instance_type": runninghub_instance_type,
     }
     mock_result = await maybe_create_mock_result(
         core,
@@ -144,84 +155,97 @@ async def run(
     audio_path = os.path.join(task_dir, "narration.mp3")
     generated_image_path = portrait_url
     generated_text = narration
-    kit = await core._get_or_create_comfykit()
+    async with core._comfykit_session(runninghub_instance_type=runninghub_instance_type) as kit:
 
-    if mode == "customize":
-        if progress_callback:
-            progress_callback("progress.step_audio", 25)
-        await _synthesize_audio(
-            core,
-            text=generated_text,
-            output_path=audio_path,
-            tts_inference_mode=tts_inference_mode,
-            tts_voice=tts_voice,
-            tts_speed=tts_speed,
-            tts_workflow=tts_workflow,
-            voice_workflow=voice_workflow,
-            ref_audio=ref_audio,
-        )
-    else:
-        if not goods_assets:
-            raise ValueError("goods_assets is required for digital mode")
-
-        goods_asset = goods_assets[0]
-        if progress_callback:
-            progress_callback("progress.step_image", 10)
-
-        if narration and narration.strip():
-            combine_image = await kit.execute(
-                _resolve_workflow_input(Path(workflow_config["third_workflow_path"])),
-                {"firstimage": portrait_url, "secondimage": goods_asset},
+        if mode == "customize":
+            if progress_callback:
+                progress_callback("progress.step_audio", 25)
+            await _synthesize_audio(
+                core,
+                text=generated_text,
+                output_path=audio_path,
+                tts_inference_mode=tts_inference_mode,
+                tts_voice=tts_voice,
+                tts_speed=tts_speed,
+                tts_workflow=tts_workflow,
+                voice_workflow=voice_workflow,
+                ref_audio=ref_audio,
+                runninghub_instance_type=runninghub_instance_type,
             )
-            combined_image_path = _extract_first_value(combine_image, "images")
-            if not combined_image_path:
-                raise ValueError("Digital human customize image workflow did not return an image")
-            generated_image_path = combined_image_path
-            generated_text = narration
         else:
-            synthesis_result = await kit.execute(
-                _resolve_workflow_input(Path(workflow_config["first_workflow_path"])),
-                {
-                    "firstimage": portrait_url,
-                    "secondimage": goods_asset,
-                    "goodstype": goods_title,
-                },
+            if not goods_assets:
+                raise ValueError("goods_assets is required for digital mode")
+
+            goods_asset = goods_assets[0]
+            if progress_callback:
+                progress_callback("progress.step_image", 10)
+
+            if narration and narration.strip():
+                combine_image = await kit.execute(
+                    _resolve_workflow_input(Path(workflow_config["third_workflow_path"])),
+                    {"firstimage": portrait_url, "secondimage": goods_asset},
+                )
+                combined_image_path = _extract_first_value(combine_image, "images")
+                if not combined_image_path:
+                    raise ValueError("Digital human customize image workflow did not return an image")
+                generated_image_path = combined_image_path
+                generated_text = narration
+            else:
+                synthesis_result = await kit.execute(
+                    _resolve_workflow_input(Path(workflow_config["first_workflow_path"])),
+                    {
+                        "firstimage": portrait_url,
+                        "secondimage": goods_asset,
+                        "goodstype": goods_title,
+                    },
+                )
+                if hasattr(synthesis_result, "status") and synthesis_result.status != "completed":
+                    raise ValueError(f"workflow execution failed: {getattr(synthesis_result, 'msg', 'unknown error')}")
+                synthesized_image_path = _extract_first_value(synthesis_result, "images")
+                if not synthesized_image_path:
+                    raise ValueError("Digital human synthesis workflow did not return an image")
+                generated_image_path = synthesized_image_path
+                generated_text = _extract_first_value(synthesis_result, "texts") or goods_title
+
+            if progress_callback:
+                progress_callback("progress.step_audio", 25)
+            await _synthesize_audio(
+                core,
+                text=generated_text,
+                output_path=audio_path,
+                tts_inference_mode=tts_inference_mode,
+                tts_voice=tts_voice,
+                tts_speed=tts_speed,
+                tts_workflow=tts_workflow,
+                voice_workflow=voice_workflow,
+                ref_audio=ref_audio,
+                runninghub_instance_type=runninghub_instance_type,
             )
-            if hasattr(synthesis_result, "status") and synthesis_result.status != "completed":
-                raise ValueError(f"workflow execution failed: {getattr(synthesis_result, 'msg', 'unknown error')}")
-            synthesized_image_path = _extract_first_value(synthesis_result, "images")
-            if not synthesized_image_path:
-                raise ValueError("Digital human synthesis workflow did not return an image")
-            generated_image_path = synthesized_image_path
-            generated_text = _extract_first_value(synthesis_result, "texts") or goods_title
 
         if progress_callback:
-            progress_callback("progress.step_audio", 25)
-        await _synthesize_audio(
-            core,
-            text=generated_text,
-            output_path=audio_path,
-            tts_inference_mode=tts_inference_mode,
-            tts_voice=tts_voice,
-            tts_speed=tts_speed,
-            tts_workflow=tts_workflow,
-            voice_workflow=voice_workflow,
-            ref_audio=ref_audio,
+            progress_callback("progress.concatenating", 65)
+
+        second_result = await kit.execute(
+            _resolve_workflow_input(Path(workflow_config["second_workflow_path"])),
+            {"videoimage": generated_image_path, "audio": audio_path},
         )
-
-    if progress_callback:
-        progress_callback("progress.concatenating", 65)
-
-    second_result = await kit.execute(
-        _resolve_workflow_input(Path(workflow_config["second_workflow_path"])),
-        {"videoimage": generated_image_path, "audio": audio_path},
-    )
     generated_video_url = _extract_first_value(second_result, "videos")
     if not generated_video_url:
         raise ValueError("Digital human workflow did not return a video")
 
     final_video_path = os.path.join(task_dir, "final.mp4")
     await _download_to_path(generated_video_url, final_video_path)
+
+    if bgm_mode in {"default", "custom"} and bgm_path:
+        bgm_video_path = os.path.join(task_dir, "final_with_bgm.mp4")
+        core.video.concat_videos(
+            videos=[final_video_path],
+            output=bgm_video_path,
+            bgm_path=bgm_path,
+            bgm_volume=bgm_volume,
+            bgm_mode=bgm_mode,
+        )
+        final_video_path = bgm_video_path
 
     storyboard = Storyboard(
         title=goods_title or "Digital Human",

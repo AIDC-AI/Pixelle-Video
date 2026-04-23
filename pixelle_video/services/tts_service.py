@@ -69,6 +69,7 @@ class TTSService(ComfyBaseService):
         # ComfyUI connection (optional overrides)
         comfyui_url: Optional[str] = None,
         runninghub_api_key: Optional[str] = None,
+        runninghub_instance_type: Optional[str] = None,
         # TTS parameters
         voice: Optional[str] = None,
         speed: Optional[float] = None,
@@ -132,6 +133,7 @@ class TTSService(ComfyBaseService):
                 text=text,
                 comfyui_url=comfyui_url,
                 runninghub_api_key=runninghub_api_key,
+                runninghub_instance_type=runninghub_instance_type,
                 voice=voice,
                 speed=speed,
                 output_path=output_path,
@@ -200,6 +202,7 @@ class TTSService(ComfyBaseService):
         text: str,
         comfyui_url: Optional[str] = None,
         runninghub_api_key: Optional[str] = None,
+        runninghub_instance_type: Optional[str] = None,
         voice: Optional[str] = None,
         speed: float = 1.0,
         output_path: Optional[str] = None,
@@ -239,20 +242,21 @@ class TTSService(ComfyBaseService):
         
         # 3. Execute workflow using shared ComfyKit instance from core
         try:
-            # Get shared ComfyKit instance (lazy initialization + config hot-reload)
-            kit = await self.core._get_or_create_comfykit()
-            
-            # Determine what to pass to ComfyKit based on source
-            if workflow_info["source"] == "runninghub" and "workflow_id" in workflow_info:
-                # RunningHub: pass workflow_id
-                workflow_input = workflow_info["workflow_id"]
-                logger.info(f"Executing RunningHub TTS workflow: {workflow_input}")
-            else:
-                # Selfhost: pass file path
-                workflow_input = workflow_info["path"]
-                logger.info(f"Executing selfhost TTS workflow: {workflow_input}")
-            
-            result = await kit.execute(workflow_input, workflow_params)
+            instance_override = (
+                runninghub_instance_type if workflow_info["source"] == "runninghub" else None
+            )
+            async with self.core._comfykit_session(runninghub_instance_type=instance_override) as kit:
+                # Determine what to pass to ComfyKit based on source
+                if workflow_info["source"] == "runninghub" and "workflow_id" in workflow_info:
+                    # RunningHub: pass workflow_id
+                    workflow_input = workflow_info["workflow_id"]
+                    logger.info(f"Executing RunningHub TTS workflow: {workflow_input}")
+                else:
+                    # Selfhost: pass file path
+                    workflow_input = workflow_info["path"]
+                    logger.info(f"Executing selfhost TTS workflow: {workflow_input}")
+                
+                result = await kit.execute(workflow_input, workflow_params)
             
             # 4. Handle result
             if result.status != "completed":

@@ -18,7 +18,8 @@ Provides unified access to all capabilities (LLM, TTS, Image, etc.)
 
 import hashlib
 import json
-from typing import Optional
+from contextlib import asynccontextmanager
+from typing import AsyncIterator, Optional
 
 from loguru import logger
 from comfykit import ComfyKit
@@ -33,6 +34,7 @@ from pixelle_video.services.video import VideoService
 from pixelle_video.services.frame_processor import FrameProcessor
 from pixelle_video.services.persistence import PersistenceService
 from pixelle_video.services.history_manager import HistoryManager
+from pixelle_video.services.style_registry import StyleRegistry
 from pixelle_video.pipelines.standard import StandardPipeline
 from pixelle_video.pipelines.custom import CustomPipeline
 from pixelle_video.pipelines.asset_based import AssetBasedPipeline
@@ -94,6 +96,7 @@ class PixelleVideoCore:
         self.frame_processor: Optional[FrameProcessor] = None
         self.persistence: Optional[PersistenceService] = None
         self.history: Optional[HistoryManager] = None
+        self.styles: Optional[StyleRegistry] = None
         
         # Video generation pipelines (dictionary of pipeline_name -> pipeline_instance)
         self.pipelines = {}
@@ -101,7 +104,7 @@ class PixelleVideoCore:
         # Default pipeline callable (for backward compatibility)
         self.generate_video = None
     
-    def _get_comfykit_config(self) -> dict:
+    def _get_comfykit_config(self, *, runninghub_instance_type: Optional[str] = None) -> dict:
         """
         Get current ComfyKit configuration from config_manager
         
@@ -120,10 +123,16 @@ class PixelleVideoCore:
             kit_config["api_key"] = comfyui_config["comfyui_api_key"]
         if comfyui_config.get("runninghub_api_key"):
             kit_config["runninghub_api_key"] = comfyui_config["runninghub_api_key"]
-        # Only pass instance_type if it has a non-empty value
-        instance_type = comfyui_config.get("runninghub_instance_type")
-        if instance_type and instance_type.strip():
-            kit_config["runninghub_instance_type"] = instance_type
+
+        normalized_instance_type = (
+            runninghub_instance_type.strip() if isinstance(runninghub_instance_type, str) else runninghub_instance_type
+        )
+        if normalized_instance_type is None:
+            instance_type = comfyui_config.get("runninghub_instance_type")
+            if instance_type and instance_type.strip():
+                kit_config["runninghub_instance_type"] = instance_type
+        elif normalized_instance_type and normalized_instance_type.lower() != "auto":
+            kit_config["runninghub_instance_type"] = normalized_instance_type
         
         return kit_config
     
@@ -175,6 +184,36 @@ class PixelleVideoCore:
             logger.info("✅ ComfyKit instance created")
         
         return self._comfykit
+
+    @asynccontextmanager
+    async def _comfykit_session(
+        self,
+        *,
+        runninghub_instance_type: Optional[str] = None,
+    ) -> AsyncIterator[ComfyKit]:
+        """
+        Yield a ComfyKit instance for the current task.
+
+        When no task-level RunningHub instance type override is provided, this reuses the
+        shared hot-reloaded ComfyKit instance. When a task explicitly chooses an instance
+        type (including "auto"), create a dedicated short-lived ComfyKit so concurrent
+        tasks do not race on shared runtime configuration.
+        """
+        if runninghub_instance_type is None:
+            yield await self._get_or_create_comfykit()
+            return
+
+        override_config = self._get_comfykit_config(runninghub_instance_type=runninghub_instance_type)
+        logger.info("✨ Creating task-scoped ComfyKit instance...")
+        logger.debug(f"Task-scoped ComfyKit config: {override_config}")
+        kit = ComfyKit(**override_config)
+        try:
+            yield kit
+        finally:
+            try:
+                await kit.close()
+            except Exception as exc:
+                logger.warning(f"Failed to close task-scoped ComfyKit instance: {exc}")
     
     async def initialize(self):
         """
@@ -204,6 +243,7 @@ class PixelleVideoCore:
         self.frame_processor = FrameProcessor(self)
         self.persistence = PersistenceService(output_dir="output")
         self.history = HistoryManager(self.persistence)
+        self.styles = StyleRegistry()
         
         # 2. Register video generation pipelines
         self.pipelines = {
