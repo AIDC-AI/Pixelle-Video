@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, Search, Bell, User, Clapperboard } from 'lucide-react';
+import { Moon, Sun, Search, Bell, User } from 'lucide-react';
 import { useAppTranslations } from '@/lib/i18n';
+import { BrandMark } from './brand-mark';
 
 export function Topbar() {
   const { theme, setTheme } = useTheme();
   const t = useAppTranslations('shell');
+  const brandT = useAppTranslations('brand') as (key: 'name') => string;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -18,10 +20,8 @@ export function Topbar() {
   return (
     <header className="flex items-center justify-between px-6 h-14 border-b bg-background">
       <div className="flex items-center space-x-2 font-bold text-foreground">
-        <div className="w-5 h-5 bg-foreground text-background rounded flex items-center justify-center text-[11px]">
-          <Clapperboard className="w-3 h-3" />
-        </div>
-        <span>天幕</span>
+        <BrandMark size="sm" />
+        <span>{brandT('name')}</span>
       </div>
 
       <div className="flex-1 flex justify-center">

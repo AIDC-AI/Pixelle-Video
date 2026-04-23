@@ -85,7 +85,7 @@ describe('Settings Page', () => {
     setHealthShouldFail(false);
     setSettingsWriteShouldFail(false);
     setSettings({
-      project_name: 'Pixelle-Video',
+      project_name: 'Demo Project',
       llm: {
         api_key: 'sk-****1234',
         base_url: 'https://api.openai.com/v1',
@@ -147,7 +147,7 @@ describe('Settings Page', () => {
     const user = userEvent.setup();
     renderPage();
 
-    const projectNameInput = await screen.findByDisplayValue('Pixelle-Video');
+    const projectNameInput = await screen.findByDisplayValue('Demo Project');
     const templateInput = await screen.findByDisplayValue('1080x1920/default.html');
     const comfyEndpointInput = screen.getByTestId('settings-comfyui-url');
     const runningHubConcurrencyInput = screen.getByTestId('settings-runninghub-concurrency');
@@ -307,7 +307,7 @@ describe('Settings Page', () => {
     expect(await screen.findByText('Build & Health')).toBeInTheDocument();
     expect(screen.getByText('Backend Version')).toBeInTheDocument();
     expect(screen.getByText('Service')).toBeInTheDocument();
-    expect(await screen.findByText('Pixelle-Video API')).toBeInTheDocument();
+    expect(await screen.findByText('Demo API')).toBeInTheDocument();
     expect(screen.getAllByText('0.1.0').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'GitHub' })).toHaveAttribute(
       'href',

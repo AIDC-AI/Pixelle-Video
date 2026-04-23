@@ -135,7 +135,7 @@ let batches: StoredBatch[] = [];
 let templates: TemplateInfo[] = [];
 let presets: PresetItem[] = [];
 let settingsPayload: SettingsPayload = {
-  project_name: 'Pixelle-Video',
+  project_name: 'Demo Project',
   llm: {
     api_key: 'sk-****demo',
     base_url: 'https://api.openai.com/v1',
@@ -921,7 +921,7 @@ function resetMockApiState(): void {
   setDefaultTaskScenarios();
   setDefaultBatches();
   settingsPayload = {
-    project_name: 'Pixelle-Video',
+    project_name: 'Demo Project',
     llm: {
       api_key: 'sk-****demo',
       base_url: 'https://api.openai.com/v1',
@@ -1083,7 +1083,7 @@ const handlers = [
     const response: HealthResponse = {
       status: 'healthy',
       version: '0.1.0',
-      service: 'Pixelle-Video API',
+      service: 'Demo API',
     };
     return HttpResponse.json(response);
   }),

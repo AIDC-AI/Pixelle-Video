@@ -4,6 +4,11 @@ import { AppShell } from './app-shell';
 
 vi.mock('./topbar', () => ({ Topbar: () => <div data-testid="topbar" /> }));
 vi.mock('./sidebar', () => ({ Sidebar: () => <div data-testid="sidebar" /> }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
 vi.mock('./empty-projects-prompt', () => ({ EmptyProjectsPrompt: () => <div data-testid="empty-projects-prompt" /> }));
 
 describe('AppShell', () => {

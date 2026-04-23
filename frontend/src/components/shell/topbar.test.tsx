@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Topbar } from './topbar';
 import { AppIntlProvider } from '@/lib/i18n';
+import zhCnMessages from '../../../messages/zh-CN.json';
 
 const mockSetTheme = vi.fn();
 let mockTheme: 'dark' | 'light' | undefined = 'dark';
@@ -30,10 +31,11 @@ describe('Topbar', () => {
     mockSetTheme.mockReset();
   });
 
-  it('renders the 天幕 brand logo text', () => {
+  it('renders the localized brand name and mark', () => {
     renderTopbar();
 
-    expect(screen.getByText('天幕')).toBeInTheDocument();
+    expect(screen.getByText(zhCnMessages.brand.name)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: zhCnMessages.brand.productName })).toBeInTheDocument();
   });
 
   it('renders the search button', () => {

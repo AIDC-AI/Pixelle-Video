@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BrandMark } from '@/components/shell/brand-mark';
 import { useHealthStatus, useSettings, useUpdateSettings } from '@/lib/hooks/use-settings';
 import {
   readLanguagePreference,
@@ -21,6 +22,7 @@ import {
   writeLanguagePreference,
   writeSidebarCollapsedPreference,
 } from '@/lib/preferences';
+import { useAppTranslations } from '@/lib/i18n';
 import type { components } from '@/types/api';
 
 type SettingsPayload = components['schemas']['SettingsPayload'];
@@ -213,6 +215,7 @@ export function SettingsShell() {
   const settingsQuery = useSettings();
   const updateSettings = useUpdateSettings();
   const healthQuery = useHealthStatus();
+  const brandT = useAppTranslations('brand') as (key: 'productName' | 'browserDescription') => string;
   const activeTab = getActiveTab(searchParams.get('tab'));
 
   const [settingsDraft, setSettingsDraft] = useState<NormalizedSettings | null>(null);
@@ -223,7 +226,7 @@ export function SettingsShell() {
       settingsQuery.data
         ? normalizeSettings(settingsQuery.data)
         : normalizeSettings({
-            project_name: 'Pixelle-Video',
+            project_name: 'Demo Project',
             llm: { api_key: '', base_url: '', model: '' },
             comfyui: {
               comfyui_url: '',
@@ -306,7 +309,7 @@ export function SettingsShell() {
 
   const aboutRows = useMemo(
     () => [
-      { label: 'Product', value: 'Pixelle-Video Workbench' },
+      { label: 'Product', value: brandT('productName') },
       { label: 'Frontend Version', value: packageJson.version },
       { label: 'Backend Version', value: healthQuery.data?.version ?? 'Unavailable' },
       { label: 'Service', value: healthQuery.data?.service ?? 'Unavailable' },
@@ -314,7 +317,7 @@ export function SettingsShell() {
       { label: 'Startup Time', value: 'Unavailable in current /health payload' },
       { label: 'License', value: 'Apache-2.0' },
     ],
-    [healthQuery.data?.service, healthQuery.data?.version]
+    [brandT, healthQuery.data?.service, healthQuery.data?.version]
   );
 
   return (
@@ -647,6 +650,13 @@ export function SettingsShell() {
           <TabsContent value="about" className="space-y-6">
             <Card className="border-border/70 bg-card shadow-none">
               <CardHeader>
+                <div className="mb-2 flex items-center gap-3">
+                  <BrandMark size="xl" />
+                  <div>
+                    <p className="text-base font-semibold text-foreground">{brandT('productName')}</p>
+                    <p className="text-sm text-muted-foreground">{brandT('browserDescription')}</p>
+                  </div>
+                </div>
                 <CardTitle>Build & Health</CardTitle>
                 <CardDescription>Version data comes from `/health` plus the local frontend package metadata.</CardDescription>
               </CardHeader>
