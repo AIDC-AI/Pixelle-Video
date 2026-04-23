@@ -148,10 +148,23 @@ class VideoAnalysisService(ComfyBaseService):
             
             result = await kit.execute(workflow_input, workflow_params)
             
+            # 6. Validate response object
+            if result is None:
+                logger.error("Video analysis failed: Empty response from ComfyKit")
+                logger.error(f"   Workflow input: {workflow_input}")
+                logger.error(f"   Workflow params: {workflow_params}")
+                raise Exception("Video analysis failed: Empty response from ComfyKit (possible RunningHub API error)")
+            
+            # Log response details for debugging
+            logger.debug(f"ComfyKit response status: {result.status}")
+            logger.debug(f"ComfyKit response object: {result.__dict__ if hasattr(result, '__dict__') else result}")
+            
             # 6. Extract description from result
             if result.status != "completed":
                 error_msg = result.msg or "Unknown error"
                 logger.error(f"Video analysis failed: {error_msg}")
+                logger.error(f"   Status: {result.status}")
+                logger.error(f"   Response details: {result.__dict__ if hasattr(result, '__dict__') else 'N/A'}")
                 raise Exception(f"Video analysis failed: {error_msg}")
             
             # Extract text description from result

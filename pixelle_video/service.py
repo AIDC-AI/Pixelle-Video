@@ -118,13 +118,22 @@ class PixelleVideoCore:
             kit_config["comfyui_url"] = comfyui_config["comfyui_url"]
         if comfyui_config.get("comfyui_api_key"):
             kit_config["api_key"] = comfyui_config["comfyui_api_key"]
-        if comfyui_config.get("runninghub_api_key"):
-            kit_config["runninghub_api_key"] = comfyui_config["runninghub_api_key"]
+        
+        # CRITICAL: Ensure RunningHub API key is passed to ComfyKit
+        runninghub_api_key = comfyui_config.get("runninghub_api_key")
+        if runninghub_api_key:
+            kit_config["runninghub_api_key"] = runninghub_api_key
+            logger.debug(f"ComfyKit configured with RunningHub API key (first 10 chars: {runninghub_api_key[:10]}...)")
+        else:
+            logger.warning("RunningHub API key not configured - RunningHub workflows will fail")
+        
         # Only pass instance_type if it has a non-empty value
         instance_type = comfyui_config.get("runninghub_instance_type")
         if instance_type and instance_type.strip():
             kit_config["runninghub_instance_type"] = instance_type
+            logger.debug(f"ComfyKit configured with RunningHub instance type: {instance_type}")
         
+        logger.debug(f"Final ComfyKit config keys: {list(kit_config.keys())}")
         return kit_config
     
     def _compute_comfykit_config_hash(self, config: dict) -> str:

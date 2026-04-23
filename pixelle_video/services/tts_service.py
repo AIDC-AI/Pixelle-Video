@@ -254,10 +254,23 @@ class TTSService(ComfyBaseService):
             
             result = await kit.execute(workflow_input, workflow_params)
             
+            # 4. Validate response object
+            if result is None:
+                logger.error("TTS generation failed: Empty response from ComfyKit")
+                logger.error(f"   Workflow input: {workflow_input}")
+                logger.error(f"   Workflow params: {workflow_params}")
+                raise Exception("TTS generation failed: Empty response from ComfyKit (possible RunningHub API error)")
+            
+            # Log response details for debugging
+            logger.debug(f"ComfyKit response status: {result.status}")
+            logger.debug(f"ComfyKit response object: {result.__dict__ if hasattr(result, '__dict__') else result}")
+            
             # 4. Handle result
             if result.status != "completed":
                 error_msg = result.msg or "Unknown error"
                 logger.error(f"TTS generation failed: {error_msg}")
+                logger.error(f"   Status: {result.status}")
+                logger.error(f"   Response details: {result.__dict__ if hasattr(result, '__dict__') else 'N/A'}")
                 raise Exception(f"TTS generation failed: {error_msg}")
             
             # ComfyKit result can have audio files in different output types

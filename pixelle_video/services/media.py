@@ -242,10 +242,23 @@ class MediaService(ComfyBaseService):
             
             result = await kit.execute(workflow_input, workflow_params)
             
+            # 5. Validate response object
+            if result is None:
+                logger.error("Media generation failed: Empty response from ComfyKit")
+                logger.error(f"   Workflow input: {workflow_input}")
+                logger.error(f"   Workflow params: {workflow_params}")
+                raise Exception("Media generation failed: Empty response from ComfyKit (possible RunningHub API error)")
+            
+            # Log response details for debugging
+            logger.debug(f"ComfyKit response status: {result.status}")
+            logger.debug(f"ComfyKit response object: {result.__dict__ if hasattr(result, '__dict__') else result}")
+            
             # 5. Handle result based on specified media_type
             if result.status != "completed":
                 error_msg = result.msg or "Unknown error"
                 logger.error(f"Media generation failed: {error_msg}")
+                logger.error(f"   Status: {result.status}")
+                logger.error(f"   Response details: {result.__dict__ if hasattr(result, '__dict__') else 'N/A'}")
                 raise Exception(f"Media generation failed: {error_msg}")
             
             # Extract media based on specified type
@@ -253,6 +266,9 @@ class MediaService(ComfyBaseService):
                 # Video workflow - get video from result
                 if not result.videos:
                     logger.error("No video generated (workflow returned no videos)")
+                    logger.error(f"   Available attributes: {result.__dict__ if hasattr(result, '__dict__') else 'N/A'}")
+                    logger.error(f"   result.videos: {getattr(result, 'videos', 'ATTRIBUTE_NOT_FOUND')}")
+                    logger.error(f"   result.outputs: {getattr(result, 'outputs', 'ATTRIBUTE_NOT_FOUND')}")
                     raise Exception("No video generated")
                 
                 video_url = result.videos[0]
@@ -272,6 +288,9 @@ class MediaService(ComfyBaseService):
                 # Image workflow - get image from result
                 if not result.images:
                     logger.error("No image generated (workflow returned no images)")
+                    logger.error(f"   Available attributes: {result.__dict__ if hasattr(result, '__dict__') else 'N/A'}")
+                    logger.error(f"   result.images: {getattr(result, 'images', 'ATTRIBUTE_NOT_FOUND')}")
+                    logger.error(f"   result.outputs: {getattr(result, 'outputs', 'ATTRIBUTE_NOT_FOUND')}")
                     raise Exception("No image generated")
                 
                 image_url = result.images[0]
