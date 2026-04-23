@@ -12,6 +12,12 @@ eggs/
 .eggs/
 lib/
 lib64/
+!frontend/src/lib/
+!frontend/src/lib/hooks/
+!frontend/src/lib/hooks/use-ai-features.ts
+!frontend/src/lib/hooks/use-ai-features.test.ts
+!frontend/src/lib/hooks/use-usage.ts
+!frontend/src/lib/hooks/use-usage.test.tsx
 parts/
 sdist/
 var/
@@ -57,6 +63,7 @@ test_outputs/
 test_*.py
 
 !bgm/default.mp3
+!bgm/style-*-bgm.mp3
 
 # Temp files
 temp/
@@ -74,3 +81,7 @@ examples/
 repositories/
 
 *.out
+
+.superpowers/
+frontend/.playwright-runtime/
+frontend/test-results/
