@@ -25,21 +25,21 @@ api_providers:
     local_proxy: ""
   openai:
     api_key: ""
-    base_url: ""
+    base_url: "https://api.openai.com/v1"
   dashscope:
     api_key: ""
-    base_url: ""
+    base_url: "https://dashscope.aliyuncs.com/api/v1"
   deepseek:
     api_key: ""
-    base_url: ""
+    base_url: "https://api.deepseek.com/v1"
   gemini:
     api_key: ""
-    base_url: ""
+    base_url: "https://generativelanguage.googleapis.com/v1"
   ark:
     api_key: ""
-    base_url: ""
+    base_url: "https://ark.cn-beijing.volces.com/api/v3"
   kling:
-    base_url: ""
+    base_url: "https://api-beijing.klingai.com"
     access_key: ""
     secret_key: ""
 
