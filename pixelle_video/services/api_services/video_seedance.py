@@ -110,7 +110,7 @@ class SeedanceVideoClient:
 
         # 合并其他可选参数 (如 seed, watermark)
         for key in ["seed", "watermark", "generate_audio"]:
-            if key in kwargs:
+            if key in kwargs and kwargs[key] is not None:
                 payload[key] = kwargs[key]
 
         logger.info(f"SeedanceVideoClient: 提交任务 model={model}, duration={duration}s")

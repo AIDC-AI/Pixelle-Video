@@ -5,9 +5,10 @@
 """Direct API provider media generation adapter."""
 
 import asyncio
+from copy import deepcopy
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from loguru import logger
 
@@ -33,16 +34,17 @@ class APIProviderMediaService:
             "doubao-seedream-4-5-251128",
             "doubao-seedream-4-0-250828",
         ],
-        "jimeng": [
-            "jimeng-3.1",
-        ],
     }
 
     VIDEO_MODELS = {
         "dashscope": [
             "wan2.7-i2v",
+            "wan2.7-r2v",
+            "wan2.7-videoedit",
             "wan2.6-i2v-flash",
             "happyhorse-1.0-i2v",
+            "happyhorse-1.0-r2v",
+            "happyhorse-1.0-video-edit",
         ],
         "kling": [
             "kling-v3",
@@ -55,9 +57,268 @@ class APIProviderMediaService:
             "seedance-1-0-pro",
             "seedance-1-0-lite",
         ],
-        "jimeng": [
-            "jimeng-video",
-        ],
+    }
+
+    VIDEO_MODEL_CAPABILITIES: dict[tuple[str, str], dict[str, Any]] = {
+        ("dashscope", "wan2.7-i2v"): {
+            "ability_type": "image_to_video",
+            "ability_types": [
+                "first_frame_i2v",
+                "start_end_frame_i2v",
+                "video_continuation",
+                "audio_driven_i2v",
+                "multi_shot",
+            ],
+            "adapter_ability_types": ["first_frame_i2v", "audio_driven_i2v"],
+            "input_modalities": ["text", "image", "audio", "video"],
+            "adapter_input_modalities": ["text", "image"],
+            "duration": {"min": 2, "max": 15, "integer": True, "verified": True},
+            "resolutions": ["720P", "1080P"],
+            "ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"],
+            "fps": 30,
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://help.aliyun.com/zh/model-studio/video-generate-edit-model/",
+                "https://help.aliyun.com/zh/model-studio/image-to-video-general-api-reference",
+            ],
+            "contract_issues": [
+                "Pixelle UI exposes first-frame image-to-video; asset-based workflow can optionally pass narration audio as driving_audio.",
+                "last_frame and first_clip are supported by the adapter for continuation, not character replacement.",
+            ],
+        },
+        ("dashscope", "wan2.7-videoedit"): {
+            "ability_type": "video_editing",
+            "ability_types": ["video_editing", "action_transfer", "instruction_editing", "video_transfer"],
+            "adapter_ability_types": ["action_transfer", "video_editing"],
+            "input_modalities": ["text", "image", "video"],
+            "adapter_input_modalities": ["text", "image", "video"],
+            "duration": {"min": 2, "max": 10, "integer": True, "verified": True},
+            "resolutions": ["720P", "1080P"],
+            "ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"],
+            "fps": 30,
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://help.aliyun.com/zh/model-studio/wan-video-editing-api-reference",
+                "https://help.aliyun.com/zh/model-studio/video-generate-edit-model/",
+            ],
+            "contract_issues": [
+                "Action transfer is mapped to video plus reference_image media, following the DashScope video-edit API contract.",
+            ],
+        },
+        ("dashscope", "wan2.7-r2v"): {
+            "ability_type": "reference_to_video",
+            "ability_types": [
+                "reference_to_video",
+                "digital_human",
+                "multi_character",
+                "native_audio",
+                "voice_reference",
+                "multi_shot",
+            ],
+            "adapter_ability_types": ["reference_to_video", "digital_human", "voice_reference"],
+            "input_modalities": ["text", "image", "audio", "video"],
+            "adapter_input_modalities": ["text", "image", "audio"],
+            "duration": {"min": 2, "max": 10, "integer": True, "verified": True},
+            "resolutions": ["720P", "1080P"],
+            "ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"],
+            "fps": 30,
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://www.alibabacloud.com/help/doc-detail/3001146.html",
+            ],
+            "contract_issues": [
+                "Digital human uses reference_image media and optionally attaches a TTS audio file as reference_voice for the first character.",
+            ],
+        },
+        ("dashscope", "wan2.6-i2v-flash"): {
+            "ability_type": "image_to_video",
+            "ability_types": ["first_frame_i2v", "audio_driven_i2v", "multi_shot", "fast_generation"],
+            "adapter_ability_types": ["first_frame_i2v"],
+            "input_modalities": ["text", "image", "audio"],
+            "adapter_input_modalities": ["text", "image"],
+            "duration": {"min": 2, "max": 15, "integer": True, "verified": True},
+            "resolutions": ["720P", "1080P"],
+            "ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"],
+            "fps": 30,
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://help.aliyun.com/zh/model-studio/image-to-video-guide",
+                "https://help.aliyun.com/zh/model-studio/video-generate-edit-model/",
+            ],
+            "contract_issues": [
+                "Official model supports audio input and audio sync, but the current DashScope legacy SDK call path only passes first-frame image parameters.",
+            ],
+        },
+        ("dashscope", "happyhorse-1.0-i2v"): {
+            "ability_type": "image_to_video",
+            "ability_types": ["first_frame_i2v", "native_audio"],
+            "adapter_ability_types": ["first_frame_i2v", "native_audio"],
+            "input_modalities": ["text", "image"],
+            "adapter_input_modalities": ["text", "image"],
+            "duration": {"min": 3, "max": 15, "integer": True, "verified": True},
+            "resolutions": ["720P", "1080P"],
+            "fps": 24,
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://help.aliyun.com/zh/model-studio/video-generate-edit-model/",
+            ],
+            "contract_issues": [],
+        },
+        ("dashscope", "happyhorse-1.0-video-edit"): {
+            "ability_type": "video_editing",
+            "ability_types": ["video_editing", "action_transfer", "instruction_editing", "native_audio"],
+            "adapter_ability_types": ["action_transfer", "video_editing"],
+            "input_modalities": ["text", "image", "video"],
+            "adapter_input_modalities": ["text", "image", "video"],
+            "duration": {"min": 3, "max": 15, "integer": True, "verified": True},
+            "resolutions": ["720P", "1080P"],
+            "fps": 24,
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://help.aliyun.com/zh/model-studio/video-generate-edit-model/",
+                "https://help.aliyun.com/zh/model-studio/wan-video-editing-api-reference",
+            ],
+            "contract_issues": [
+                "Model capability is documented in the model list; adapter uses the same video + reference_image media contract as DashScope video-edit models.",
+            ],
+        },
+        ("dashscope", "happyhorse-1.0-r2v"): {
+            "ability_type": "reference_to_video",
+            "ability_types": [
+                "reference_to_video",
+                "digital_human",
+                "multi_character",
+                "native_audio",
+                "multi_shot",
+            ],
+            "adapter_ability_types": ["reference_to_video", "digital_human"],
+            "input_modalities": ["text", "image"],
+            "adapter_input_modalities": ["text", "image"],
+            "duration": {"min": 3, "max": 15, "integer": True, "verified": True},
+            "resolutions": ["720P", "1080P"],
+            "ratios": ["16:9", "9:16", "3:4", "4:3", "1:1"],
+            "fps": 24,
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://www.alibabacloud.com/help/doc-detail/3030778.html",
+            ],
+            "contract_issues": [
+                "HappyHorse reference-to-video supports reference_image media. The public contract does not expose reference_voice in this API.",
+            ],
+        },
+        ("kling", "kling-v3"): {
+            "ability_type": "image_to_video",
+            "ability_types": [
+                "text_to_video",
+                "image_to_video",
+                "start_end_frame_i2v",
+                "native_audio",
+                "multi_shot",
+                "element_reference",
+            ],
+            "adapter_ability_types": ["first_frame_i2v", "native_audio"],
+            "input_modalities": ["text", "image"],
+            "adapter_input_modalities": ["text", "image"],
+            "duration": {"min": 3, "max": 15, "integer": True, "verified": True},
+            "resolutions": ["720P", "1080P"],
+            "api_contract_verified": False,
+            "source_urls": [
+                "https://app.klingai.com/cn/quickstart/klingai-video-3-model-user-guide",
+            ],
+            "contract_issues": [
+                "Official product guide confirms model capabilities, but the public API parameter contract was not found in accessible official docs.",
+                "Current adapter only calls /v1/videos/image2video with one base64 image; start/end frames, element references and native audio are not exposed.",
+            ],
+        },
+        ("kling", "kling-v2-6"): {
+            "ability_type": "image_to_video",
+            "ability_types": ["text_to_video", "image_to_video", "start_end_frame_i2v", "native_audio"],
+            "adapter_ability_types": ["first_frame_i2v", "native_audio"],
+            "input_modalities": ["text", "image"],
+            "adapter_input_modalities": ["text", "image"],
+            "api_contract_verified": False,
+            "source_urls": [
+                "https://app.klingai.com/cn/quickstart/klingai-video-3-model-user-guide",
+            ],
+            "contract_issues": [
+                "Official product guide lists capabilities, but accessible official API parameters for duration/mode/sound were not found.",
+            ],
+        },
+        ("kling", "kling-v2-5-turbo"): {
+            "ability_type": "image_to_video",
+            "ability_types": ["image_to_video"],
+            "adapter_ability_types": ["first_frame_i2v", "native_audio"],
+            "input_modalities": ["text", "image"],
+            "adapter_input_modalities": ["text", "image"],
+            "api_contract_verified": False,
+            "source_urls": [],
+            "contract_issues": [
+                "Official accessible API/model contract was not found. Keep this model unverified until provider docs are supplied.",
+            ],
+        },
+        ("seedance", "doubao-seedance-2-0-260128"): {
+            "ability_type": "image_to_video",
+            "ability_types": ["text_to_video", "image_to_video"],
+            "adapter_ability_types": ["first_frame_i2v", "native_audio"],
+            "input_modalities": ["text", "image"],
+            "adapter_input_modalities": ["text", "image"],
+            "duration": {"min": 2, "max": 12, "integer": True, "verified": True},
+            "resolutions": ["720p", "1080p"],
+            "ratios": ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9", "adaptive"],
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://www.volcengine.com/docs/82379/1520757",
+                "https://www.volcengine.com/docs/6492/2165104?lang=zh",
+            ],
+            "contract_issues": [
+                "Current adapter supports first_frame image-to-video plus ratio, resolution, seed, watermark and generate_audio. Additional multi-image/video roles are not exposed.",
+            ],
+        },
+        ("seedance", "doubao-seedance-2-0-fast-260128"): {
+            "ability_type": "image_to_video",
+            "ability_types": ["text_to_video", "image_to_video", "fast_generation"],
+            "adapter_ability_types": ["first_frame_i2v", "native_audio"],
+            "input_modalities": ["text", "image"],
+            "adapter_input_modalities": ["text", "image"],
+            "duration": {"min": 2, "max": 12, "integer": True, "verified": True},
+            "resolutions": ["720p", "1080p"],
+            "ratios": ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9", "adaptive"],
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://www.volcengine.com/docs/82379/1520757",
+                "https://www.volcengine.com/docs/6492/2165104?lang=zh",
+            ],
+            "contract_issues": [
+                "Current adapter supports first_frame image-to-video plus ratio, resolution, seed, watermark and generate_audio. Additional multi-image/video roles are not exposed.",
+            ],
+        },
+        ("seedance", "seedance-1-0-pro"): {
+            "ability_type": "image_to_video",
+            "ability_types": [],
+            "adapter_ability_types": ["first_frame_i2v"],
+            "api_contract_verified": False,
+            "source_urls": [],
+            "contract_issues": [
+                "Exact official model ID was not found. Volcengine docs refer to doubao-seedance model IDs, so this alias must be confirmed before relying on it.",
+            ],
+        },
+        ("seedance", "seedance-1-0-lite"): {
+            "ability_type": "image_to_video",
+            "ability_types": [],
+            "adapter_ability_types": ["first_frame_i2v"],
+            "api_contract_verified": False,
+            "source_urls": [],
+            "contract_issues": [
+                "Exact official model ID was not found. Volcengine docs refer to doubao-seedance model IDs, so this alias must be confirmed before relying on it.",
+            ],
+        },
     }
 
     def __init__(self, config: dict, core=None):
@@ -80,7 +341,7 @@ class APIProviderMediaService:
 
     def _workflow_info(self, provider: str, model: str, media_type: str) -> dict:
         key = f"api/{provider}/{model}"
-        return {
+        info = {
             "name": model,
             "display_name": f"{model} - API {provider.title()}",
             "source": "api",
@@ -90,6 +351,15 @@ class APIProviderMediaService:
             "path": key,
             "key": key,
         }
+        if media_type == "video":
+            capabilities = self._video_capabilities(provider, model)
+            info["capabilities"] = capabilities
+            info["ability_type"] = capabilities.get("ability_type")
+            info["ability_types"] = capabilities.get("ability_types", [])
+            info["adapter_ability_types"] = capabilities.get("adapter_ability_types", [])
+            info["api_contract_verified"] = capabilities.get("api_contract_verified", False)
+            info["contract_issues"] = capabilities.get("contract_issues", [])
+        return info
 
     def resolve_workflow(self, workflow: str) -> dict:
         """Resolve an api/provider/model key to model metadata."""
@@ -198,17 +468,26 @@ class APIProviderMediaService:
     ) -> MediaResult:
         from pixelle_video.services.api_services.video_client import VideoClient
 
-        if not image_path:
+        first_clip_path = params.get("first_clip_path") or params.get("first_video_path")
+        reference_image_path = params.get("reference_image_path")
+        reference_image_paths = params.get("reference_image_paths") or []
+        reference_video_paths = params.get("reference_video_paths") or []
+        has_reference_inputs = bool(reference_image_path or reference_image_paths or reference_video_paths)
+        if not image_path and not first_clip_path and not has_reference_inputs:
             raise ValueError(
-                "API video models require an input image_path. "
-                "Use an image template first or pass image_path when calling media generation."
+                "API video models require image_path, first_clip_path, or reference media inputs. "
+                "Use an image template first or pass input image/video/reference media when calling media generation."
             )
+        if first_clip_path and not image_path and provider != "dashscope":
+            raise ValueError(f"first_clip_path is only supported for DashScope wan2.7 models, not provider={provider}.")
 
         client = self._create_video_client()
         save_path = output_path or os.path.join(self._save_dir(None, "api_videos"), "video.mp4")
-        ratio = self._ratio(width, height)
+        ratio = params.get("video_ratio") or params.get("ratio") or self._ratio(width, height)
         requested_duration = int(duration or params.get("duration") or 5)
         safe_duration = self._video_duration(provider, model, requested_duration)
+        resolution = params.get("resolution") or self._video_resolution(provider, width, height)
+        video_options = self._video_options(provider, model, params, resolution)
 
         logger.info(f"Generating video via API provider={provider}, model={model}")
         await asyncio.to_thread(
@@ -219,6 +498,7 @@ class APIProviderMediaService:
             model=model,
             duration=safe_duration,
             video_ratio=ratio,
+            **video_options,
         )
 
         if not os.path.exists(save_path):
@@ -233,9 +513,6 @@ class APIProviderMediaService:
         return ImageClient(
             dashscope_api_key=cfg["dashscope"].get("api_key") or None,
             dashscope_base_url=cfg["dashscope"].get("base_url") or None,
-            jimeng_base_url=cfg["jimeng"].get("base_url") or None,
-            jimeng_access_key=cfg["jimeng"].get("access_key") or None,
-            jimeng_secret_key=cfg["jimeng"].get("secret_key") or None,
             gpt_api_key=cfg["openai"].get("api_key") or None,
             gpt_base_url=cfg["openai"].get("base_url") or None,
             local_proxy=cfg["common"].get("local_proxy") or None,
@@ -250,9 +527,6 @@ class APIProviderMediaService:
         return VideoClient(
             dashscope_api_key=cfg["dashscope"].get("api_key") or None,
             dashscope_base_url=cfg["dashscope"].get("base_url") or None,
-            jimeng_base_url=cfg["jimeng"].get("base_url") or None,
-            jimeng_access_key=cfg["jimeng"].get("access_key") or None,
-            jimeng_secret_key=cfg["jimeng"].get("secret_key") or None,
             kling_access_key=cfg["kling"].get("access_key") or None,
             kling_secret_key=cfg["kling"].get("secret_key") or None,
             kling_base_url=cfg["kling"].get("base_url") or None,
@@ -280,8 +554,26 @@ class APIProviderMediaService:
             return "2K"
         return "1080P"
 
+    def _video_resolution(self, provider: str, width: Optional[int], height: Optional[int]) -> str:
+        resolution = self._resolution(width, height)
+        if provider == "seedance":
+            return "1080p" if resolution in {"1080P", "2K", "4K"} else "720p"
+        return "1080P" if resolution in {"1080P", "2K", "4K"} else "720P"
+
     def _video_duration(self, provider: str, model: str, duration: int) -> int:
         """Normalize requested duration to ranges accepted by common providers."""
+        capabilities = self._video_capabilities(provider, model)
+        duration_contract = capabilities.get("duration") or {}
+
+        if duration_contract.get("verified"):
+            if duration_contract.get("allowed_values"):
+                allowed = sorted(duration_contract["allowed_values"])
+                return min(allowed, key=lambda value: abs(value - duration))
+
+            min_duration = int(duration_contract.get("min", duration))
+            max_duration = int(duration_contract.get("max", duration))
+            return min(max(duration, min_duration), max_duration)
+
         model_lower = model.lower()
 
         if provider == "dashscope":
@@ -296,3 +588,62 @@ class APIProviderMediaService:
             return min(max(duration, 5), 10)
 
         return max(duration, 1)
+
+    def _video_capabilities(self, provider: str, model: str) -> dict[str, Any]:
+        """Return provider/model capability metadata backed by official docs when available."""
+        default = {
+            "ability_type": "image_to_video",
+            "ability_types": [],
+            "adapter_ability_types": ["first_frame_i2v"],
+            "api_contract_verified": False,
+            "source_urls": [],
+            "contract_issues": ["No official API contract metadata has been added for this model."],
+        }
+        return deepcopy(self.VIDEO_MODEL_CAPABILITIES.get((provider, model), default))
+
+    def _video_options(
+        self,
+        provider: str,
+        model: str,
+        params: dict[str, Any],
+        resolution: str,
+    ) -> dict[str, Any]:
+        """Map Pixelle's generic video params to provider client options."""
+        options: dict[str, Any] = {
+            "resolution": resolution,
+            "negative_prompt": params.get("negative_prompt"),
+            "watermark": params.get("watermark"),
+            "seed": params.get("seed"),
+        }
+
+        if provider == "dashscope":
+            options.update(
+                {
+                    "last_image_path": params.get("last_image_path") or params.get("last_frame_path"),
+                    "first_clip_path": params.get("first_clip_path") or params.get("first_video_path"),
+                    "reference_image_path": params.get("reference_image_path"),
+                    "reference_image_paths": params.get("reference_image_paths"),
+                    "reference_video_paths": params.get("reference_video_paths"),
+                    "reference_audio_path": params.get("reference_audio_path") or params.get("reference_voice_path"),
+                    "audio": params.get("audio"),
+                    "audio_path": params.get("audio_path") or params.get("driving_audio_path"),
+                    "prompt_extend": params.get("prompt_extend"),
+                    "shot_type": params.get("shot_type", "multi"),
+                }
+            )
+        elif provider == "kling":
+            options.update(
+                {
+                    "sound": params.get("sound", ""),
+                    "mode": params.get("mode", "pro"),
+                    "cfg_scale": params.get("cfg_scale", 0.5),
+                }
+            )
+        elif provider == "seedance":
+            options.update(
+                {
+                    "generate_audio": params.get("generate_audio"),
+                }
+            )
+
+        return {key: value for key, value in options.items() if value is not None}

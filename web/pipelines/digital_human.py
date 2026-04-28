@@ -8,7 +8,7 @@ from loguru import logger
 import httpx
 from web.i18n import tr, get_language
 from web.pipelines.base import PipelineUI, register_pipeline_ui
-from web.pipelines.api_workflows import list_api_media_workflows
+from web.pipelines.api_workflows import list_api_media_workflows, render_api_video_controls
 from web.components.content_input import render_version_info
 from web.components.digital_tts_config import render_style_config
 from web.utils.async_helpers import run_async
@@ -200,6 +200,39 @@ class DigitalHumanPipelineUI(PipelineUI):
             if selected_api_image != api_image_options[0] and api_image_workflows:
                 selected_index = api_image_options.index(selected_api_image) - 1
                 workflow_config["api_image_workflow"] = api_image_workflows[selected_index]["key"]
+
+            api_video_workflows = list_api_media_workflows(
+                pixelle_video,
+                "video",
+                required_adapter_abilities=["digital_human"],
+                verified_only=True,
+            )
+            api_video_options = ["使用原工作流合成口播视频" if get_language() == "zh_CN" else "Use original talking-video workflow"]
+            api_video_options.extend([wf["display_name"] for wf in api_video_workflows])
+
+            selected_api_video = st.selectbox(
+                "API 参考生视频模型" if get_language() == "zh_CN" else "API reference-to-video model",
+                api_video_options,
+                index=0,
+                help=(
+                    "可选：用 DashScope 参考生视频模型直接生成数字人口播成片，跳过原第二步数字人视频合成 workflow。"
+                    if get_language() == "zh_CN"
+                    else "Optional: use a DashScope reference-to-video model to generate the talking video directly, bypassing the original second-step talking-video workflow."
+                ),
+                key="digital_human_api_video_workflow",
+            )
+
+            workflow_config["api_video_workflow"] = None
+            workflow_config["api_video_params"] = {}
+            if selected_api_video != api_video_options[0] and api_video_workflows:
+                selected_index = api_video_options.index(selected_api_video) - 1
+                selected_workflow = api_video_workflows[selected_index]
+                workflow_config["api_video_workflow"] = selected_workflow["key"]
+                workflow_config["api_video_params"] = render_api_video_controls(
+                    selected_workflow,
+                    key_prefix="digital_human",
+                    default_duration=5,
+                )
 
             return workflow_config
 
@@ -393,11 +426,98 @@ class DigitalHumanPipelineUI(PipelineUI):
                     # Define async generation function
                     async def generate_digital_human_video():
                         task_dir, task_id = create_task_output_dir()
-                        kit = await pixelle_video._get_or_create_comfykit()
                         workflow_path = video_params["workflow_path"]
+                        api_video_workflow = workflow_path.get("api_video_workflow")
+                        api_video_params = dict(workflow_path.get("api_video_params") or {})
 
                         import json
                         from pathlib import Path
+
+                        async def generate_tts_reference(text: str) -> str:
+                            audio_path = os.path.join(task_dir, "narration.mp3")
+                            tts_inference_mode = video_params.get("tts_inference_mode", "local")
+                            tts_voice = video_params.get("tts_voice")
+                            tts_speed = video_params.get("tts_speed")
+                            tts_workflow = video_params.get("tts_workflow")
+                            ref_audio = video_params.get("ref_audio")
+
+                            tts_kwargs = {
+                                "text": text,
+                                "output_path": audio_path,
+                                "inference_mode": tts_inference_mode,
+                            }
+                            if tts_inference_mode == "local":
+                                tts_kwargs["voice"] = tts_voice
+                                tts_kwargs["speed"] = tts_speed
+                            elif tts_inference_mode == "comfyui":
+                                if tts_workflow:
+                                    tts_kwargs["workflow"] = tts_workflow
+                                if ref_audio:
+                                    tts_kwargs["ref_audio"] = ref_audio
+
+                            await pixelle_video.tts(**tts_kwargs)
+                            return audio_path
+
+                        async def generate_api_digital_human(text: str) -> str:
+                            status_text.text(tr("progress.step_audio"))
+                            progress_bar.progress(25)
+                            audio_path = await generate_tts_reference(text)
+
+                            reference_image_paths = [character_assets[0]]
+                            if mode == "digital" and goods_assets:
+                                reference_image_paths.append(goods_assets[0])
+
+                            subject_prompt = (
+                                "参考图1中的人物面对镜头自然口播。"
+                                if get_language() == "zh_CN"
+                                else "The person in reference image 1 speaks naturally to camera."
+                            )
+                            if mode == "digital" and goods_assets:
+                                subject_prompt += (
+                                    "结合参考图2中的商品，生成竖屏商业口播视频。"
+                                    if get_language() == "zh_CN"
+                                    else "Use the product in reference image 2 and create a vertical product-promotion talking video."
+                                )
+                            prompt = f"{subject_prompt} 口播文案：{text}"
+
+                            final_video_path = os.path.join(task_dir, "final.mp4")
+                            duration = int(api_video_params.pop("duration", 5))
+                            media_params = {
+                                **api_video_params,
+                                "prompt": prompt,
+                                "workflow": api_video_workflow,
+                                "media_type": "video",
+                                "output_path": final_video_path,
+                                "duration": duration,
+                                "reference_image_paths": reference_image_paths,
+                                "reference_audio_path": audio_path,
+                                "audio": True,
+                                "video_ratio": api_video_params.get("video_ratio", "9:16"),
+                            }
+                            progress_bar.progress(60)
+                            status_text.text(tr("progress.generation"))
+                            media_result = await pixelle_video.media(**media_params)
+                            progress_bar.progress(100)
+                            status_text.text(tr("status.success"))
+                            return media_result.url
+
+                        if api_video_workflow:
+                            if mode == "customize":
+                                generated_text = goods_text
+                            elif goods_text and goods_text.strip():
+                                generated_text = goods_text
+                            else:
+                                generated_text = await pixelle_video.llm(
+                                    prompt=(
+                                        f"请为商品“{goods_title}”写一段适合数字人口播短视频的中文推广文案。"
+                                        "要求自然、有吸引力，控制在80字以内，只输出文案正文。"
+                                    ),
+                                    temperature=0.7,
+                                    max_tokens=300,
+                                )
+                            return await generate_api_digital_human(generated_text)
+
+                        kit = await pixelle_video._get_or_create_comfykit()
 
                         if mode == "customize":
                             status_text.text(tr("progress.step_audio"))

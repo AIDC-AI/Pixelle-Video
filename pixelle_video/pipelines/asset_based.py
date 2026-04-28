@@ -672,7 +672,10 @@ class AssetBasedPipeline(LinearVideoPipeline):
             if api_video_workflow and frame.media_type == "image" and frame.image_path:
                 logger.info(f"Animating scene {i} image via API workflow: {api_video_workflow}")
                 api_video_path = get_task_frame_path(context.task_id, frame.index, "video")
-                api_duration = max(3, min(int(round(frame.duration or 5)), 15))
+                api_video_params = dict(context.request.get("api_video_params") or {})
+                if api_video_params.pop("use_narration_audio_as_driving_audio", False):
+                    api_video_params["audio_path"] = frame.audio_path
+                api_duration = int(api_video_params.pop("duration", max(3, min(int(round(frame.duration or 5)), 15))))
                 media_result = await self.core.media(
                     prompt=frame.narration or context.input_text or "",
                     workflow=api_video_workflow,
@@ -682,6 +685,7 @@ class AssetBasedPipeline(LinearVideoPipeline):
                     duration=api_duration,
                     width=config.media_width,
                     height=config.media_height,
+                    **api_video_params,
                 )
                 frame.media_type = "video"
                 frame.video_path = media_result.url

@@ -8,7 +8,11 @@ from loguru import logger
 import httpx
 from web.i18n import tr, get_language
 from web.pipelines.base import PipelineUI, register_pipeline_ui
-from web.pipelines.api_workflows import is_api_workflow, list_api_media_workflows
+from web.pipelines.api_workflows import (
+    is_api_workflow,
+    list_api_media_workflows,
+    render_api_video_controls,
+)
 from web.components.content_input import render_version_info
 from web.utils.async_helpers import run_async
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
@@ -75,7 +79,12 @@ class ImageToVideoPipelineUI(PipelineUI):
                                 "key": f"{source}/{fname}",
                                 "display_name": display
                             })
-                result.extend(list_api_media_workflows(pixelle_video, "video"))
+                result.extend(list_api_media_workflows(
+                    pixelle_video,
+                    "video",
+                    required_adapter_abilities=["first_frame_i2v"],
+                    verified_only=True,
+                ))
                 return result
 
             # File uploader for multiple files
@@ -140,17 +149,26 @@ class ImageToVideoPipelineUI(PipelineUI):
             if workflow_options:
                 workflow_selected_index = workflow_options.index(workflow_display)
                 workflow_key = workflow_keys[workflow_selected_index]
+                workflow_info = i2v_workflows[workflow_selected_index]
             else:
                 workflow_key = None
+                workflow_info = None
             
             # Check and warn for selfhost workflow (auto popup if not confirmed)
             if not is_api_workflow(workflow_key):
                 check_and_warn_selfhost_workflow(workflow_key)
+
+            api_video_params = render_api_video_controls(
+                workflow_info,
+                key_prefix="i2v",
+                default_duration=5,
+            ) if is_api_workflow(workflow_key) else {}
             
             return {
                 "audio_assets": audio_asset_paths,
                 "prompt_text": prompt_text,
-                "workflow_key": workflow_key
+                "workflow_key": workflow_key,
+                "api_video_params": api_video_params,
                 }
 
     def _render_output_preview(self, pixelle_video: Any, video_params: dict):
@@ -165,6 +183,7 @@ class ImageToVideoPipelineUI(PipelineUI):
             audio_assets = video_params.get("audio_assets", [])
             prompt_text = video_params.get("prompt_text", "")
             workflow_key = video_params.get("workflow_key")
+            api_video_params = video_params.get("api_video_params") or {}
 
             logger.info(f"  - video_params: {video_params}")
 
@@ -216,12 +235,16 @@ class ImageToVideoPipelineUI(PipelineUI):
                         final_video_path = os.path.join(task_dir, "final.mp4")
 
                         if is_api_workflow(workflow_key):
+                            media_params = {
+                                **api_video_params,
+                                "prompt": prompt,
+                                "workflow": workflow_key,
+                                "media_type": "video",
+                                "image_path": image_path,
+                                "output_path": final_video_path,
+                            }
                             media_result = await pixelle_video.media(
-                                prompt=prompt,
-                                workflow=workflow_key,
-                                media_type="video",
-                                image_path=image_path,
-                                output_path=final_video_path,
+                                **media_params,
                             )
                             progress_bar.progress(100)
                             status_text.text(tr("status.success"))

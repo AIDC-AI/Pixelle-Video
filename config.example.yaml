@@ -38,10 +38,6 @@ api_providers:
   ark:
     api_key: ""
     base_url: ""
-  jimeng:
-    base_url: ""
-    access_key: ""
-    secret_key: ""
   kling:
     base_url: ""
     access_key: ""

@@ -26,7 +26,7 @@ from loguru import logger
 
 from web.i18n import tr, get_language
 from web.pipelines.base import PipelineUI, register_pipeline_ui
-from web.pipelines.api_workflows import list_api_media_workflows
+from web.pipelines.api_workflows import list_api_media_workflows, render_api_video_controls
 from web.components.content_input import render_bgm_section, render_version_info
 from web.utils.async_helpers import run_async
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
@@ -197,8 +197,8 @@ class AssetBasedPipelineUI(PipelineUI):
             has_runninghub = bool(comfyui_config.get("runninghub_api_key"))
             has_selfhost = bool(comfyui_config.get("comfyui_url"))
             
-            # Default to runninghub always
-            default_source_index = 0
+            # Prefer the configured analysis backend; API video generation is independent of this choice.
+            default_source_index = 0 if has_runninghub else 1
             
             source = st.radio(
                 tr("asset_based.source.select"),
@@ -225,8 +225,13 @@ class AssetBasedPipelineUI(PipelineUI):
                     # Use analyse_image.json as representative workflow
                     check_and_warn_selfhost_workflow("selfhost/analyse_image.json")
 
-            api_video_workflows = list_api_media_workflows(pixelle_video, "video")
-            api_video_options = ["不使用 API 视频生成" if get_language() == "zh_CN" else "Do not use API video generation"]
+            api_video_workflows = list_api_media_workflows(
+                pixelle_video,
+                "video",
+                required_adapter_abilities=["first_frame_i2v"],
+                verified_only=True,
+            )
+            api_video_options = ["使用原工作流生成图片" if get_language() == "zh_CN" else "Use original image workflow"]
             api_video_options.extend([wf["display_name"] for wf in api_video_workflows])
 
             selected_api_video = st.selectbox(
@@ -242,9 +247,23 @@ class AssetBasedPipelineUI(PipelineUI):
             )
 
             api_video_workflow = None
+            api_video_params = {}
             if selected_api_video != api_video_options[0] and api_video_workflows:
                 selected_index = api_video_options.index(selected_api_video) - 1
-                api_video_workflow = api_video_workflows[selected_index]["key"]
+                selected_workflow = api_video_workflows[selected_index]
+                api_video_workflow = selected_workflow["key"]
+                api_video_params = render_api_video_controls(
+                    selected_workflow,
+                    key_prefix="asset",
+                    default_duration=5,
+                    allow_audio_driven=True,
+                )
+                if source == "runninghub" and not has_runninghub:
+                    st.info(
+                        "已选择 API 视频模型；素材分析不会使用 RunningHub。请改选 Selfhost，或配置 RunningHub API Key。"
+                        if get_language() == "zh_CN"
+                        else "API video generation is selected; asset analysis does not use RunningHub. Please switch to Selfhost or configure a RunningHub API key."
+                    )
         
         # TTS configuration
         with st.container(border=True):
@@ -303,6 +322,7 @@ class AssetBasedPipelineUI(PipelineUI):
             "duration": duration,
             "source": source,
             "api_video_workflow": api_video_workflow,
+            "api_video_params": api_video_params,
             "voice_id": voice_id,
             "tts_speed": tts_speed
         }
@@ -411,6 +431,7 @@ class AssetBasedPipelineUI(PipelineUI):
                         bgm_volume=video_params.get("bgm_volume", 0.2),
                         bgm_mode=video_params.get("bgm_mode", "loop"),
                         api_video_workflow=video_params.get("api_video_workflow"),
+                        api_video_params=video_params.get("api_video_params"),
                         voice_id=video_params.get("voice_id", "zh-CN-YunjianNeural"),
                         tts_speed=video_params.get("tts_speed", 1.2),
                         progress_callback=update_progress

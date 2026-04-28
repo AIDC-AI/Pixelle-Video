@@ -140,7 +140,6 @@ def render_single_output(pixelle_video, video_params):
                     "media_width": st.session_state.get('template_media_width'),
                     "media_height": st.session_state.get('template_media_height'),
                 }
-                
                 # Add TTS parameters based on mode
                 video_params["tts_inference_mode"] = tts_mode
                 if tts_mode == "local":
@@ -258,7 +257,6 @@ def render_batch_output(pixelle_video, video_params):
                 "media_width": video_params.get("media_width"),
                 "media_height": video_params.get("media_height"),
             }
-            
             # Add TTS parameters based on mode (only add non-None values)
             if shared_config["tts_inference_mode"] == "local":
                 tts_voice = video_params.get("tts_voice")

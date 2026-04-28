@@ -34,9 +34,6 @@ class _ConfigMeta(type):
             "GOOGLE_GEMINI_BASE_URL": ("gemini", "base_url", ""),
             "ARK_API_KEY": ("ark", "api_key", ""),
             "ARK_BASE_URL": ("ark", "base_url", ""),
-            "JIMENG_BASE_URL": ("jimeng", "base_url", ""),
-            "JIMENG_ACCESS_KEY": ("jimeng", "access_key", ""),
-            "JIMENG_SECRET_KEY": ("jimeng", "secret_key", ""),
             "KLING_BASE_URL": ("kling", "base_url", ""),
             "KLING_ACCESS_KEY": ("kling", "access_key", ""),
             "KLING_SECRET_KEY": ("kling", "secret_key", ""),
@@ -55,4 +52,3 @@ class _ConfigMeta(type):
 
 class Config(metaclass=_ConfigMeta):
     """Old-style config facade for migrated provider clients."""
-

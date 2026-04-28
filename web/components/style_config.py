@@ -26,6 +26,11 @@ from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
 from pixelle_video.config import config_manager
 
 
+def is_api_workflow(workflow_key: str | None) -> bool:
+    """Return True for direct provider workflow keys such as api/dashscope/xxx."""
+    return bool(workflow_key and workflow_key.startswith("api/"))
+
+
 def render_style_config(pixelle_video):
     """Render style configuration section (middle column)"""
     # TTS Section (moved from left column)
@@ -293,7 +298,6 @@ def render_style_config(pixelle_video):
         template_type_options = {
             'static': tr('template.type.static'),
             'image': tr('template.type.image'),
-            'video': tr('template.type.video')
         }
         
         # Radio buttons in horizontal layout
@@ -312,8 +316,6 @@ def render_style_config(pixelle_video):
             st.info(tr('template.type.static_hint'))
         elif selected_template_type == 'image':
             st.info(tr('template.type.image_hint'))
-        elif selected_template_type == 'video':
-            st.info(tr('template.type.video_hint'))
         
         # Get templates grouped by size, filtered by selected type
         grouped_templates = get_templates_grouped_by_size_and_type(selected_template_type)
@@ -341,7 +343,6 @@ def render_style_config(pixelle_video):
         type_default_templates = {
             'static': '1080x1920/static_default.html',
             'image': '1080x1920/image_default.html',
-            'video': '1080x1920/video_default.html'
         }
         type_specific_default = type_default_templates.get(selected_template_type, config_default_template)
         
@@ -682,45 +683,25 @@ def render_style_config(pixelle_video):
     if template_requires_media:
         # Template requires media - show Media Generation Section
         with st.container(border=True):
-            # Dynamic section title based on template type
-            if template_media_type == "video":
-                section_title = tr('section.video')
-            else:
-                section_title = tr('section.image')
-            
-            st.markdown(f"**{section_title}**")
+            st.markdown(f"**{tr('section.image')}**")
         
             # 1. ComfyUI Workflow selection
             with st.expander(tr("help.feature_description"), expanded=False):
                 st.markdown(f"**{tr('help.what')}**")
-                if template_media_type == "video":
-                    st.markdown(tr('style.video_workflow_what'))
-                else:
-                    st.markdown(tr("style.workflow_what"))
+                st.markdown(tr("style.workflow_what"))
                 st.markdown(f"**{tr('help.how')}**")
-                if template_media_type == "video":
-                    st.markdown(tr('style.video_workflow_how'))
-                else:
-                    st.markdown(tr("style.workflow_how"))
+                st.markdown(tr("style.workflow_how"))
         
             # Get available workflows and filter by template type
             all_workflows = pixelle_video.media.list_workflows()
             
-            # Filter workflows based on template media type
-            if template_media_type == "video":
-                # Only show video workflows (API models expose media_type metadata)
-                workflows = [
-                    wf for wf in all_workflows
-                    if wf.get("media_type") == "video" or "video_" in wf["key"].lower()
-                ]
-            else:
-                # Only show image workflows (exclude video workflows)
-                workflows = [
-                    wf for wf in all_workflows
-                    if wf.get("media_type") == "image" or (
-                        wf.get("media_type") is None and "video_" not in wf["key"].lower()
-                    )
-                ]
+            # Standard mode only generates static images, so hide video workflows here.
+            workflows = [
+                wf for wf in all_workflows
+                if wf.get("media_type") == "image" or (
+                    wf.get("media_type") is None and "video_" not in wf["key"].lower()
+                )
+            ]
         
             # Build options for selectbox
             # Display: "image_flux.json - Runninghub"
@@ -733,9 +714,7 @@ def render_style_config(pixelle_video):
         
             # If user has a saved preference in config, try to match it
             comfyui_config = config_manager.get_comfyui_config()
-            # Select config based on template type (image or video)
-            media_config_key = "video" if template_media_type == "video" else "image"
-            saved_workflow = comfyui_config.get(media_config_key, {}).get("default_workflow", "")
+            saved_workflow = comfyui_config.get("image", {}).get("default_workflow", "")
             if saved_workflow and saved_workflow in workflow_keys:
                 default_workflow_index = workflow_keys.index(saved_workflow)
         
@@ -755,22 +734,20 @@ def render_style_config(pixelle_video):
                 workflow_key = "runninghub/image_flux.json"  # fallback
             
             # Check and warn for selfhost media workflow (auto popup if not confirmed)
-            check_and_warn_selfhost_workflow(workflow_key)
+            if not is_api_workflow(workflow_key):
+                check_and_warn_selfhost_workflow(workflow_key)
         
             # Get media size from template
             media_width = st.session_state.get('template_media_width')
             media_height = st.session_state.get('template_media_height')
             
             # Display media size info (read-only)
-            if template_media_type == "video":
-                size_info_text = tr('style.video_size_info', width=media_width, height=media_height)
-            else:
-                size_info_text = tr('style.image_size_info', width=media_width, height=media_height)
+            size_info_text = tr('style.image_size_info', width=media_width, height=media_height)
             st.info(f"📐 {size_info_text}")
         
             # Prompt prefix input
             # Get current prompt_prefix from config (based on media type)
-            current_prefix = comfyui_config.get(media_config_key, {}).get("prompt_prefix", "")
+            current_prefix = comfyui_config.get("image", {}).get("prompt_prefix", "")
         
             # Prompt prefix input (temporary, not saved to config)
             prompt_prefix = st.text_area(
@@ -783,15 +760,11 @@ def render_style_config(pixelle_video):
             )
         
             # Media preview expander
-            preview_title = tr("style.video_preview_title") if template_media_type == "video" else tr("style.preview_title")
+            preview_title = tr("style.preview_title")
             with st.expander(preview_title, expanded=False):
                 # Test prompt input
-                if template_media_type == "video":
-                    test_prompt_label = tr("style.test_video_prompt")
-                    test_prompt_value = "a dog running in the park"
-                else:
-                    test_prompt_label = tr("style.test_prompt")
-                    test_prompt_value = "a dog"
+                test_prompt_label = tr("style.test_prompt")
+                test_prompt_value = "a dog"
                 
                 test_prompt = st.text_input(
                     test_prompt_label,
@@ -801,16 +774,16 @@ def render_style_config(pixelle_video):
                 )
             
                 # Preview button
-                preview_button_label = tr("style.video_preview") if template_media_type == "video" else tr("style.preview")
+                preview_button_label = tr("style.preview")
                 if st.button(preview_button_label, key="preview_style", use_container_width=True):
-                    previewing_text = tr("style.video_previewing") if template_media_type == "video" else tr("style.previewing")
+                    previewing_text = tr("style.previewing")
                     with st.spinner(previewing_text):
                         try:
                             from pixelle_video.utils.prompt_helper import build_image_prompt
                         
                             # Build final prompt with prefix
                             final_prompt = build_image_prompt(test_prompt, prompt_prefix)
-                        
+
                             # Generate preview media (use user-specified size and media type)
                             media_result = run_async(pixelle_video.media(
                                 prompt=final_prompt,
@@ -823,24 +796,19 @@ def render_style_config(pixelle_video):
                         
                             # Display preview (support both URL and local path)
                             if preview_media_path:
-                                success_text = tr("style.video_preview_success") if template_media_type == "video" else tr("style.preview_success")
+                                success_text = tr("style.preview_success")
                                 st.success(success_text)
                             
-                                if template_media_type == "video":
-                                    # Display video
-                                    st.video(preview_media_path)
+                                if preview_media_path.startswith('http'):
+                                    # URL - use directly
+                                    img_html = f'<div class="preview-image"><img src="{preview_media_path}" alt="Style Preview"/></div>'
                                 else:
-                                    # Display image
-                                    if preview_media_path.startswith('http'):
-                                        # URL - use directly
-                                        img_html = f'<div class="preview-image"><img src="{preview_media_path}" alt="Style Preview"/></div>'
-                                    else:
-                                        # Local file - encode as base64
-                                        with open(preview_media_path, 'rb') as f:
-                                            img_data = base64.b64encode(f.read()).decode()
-                                        img_html = f'<div class="preview-image"><img src="data:image/png;base64,{img_data}" alt="Style Preview"/></div>'
-                                    
-                                    st.markdown(img_html, unsafe_allow_html=True)
+                                    # Local file - encode as base64
+                                    with open(preview_media_path, 'rb') as f:
+                                        img_data = base64.b64encode(f.read()).decode()
+                                    img_html = f'<div class="preview-image"><img src="data:image/png;base64,{img_data}" alt="Style Preview"/></div>'
+                                
+                                st.markdown(img_html, unsafe_allow_html=True)
                             
                                 # Show the final prompt used
                                 st.info(f"**{tr('style.final_prompt_label')}**\n{final_prompt}")

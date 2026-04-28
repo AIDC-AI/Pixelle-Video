@@ -9,7 +9,11 @@ from loguru import logger
 import httpx
 from web.i18n import tr, get_language
 from web.pipelines.base import PipelineUI, register_pipeline_ui
-from web.pipelines.api_workflows import is_api_workflow, list_api_media_workflows
+from web.pipelines.api_workflows import (
+    is_api_workflow,
+    list_api_media_workflows,
+    render_api_video_controls,
+)
 from web.components.content_input import render_version_info
 from web.utils.async_helpers import run_async
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
@@ -183,7 +187,12 @@ class ActionTransferPipelineUI(PipelineUI):
                                 "key": f"{source}/{fname}",
                                 "display_name": display
                             })
-                result.extend(list_api_media_workflows(pixelle_video, "video"))
+                result.extend(list_api_media_workflows(
+                    pixelle_video,
+                    "video",
+                    required_adapter_abilities=["action_transfer"],
+                    verified_only=True,
+                ))
                 return result
             
             prompt_text = st.text_area(
@@ -195,6 +204,13 @@ class ActionTransferPipelineUI(PipelineUI):
                         )
             
             transfer_workflows = list_action_transfer_workflows()
+            has_api_action_transfer = any(is_api_workflow(wf["key"]) for wf in transfer_workflows)
+            if not has_api_action_transfer:
+                st.caption(
+                    "当前已接入的 API 视频模型没有已验证的动作迁移数据契约，暂不展示 API 模型。"
+                    if get_language() == "zh_CN"
+                    else "No verified API action-transfer contract is available yet, so API video models are hidden here."
+                )
             workflow_options = [wf["display_name"] for wf in transfer_workflows] 
             workflow_keys = [wf["key"] for wf in transfer_workflows]               
             default_workflow_index = 0
@@ -210,17 +226,26 @@ class ActionTransferPipelineUI(PipelineUI):
             if workflow_options:
                 workflow_selected_index = workflow_options.index(workflow_display)
                 workflow_key = workflow_keys[workflow_selected_index]
+                workflow_info = transfer_workflows[workflow_selected_index]
             else:
                 workflow_key = None
+                workflow_info = None
             
             # Check and warn for selfhost workflow (auto popup if not confirmed)
             if not is_api_workflow(workflow_key):
                 check_and_warn_selfhost_workflow(workflow_key)
+
+            api_video_params = render_api_video_controls(
+                workflow_info,
+                key_prefix="action_transfer",
+                default_duration=5,
+            ) if is_api_workflow(workflow_key) else {}
             
             return {
                 "image_assets": image_asset_paths,
                 "prompt_text": prompt_text,
-                "workflow_key": workflow_key
+                "workflow_key": workflow_key,
+                "api_video_params": api_video_params,
                 }
 
     def _render_output_preview(self, pixelle_video: Any, video_params: dict):
@@ -237,6 +262,7 @@ class ActionTransferPipelineUI(PipelineUI):
             prompt_text = video_params.get("prompt_text", "")
             duration = video_params.get("duration")
             workflow_key = video_params.get("workflow_key")
+            api_video_params = video_params.get("api_video_params") or {}
 
             logger.info(f"  - video_params: {video_params}")
 
@@ -301,13 +327,18 @@ class ActionTransferPipelineUI(PipelineUI):
                         final_video_path = os.path.join(task_dir, "final.mp4")
 
                         if is_api_workflow(workflow_key):
+                            media_params = {
+                                **api_video_params,
+                                "prompt": prompt,
+                                "workflow": workflow_key,
+                                "media_type": "video",
+                                "output_path": final_video_path,
+                                "duration": second,
+                                "first_clip_path": video_path,
+                                "reference_image_path": image_path,
+                            }
                             media_result = await pixelle_video.media(
-                                prompt=prompt,
-                                workflow=workflow_key,
-                                media_type="video",
-                                image_path=image_path,
-                                output_path=final_video_path,
-                                duration=second,
+                                **media_params,
                             )
                             progress_bar.progress(100)
                             status_text.text(tr("status.success"))

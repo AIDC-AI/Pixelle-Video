@@ -7,13 +7,11 @@ from .config import Config
 
 try:
     from .image_dashscope import DashScopeClient
-    from .image_jimeng import JiMengClient
     from .image_seedream import SeedreamClient
     from .image_gpt import ImageGPT
     from .image_processor import ImageProcessor
 except ImportError:
     from .image_dashscope import DashScopeClient
-    from .image_jimeng import JiMengClient
     from .image_seedream import SeedreamClient
     from .image_gpt import ImageGPT
     from .image_processor import ImageProcessor
@@ -22,9 +20,6 @@ class ImageClient:
     def __init__(self,
                  dashscope_api_key: Optional[str] = None,
                  dashscope_base_url: Optional[str] = None,
-                 jimeng_base_url: Optional[str] = None,
-                 jimeng_access_key: Optional[str] = None,
-                 jimeng_secret_key: Optional[str] = None,
                  gpt_api_key: Optional[str] = None,
                  gpt_base_url: Optional[str] = None,
                  local_proxy: Optional[str] = None,
@@ -32,19 +27,12 @@ class ImageClient:
                  ark_base_url: Optional[str] = None):
         """
         Unified Image Generation Client
-        Routes requests to DashScope, JiMeng, Seedream, or GPT based on model name.
+        Routes requests to DashScope, Seedream, or GPT based on model name.
         """
         # Initialize DashScope Client
         self.dashscope_client = DashScopeClient(
             api_key=dashscope_api_key or Config.DASHSCOPE_API_KEY,
             base_url=dashscope_base_url or Config.DASHSCOPE_BASE_URL
-        )
-
-        # Initialize JiMeng Client
-        self.jimeng_client = JiMengClient(
-            base_url=jimeng_base_url or Config.JIMENG_BASE_URL,
-            access_key=jimeng_access_key or Config.JIMENG_ACCESS_KEY,
-            secret_key=jimeng_secret_key or Config.JIMENG_SECRET_KEY
         )
 
         # Initialize Seedream Client
@@ -82,7 +70,7 @@ class ImageClient:
             image_paths: List of local file paths or URLs for reference images.
             model: Model name to determine which provider to use.
             save_dir: Custom directory to save downloaded images.
-            session_id: Session ID for organizing saved files (especially for JiMeng)
+            session_id: Session ID for organizing saved files.
             video_ratio: Aspect ratio of the video, e.g., "16:9", "9:16", "4:3", "3:4", "1:1".
             resolution: Resolution string, e.g., "720P", "1080P", "2K", "4K".
 
@@ -148,7 +136,6 @@ class ImageClient:
             print("-" * 30)
             
         # Determine backend provider
-        is_jimeng = "jimeng" in model.lower()
         is_seedream = "seedream" in model.lower()
         is_sora = "sora" in model.lower() or "gpt" in model.lower()
         
@@ -162,30 +149,7 @@ class ImageClient:
         
         generated_local_paths = []
 
-        if is_jimeng:
-            # --- JiMeng Logic ---
-            try:
-                # JiMengClient handles local paths and typically saves results to code/result internally
-                # or we rely on its return value.
-                # JiMengClient.generate_image returns list of local paths (saved from base64)
-                logging.info(f"ImageClient requesting JiMeng: {model}")
-                paths = self.jimeng_client.generate_image(
-                    prompt=prompt,
-                    image_paths=image_paths if image_paths else [],
-                    model=model,
-                    session_id=session_id,
-                    size=size
-                )
-                
-                # If JiMengClient saves to a default location, we might want to move them or just return them.
-                # The provided JiMengClient saves to 'backend/code/result'.
-                # We simply return those paths.
-                generated_local_paths.extend(paths)
-                
-            except Exception as e:
-                logging.error(f"JiMeng generation failed: {e}")
-
-        elif is_seedream:
+        if is_seedream:
             # --- Seedream Logic ---
             try:
                 logging.info(f"ImageClient requesting Seedream: {model}")

@@ -48,6 +48,7 @@ class StoryboardConfig:
     
     # Media workflow
     media_workflow: Optional[str] = None       # Media workflow filename (image or video, None = use default)
+    api_video_params: Optional[Dict[str, Any]] = None  # Extra direct API video generation parameters
     
     # Frame template (includes size information in path)
     frame_template: str = "1080x1920/default.html"  # Template path with size (e.g., "1080x1920/default.html")
@@ -140,4 +141,3 @@ class VideoGenerationResult:
     duration: float                            # Total duration
     file_size: int                             # File size (bytes)
     created_at: datetime = field(default_factory=datetime.now)
-

@@ -213,6 +213,10 @@ class FrameProcessor:
         # Build media generation parameters
         from pixelle_video.utils.os_util import get_task_frame_path
         output_path = get_task_frame_path(config.task_id, frame.index, media_type)
+        api_video_params = dict(config.api_video_params or {}) if media_type == "video" else {}
+        if media_type == "video" and workflow_name.startswith("api/"):
+            await self._prepare_api_video_inputs(frame, config, api_video_params)
+
         media_params = {
             "prompt": frame.image_prompt,
             "workflow": config.media_workflow,  # Pass workflow from config (None = use default)
@@ -223,6 +227,7 @@ class FrameProcessor:
             "image_path": frame.image_path,
             "index": frame.index + 1,  # 1-based index for workflow
         }
+        media_params.update(api_video_params)
         
         # For video workflows: pass audio duration as target video duration
         # This ensures video length matches audio length from the source
@@ -268,6 +273,43 @@ class FrameProcessor:
         
         else:
             raise ValueError(f"Unknown media type: {media_result.media_type}")
+
+    async def _prepare_api_video_inputs(
+        self,
+        frame: StoryboardFrame,
+        config: StoryboardConfig,
+        api_video_params: dict,
+    ) -> None:
+        """Prepare provider-specific inputs for API video models."""
+        from pixelle_video.utils.os_util import get_task_frame_path
+
+        if api_video_params.pop("use_narration_audio_as_driving_audio", False):
+            api_video_params["audio_path"] = frame.audio_path
+
+        if frame.image_path or api_video_params.get("first_clip_path") or api_video_params.get("first_video_path"):
+            return
+
+        first_frame_workflow = api_video_params.pop("first_frame_workflow", None)
+        if not first_frame_workflow:
+            return
+
+        first_frame_path = get_task_frame_path(config.task_id, frame.index, "image")
+        logger.info(f"  → Generating API video first frame via {first_frame_workflow}")
+        image_result = await self.core.media(
+            prompt=frame.image_prompt,
+            workflow=first_frame_workflow,
+            media_type="image",
+            width=config.media_width,
+            height=config.media_height,
+            output_path=first_frame_path,
+            index=frame.index + 1,
+        )
+        frame.image_path = await self._download_media(
+            image_result.url,
+            frame.index,
+            config.task_id,
+            media_type="image",
+        )
     
     async def _step_compose_frame(
         self,
