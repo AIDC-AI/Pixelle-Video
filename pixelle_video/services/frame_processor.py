@@ -211,12 +211,16 @@ class FrameProcessor:
         logger.debug(f"  → Media type: {media_type} (workflow: {workflow_name})")
         
         # Build media generation parameters
+        from pixelle_video.utils.os_util import get_task_frame_path
+        output_path = get_task_frame_path(config.task_id, frame.index, media_type)
         media_params = {
             "prompt": frame.image_prompt,
             "workflow": config.media_workflow,  # Pass workflow from config (None = use default)
             "media_type": media_type,
             "width": config.media_width,
             "height": config.media_height,
+            "output_path": output_path,
+            "image_path": frame.image_path,
             "index": frame.index + 1,  # 1-based index for workflow
         }
         
@@ -420,8 +424,18 @@ class FrameProcessor:
         media_type: str
     ) -> str:
         """Download media (image or video) from URL to local file"""
+        import os
         from pixelle_video.utils.os_util import get_task_frame_path
         output_path = get_task_frame_path(task_id, frame_index, media_type)
+
+        if url.startswith("file://"):
+            local_path = url[7:]
+            if not os.path.exists(local_path):
+                raise FileNotFoundError(f"Generated media file not found: {local_path}")
+            return local_path
+
+        if os.path.exists(url):
+            return url
         
         timeout = httpx.Timeout(connect=10.0, read=60, write=60, pool=60)
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -444,4 +458,3 @@ class FrameProcessor:
             logger.warning(f"Failed to get video duration: {e}, using audio duration")
             # Fallback: use audio duration if available
             return 1.0  # Default to 1 second if unable to determine
-

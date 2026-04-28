@@ -9,6 +9,7 @@ from loguru import logger
 import httpx
 from web.i18n import tr, get_language
 from web.pipelines.base import PipelineUI, register_pipeline_ui
+from web.pipelines.api_workflows import is_api_workflow, list_api_media_workflows
 from web.components.content_input import render_version_info
 from web.utils.async_helpers import run_async
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
@@ -182,6 +183,7 @@ class ActionTransferPipelineUI(PipelineUI):
                                 "key": f"{source}/{fname}",
                                 "display_name": display
                             })
+                result.extend(list_api_media_workflows(pixelle_video, "video"))
                 return result
             
             prompt_text = st.text_area(
@@ -212,7 +214,8 @@ class ActionTransferPipelineUI(PipelineUI):
                 workflow_key = None
             
             # Check and warn for selfhost workflow (auto popup if not confirmed)
-            check_and_warn_selfhost_workflow(workflow_key)
+            if not is_api_workflow(workflow_key):
+                check_and_warn_selfhost_workflow(workflow_key)
             
             return {
                 "image_assets": image_asset_paths,
@@ -285,7 +288,6 @@ class ActionTransferPipelineUI(PipelineUI):
                     async def generate_audio_visual_video():
                         task_dir, task_id = create_task_output_dir()
                         logger.info(f"[Initialization] Task Directory: {task_dir}")
-                        kit = await pixelle_video._get_or_create_comfykit()
                         
                         import json
                         from pathlib import Path
@@ -296,6 +298,22 @@ class ActionTransferPipelineUI(PipelineUI):
                         video_path = video_assets[0]
                         second = duration
                         prompt = prompt_text
+                        final_video_path = os.path.join(task_dir, "final.mp4")
+
+                        if is_api_workflow(workflow_key):
+                            media_result = await pixelle_video.media(
+                                prompt=prompt,
+                                workflow=workflow_key,
+                                media_type="video",
+                                image_path=image_path,
+                                output_path=final_video_path,
+                                duration=second,
+                            )
+                            progress_bar.progress(100)
+                            status_text.text(tr("status.success"))
+                            return media_result.url
+
+                        kit = await pixelle_video._get_or_create_comfykit()
 
                         workflow_path = Path("workflows") / workflow_key
 
@@ -333,7 +351,6 @@ class ActionTransferPipelineUI(PipelineUI):
                         if not generated_video_url:
                             raise Exception("The workflow did not return a video. Please check the workflow configuration.")
 
-                        final_video_path = os.path.join(task_dir, "final.mp4")
                         timeout = httpx.Timeout(300.0)
                         async with httpx.AsyncClient(timeout=timeout) as client:
                             response = await client.get(generated_video_url)

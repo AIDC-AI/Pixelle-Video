@@ -17,6 +17,36 @@ llm:
 # DeepSeek:        base_url: "https://api.deepseek.com"                           model: "deepseek-chat"
 # Ollama (Local):  base_url: "http://localhost:11434/v1"                          model: "llama3.2"
 
+# ==================== Direct API Provider Configuration ====================
+# Optional: use providers directly for image/video/VLM generation without ComfyUI workflows.
+api_providers:
+  common:
+    print_model_input: false
+    local_proxy: ""
+  openai:
+    api_key: ""
+    base_url: ""
+  dashscope:
+    api_key: ""
+    base_url: ""
+  deepseek:
+    api_key: ""
+    base_url: ""
+  gemini:
+    api_key: ""
+    base_url: ""
+  ark:
+    api_key: ""
+    base_url: ""
+  jimeng:
+    base_url: ""
+    access_key: ""
+    secret_key: ""
+  kling:
+    base_url: ""
+    access_key: ""
+    secret_key: ""
+
 # ==================== ComfyUI Configuration ====================
 comfyui:
   # Global ComfyUI settings

@@ -26,6 +26,7 @@ from loguru import logger
 
 from web.i18n import tr, get_language
 from web.pipelines.base import PipelineUI, register_pipeline_ui
+from web.pipelines.api_workflows import list_api_media_workflows
 from web.components.content_input import render_bgm_section, render_version_info
 from web.utils.async_helpers import run_async
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
@@ -223,6 +224,27 @@ class AssetBasedPipelineUI(PipelineUI):
                     # Check and warn for selfhost mode (auto popup if not confirmed)
                     # Use analyse_image.json as representative workflow
                     check_and_warn_selfhost_workflow("selfhost/analyse_image.json")
+
+            api_video_workflows = list_api_media_workflows(pixelle_video, "video")
+            api_video_options = ["不使用 API 视频生成" if get_language() == "zh_CN" else "Do not use API video generation"]
+            api_video_options.extend([wf["display_name"] for wf in api_video_workflows])
+
+            selected_api_video = st.selectbox(
+                "API 图生视频模型" if get_language() == "zh_CN" else "API image-to-video model",
+                api_video_options,
+                index=0,
+                help=(
+                    "可选：将匹配到的图片素材先用 API 图生视频模型动画化，再进入后续字幕和合成。"
+                    if get_language() == "zh_CN"
+                    else "Optional: animate matched image assets with an API image-to-video model before subtitles and composition."
+                ),
+                key="asset_api_video_workflow",
+            )
+
+            api_video_workflow = None
+            if selected_api_video != api_video_options[0] and api_video_workflows:
+                selected_index = api_video_options.index(selected_api_video) - 1
+                api_video_workflow = api_video_workflows[selected_index]["key"]
         
         # TTS configuration
         with st.container(border=True):
@@ -280,6 +302,7 @@ class AssetBasedPipelineUI(PipelineUI):
         return {
             "duration": duration,
             "source": source,
+            "api_video_workflow": api_video_workflow,
             "voice_id": voice_id,
             "tts_speed": tts_speed
         }
@@ -387,6 +410,7 @@ class AssetBasedPipelineUI(PipelineUI):
                         bgm_path=video_params.get("bgm_path"),
                         bgm_volume=video_params.get("bgm_volume", 0.2),
                         bgm_mode=video_params.get("bgm_mode", "loop"),
+                        api_video_workflow=video_params.get("api_video_workflow"),
                         voice_id=video_params.get("voice_id", "zh-CN-YunjianNeural"),
                         tts_speed=video_params.get("tts_speed", 1.2),
                         progress_callback=update_progress
@@ -443,4 +467,3 @@ class AssetBasedPipelineUI(PipelineUI):
 
 # Register self
 register_pipeline_ui(AssetBasedPipelineUI)
-

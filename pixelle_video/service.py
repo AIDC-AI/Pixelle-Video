@@ -27,6 +27,7 @@ from pixelle_video.config import config_manager
 from pixelle_video.services.llm_service import LLMService
 from pixelle_video.services.tts_service import TTSService
 from pixelle_video.services.media import MediaService
+from pixelle_video.services.api_media import APIProviderMediaService
 from pixelle_video.services.image_analysis import ImageAnalysisService
 from pixelle_video.services.video_analysis import VideoAnalysisService
 from pixelle_video.services.video import VideoService
@@ -90,6 +91,7 @@ class PixelleVideoCore:
         self.llm: Optional[LLMService] = None
         self.tts: Optional[TTSService] = None
         self.media: Optional[MediaService] = None
+        self.api_media: Optional[APIProviderMediaService] = None
         self.video: Optional[VideoService] = None
         self.frame_processor: Optional[FrameProcessor] = None
         self.persistence: Optional[PersistenceService] = None
@@ -196,6 +198,7 @@ class PixelleVideoCore:
         # Initialize services
         self.llm = LLMService(self.config)
         self.tts = TTSService(self.config, core=self)
+        self.api_media = APIProviderMediaService(self.config, core=self)
         self.media = MediaService(self.config, core=self)
         self.image = self.media  # Alias for backward compatibility
         self.image_analysis = ImageAnalysisService(self.config, core=self)

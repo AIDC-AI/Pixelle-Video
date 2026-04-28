@@ -42,7 +42,8 @@ from pixelle_video.pipelines.linear import LinearVideoPipeline, PipelineContext
 from pixelle_video.models.progress import ProgressEvent
 from pixelle_video.utils.os_util import (
     create_task_output_dir,
-    get_task_final_video_path
+    get_task_final_video_path,
+    get_task_frame_path,
 )
 
 # Type alias for progress callback
@@ -666,6 +667,25 @@ class AssetBasedPipeline(LinearVideoPipeline):
             ]
             duration_result = subprocess.run(duration_cmd, capture_output=True, text=True, check=True)
             frame.duration = float(duration_result.stdout.strip())
+
+            api_video_workflow = context.request.get("api_video_workflow")
+            if api_video_workflow and frame.media_type == "image" and frame.image_path:
+                logger.info(f"Animating scene {i} image via API workflow: {api_video_workflow}")
+                api_video_path = get_task_frame_path(context.task_id, frame.index, "video")
+                api_duration = max(3, min(int(round(frame.duration or 5)), 15))
+                media_result = await self.core.media(
+                    prompt=frame.narration or context.input_text or "",
+                    workflow=api_video_workflow,
+                    media_type="video",
+                    image_path=frame.image_path,
+                    output_path=api_video_path,
+                    duration=api_duration,
+                    width=config.media_width,
+                    height=config.media_height,
+                )
+                frame.media_type = "video"
+                frame.video_path = media_result.url
+                logger.success(f"✅ API video generated for scene {i}: {frame.video_path}")
             
             # Emit progress for video composition
             frame_progress = base_progress + ((i - 1) + 0.75) / total_frames * progress_range

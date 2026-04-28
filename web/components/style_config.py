@@ -708,11 +708,19 @@ def render_style_config(pixelle_video):
             
             # Filter workflows based on template media type
             if template_media_type == "video":
-                # Only show video_ workflows
-                workflows = [wf for wf in all_workflows if "video_" in wf["key"].lower()]
+                # Only show video workflows (API models expose media_type metadata)
+                workflows = [
+                    wf for wf in all_workflows
+                    if wf.get("media_type") == "video" or "video_" in wf["key"].lower()
+                ]
             else:
-                # Only show image_ workflows (exclude video_)
-                workflows = [wf for wf in all_workflows if "video_" not in wf["key"].lower()]
+                # Only show image workflows (exclude video workflows)
+                workflows = [
+                    wf for wf in all_workflows
+                    if wf.get("media_type") == "image" or (
+                        wf.get("media_type") is None and "video_" not in wf["key"].lower()
+                    )
+                ]
         
             # Build options for selectbox
             # Display: "image_flux.json - Runninghub"

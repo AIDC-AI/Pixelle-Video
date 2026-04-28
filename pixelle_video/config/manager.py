@@ -144,6 +144,14 @@ class ConfigManager:
                 "prompt_prefix": self.config.comfyui.video.prompt_prefix,
             }
         }
+
+    def get_api_providers_config(self) -> dict:
+        """Get direct API provider configuration as dict"""
+        return self.config.api_providers.model_dump()
+
+    def set_api_provider_config(self, provider: str, updates: dict):
+        """Set configuration for a direct API provider"""
+        self.update({"api_providers": {provider: updates}})
     
     def set_comfyui_config(
         self, 
@@ -169,4 +177,3 @@ class ConfigManager:
         
         if updates:
             self.update({"comfyui": updates})
-
