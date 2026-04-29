@@ -12,6 +12,7 @@ from web.pipelines.api_workflows import list_api_media_workflows, render_api_vid
 from web.components.content_input import render_version_info
 from web.components.digital_tts_config import render_style_config
 from web.utils.async_helpers import run_async
+from web.utils.history_persistence import save_web_generation_history
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
 from pixelle_video.config import config_manager
 from pixelle_video.utils.os_util import create_task_output_dir
@@ -810,6 +811,25 @@ class DigitalHumanPipelineUI(PipelineUI):
                                 
                     # Execute async generation
                     final_video_path = run_async(generate_digital_human_video())
+                    run_async(save_web_generation_history(
+                        pixelle_video,
+                        task_id=Path(final_video_path).parent.name,
+                        video_path=final_video_path,
+                        pipeline="digital_human",
+                        title="数字人口播" if get_language() == "zh_CN" else "Digital Human",
+                        input_params={
+                            "text": goods_text or goods_title,
+                            "mode": mode,
+                            "goods_title": goods_title,
+                            "goods_text": goods_text,
+                            "character_assets": character_assets,
+                            "goods_assets": goods_assets,
+                            "workflow_path": video_params.get("workflow_path"),
+                            "tts_voice": video_params.get("tts_voice"),
+                            "tts_speed": video_params.get("tts_speed"),
+                            "tts_inference_mode": video_params.get("tts_inference_mode"),
+                        },
+                    ))
                     
                     total_time = time.time() - start_time
                     progress_bar.progress(100)

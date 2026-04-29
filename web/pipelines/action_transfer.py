@@ -16,6 +16,7 @@ from web.pipelines.api_workflows import (
 )
 from web.components.content_input import render_version_info
 from web.utils.async_helpers import run_async
+from web.utils.history_persistence import save_web_generation_history
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
 from pixelle_video.config import config_manager
 from pixelle_video.utils.os_util import create_task_output_dir
@@ -342,6 +343,22 @@ class ActionTransferPipelineUI(PipelineUI):
                             )
                             progress_bar.progress(100)
                             status_text.text(tr("status.success"))
+                            await save_web_generation_history(
+                                pixelle_video,
+                                task_id=task_id,
+                                video_path=media_result.url,
+                                pipeline="action_transfer",
+                                title="动作迁移" if get_language() == "zh_CN" else "Action Transfer",
+                                input_params={
+                                    "text": prompt,
+                                    "prompt_text": prompt,
+                                    "image_assets": image_assets,
+                                    "video_assets": video_assets,
+                                    "duration": second,
+                                    "workflow_key": workflow_key,
+                                    "api_video_params": api_video_params,
+                                },
+                            )
                             return media_result.url
 
                         kit = await pixelle_video._get_or_create_comfykit()
@@ -390,6 +407,21 @@ class ActionTransferPipelineUI(PipelineUI):
                                 f.write(response.content)
                         progress_bar.progress(100)
                         status_text.text(tr("status.success"))
+                        await save_web_generation_history(
+                            pixelle_video,
+                            task_id=task_id,
+                            video_path=final_video_path,
+                            pipeline="action_transfer",
+                            title="动作迁移" if get_language() == "zh_CN" else "Action Transfer",
+                            input_params={
+                                "text": prompt,
+                                "prompt_text": prompt,
+                                "image_assets": image_assets,
+                                "video_assets": video_assets,
+                                "duration": second,
+                                "workflow_key": workflow_key,
+                            },
+                        )
                         return final_video_path
                     
                     # Execute async generation
