@@ -54,7 +54,7 @@ LLM_PRESETS: List[Dict[str, Any]] = [
     {
         "name": "MiniMax",
         "base_url": "https://api.minimax.chat/v1",
-        "model": "MiniMax-Text-01",
+        "model": "MiniMax-M2.7",
         "api_key_url": "https://platform.minimaxi.com/user-center/basic-information/interface-key",
     },
     {
