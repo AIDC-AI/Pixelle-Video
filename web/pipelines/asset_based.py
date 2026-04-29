@@ -188,21 +188,34 @@ class AssetBasedPipelineUI(PipelineUI):
                 st.markdown(tr("asset_based.source.how"))
             
             source_options = {
+                "api": "API VLM 素材分析" if get_language() == "zh_CN" else "API VLM asset analysis",
                 "runninghub": tr("asset_based.source.runninghub"),
                 "selfhost": tr("asset_based.source.selfhost")
             }
             
             # Check if RunningHub API key is configured
             comfyui_config = config_manager.get_comfyui_config()
+            api_provider_config = config_manager.config.to_dict().get("api_providers", {})
             has_runninghub = bool(comfyui_config.get("runninghub_api_key"))
             has_selfhost = bool(comfyui_config.get("comfyui_url"))
+            has_api_analysis = any(
+                bool((api_provider_config.get(provider, {}) or {}).get("api_key"))
+                for provider in ("dashscope", "openai", "gemini")
+            )
             
-            # Prefer the configured analysis backend; API video generation is independent of this choice.
-            default_source_index = 0 if has_runninghub else 1
+            # Prefer API VLM when configured, so API media workflows do not depend on RunningHub.
+            source_keys = list(source_options.keys())
+            if has_api_analysis:
+                default_source = "api"
+            elif has_runninghub:
+                default_source = "runninghub"
+            else:
+                default_source = "selfhost"
+            default_source_index = source_keys.index(default_source)
             
             source = st.radio(
                 tr("asset_based.source.select"),
-                options=list(source_options.keys()),
+                options=source_keys,
                 format_func=lambda x: source_options[x],
                 index=default_source_index,
                 horizontal=True,
@@ -211,7 +224,20 @@ class AssetBasedPipelineUI(PipelineUI):
             )
             
             # Show hint based on selection
-            if source == "runninghub":
+            if source == "api":
+                if not has_api_analysis:
+                    st.warning(
+                        "未配置可用于 VLM 素材分析的 API Key（DashScope/OpenAI/Gemini）。"
+                        if get_language() == "zh_CN"
+                        else "No API key configured for VLM asset analysis (DashScope/OpenAI/Gemini)."
+                    )
+                else:
+                    st.info(
+                        "使用 API VLM 分析上传素材，不依赖 RunningHub/ComfyUI。"
+                        if get_language() == "zh_CN"
+                        else "Use API VLM to analyze uploaded assets without RunningHub/ComfyUI."
+                    )
+            elif source == "runninghub":
                 if not has_runninghub:
                     st.warning(tr("asset_based.source.runninghub_not_configured"))
                 else:
@@ -260,9 +286,9 @@ class AssetBasedPipelineUI(PipelineUI):
                 )
                 if source == "runninghub" and not has_runninghub:
                     st.info(
-                        "已选择 API 视频模型；素材分析不会使用 RunningHub。请改选 Selfhost，或配置 RunningHub API Key。"
+                        "已选择 API 视频模型；如不想配置 RunningHub，请把素材分析来源切换为 API VLM。"
                         if get_language() == "zh_CN"
-                        else "API video generation is selected; asset analysis does not use RunningHub. Please switch to Selfhost or configure a RunningHub API key."
+                        else "API video generation is selected; switch asset analysis to API VLM if you do not want to configure RunningHub."
                     )
         
         # TTS configuration
