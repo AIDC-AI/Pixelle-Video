@@ -283,6 +283,7 @@ class AssetBasedPipelineUI(PipelineUI):
                     key_prefix="asset",
                     default_duration=5,
                     allow_audio_driven=True,
+                    show_duration=False,
                 )
                 if source == "runninghub" and not has_runninghub:
                     st.info(

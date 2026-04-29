@@ -6,6 +6,7 @@
 
 import os
 import logging
+import time
 from typing import Optional
 from http import HTTPStatus
 
@@ -16,6 +17,7 @@ except ImportError:
     dashscope = None
     VideoSynthesis = None
 import requests
+from requests import exceptions as requests_exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,62 @@ class DashscopeVideoClient:
             dashscope.api_key = self.api_key
         if dashscope and self.base_url:
             dashscope.base_http_api_url = self.base_url
+
+    _RETRYABLE_EXCEPTIONS = (
+        requests_exceptions.ConnectionError,
+        requests_exceptions.Timeout,
+        requests_exceptions.SSLError,
+        requests_exceptions.ChunkedEncodingError,
+        requests_exceptions.ContentDecodingError,
+        TimeoutError,
+        ConnectionError,
+    )
+
+    def _with_network_retry(self, action_name: str, func, max_attempts: int = 5, base_delay: float = 3.0):
+        """Retry transient network failures without hiding provider-side task failures."""
+        last_error = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                return func()
+            except self._RETRYABLE_EXCEPTIONS as exc:
+                last_error = exc
+            except Exception as exc:
+                if not self._is_retryable_error(exc):
+                    raise
+                last_error = exc
+
+            if attempt >= max_attempts:
+                break
+            delay = min(base_delay * attempt, 20)
+            logger.warning(
+                "DashscopeVideoClient: %s network error, retrying %s/%s in %.1fs: %s",
+                action_name,
+                attempt,
+                max_attempts,
+                delay,
+                last_error,
+            )
+            time.sleep(delay)
+
+        raise RuntimeError(
+            f"DashScope {action_name} failed after {max_attempts} attempts due to network error: {last_error}"
+        ) from last_error
+
+    def _is_retryable_error(self, exc: Exception) -> bool:
+        message = str(exc).lower()
+        retry_markers = (
+            "ssleoferror",
+            "unexpected_eof",
+            "eof occurred in violation of protocol",
+            "connection reset",
+            "connection aborted",
+            "remote disconnected",
+            "max retries exceeded",
+            "read timed out",
+            "connect timed out",
+            "temporarily unavailable",
+        )
+        return any(marker in message for marker in retry_markers)
 
     def generate_video(
         self,
@@ -144,8 +202,9 @@ class DashscopeVideoClient:
             if seed is not None:
                 call_kwargs["seed"] = seed
 
-            rsp = VideoSynthesis.call(
-                **call_kwargs,
+            rsp = self._with_network_retry(
+                "submit task",
+                lambda: VideoSynthesis.call(**call_kwargs),
             )
         elif self._is_video_edit_model(model):
             media = self._build_video_edit_media(
@@ -174,8 +233,9 @@ class DashscopeVideoClient:
             if seed is not None:
                 call_kwargs["seed"] = seed
 
-            rsp = VideoSynthesis.call(
-                **call_kwargs,
+            rsp = self._with_network_retry(
+                "submit task",
+                lambda: VideoSynthesis.call(**call_kwargs),
             )
         elif model.startswith("wan2.7") or "happyhorse" in model:
             # wan2.7 series use the new API format with 'media'
@@ -208,8 +268,9 @@ class DashscopeVideoClient:
             if seed is not None:
                 call_kwargs["seed"] = seed
 
-            rsp = VideoSynthesis.call(
-                **call_kwargs,
+            rsp = self._with_network_retry(
+                "submit task",
+                lambda: VideoSynthesis.call(**call_kwargs),
             )
         else:
             # Older models (wan2.1, wan2.6 etc.) use 'img_url' and 'shot_type'
@@ -237,8 +298,9 @@ class DashscopeVideoClient:
             if seed is not None:
                 call_kwargs["seed"] = seed
 
-            rsp = VideoSynthesis.call(
-                **call_kwargs,
+            rsp = self._with_network_retry(
+                "submit task",
+                lambda: VideoSynthesis.call(**call_kwargs),
             )
 
         if rsp.status_code != HTTPStatus.OK:
@@ -259,7 +321,12 @@ class DashscopeVideoClient:
                 )
 
             logger.info(f"DashscopeVideoClient: 任务已提交 task_id={task_id}, status={task_status}; 等待生成完成...")
-            rsp = VideoSynthesis.wait(task=rsp, api_key=self.api_key)
+            rsp = self._with_network_retry(
+                f"wait task {task_id}",
+                lambda: VideoSynthesis.wait(task=rsp, api_key=self.api_key),
+                max_attempts=8,
+                base_delay=5.0,
+            )
             if rsp.status_code != HTTPStatus.OK:
                 raise RuntimeError(
                     f"万象视频任务查询失败: status={rsp.status_code}, "
@@ -281,7 +348,12 @@ class DashscopeVideoClient:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
         # 下载视频
-        resp = requests.get(video_url, stream=True, timeout=120)
+        resp = self._with_network_retry(
+            "download video",
+            lambda: requests.get(video_url, stream=True, timeout=120),
+            max_attempts=5,
+            base_delay=3.0,
+        )
         if resp.status_code != 200:
             raise RuntimeError(f"视频下载失败: HTTP {resp.status_code}")
 

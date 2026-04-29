@@ -29,6 +29,7 @@ import os
 import re
 import tempfile
 import uuid
+import asyncio
 from typing import Dict, Any, Optional
 from pathlib import Path
 from loguru import logger
@@ -55,6 +56,7 @@ class HTMLFrameGenerator:
     
     _browser = None
     _playwright = None
+    _browser_loop_id = None
 
     def __init__(self, template_path: str):
         """
@@ -307,6 +309,16 @@ class HTMLFrameGenerator:
     @classmethod
     async def _ensure_browser(cls):
         """Lazily initialize a shared Playwright browser instance"""
+        current_loop_id = id(asyncio.get_running_loop())
+        browser_stale = (
+            cls._browser is not None
+            and cls._browser_loop_id is not None
+            and cls._browser_loop_id != current_loop_id
+        )
+        if browser_stale:
+            logger.debug("Playwright browser belongs to a closed/previous event loop; recreating it")
+            cls._discard_browser_references()
+
         if cls._browser is None or not cls._browser.is_connected():
             from playwright.async_api import async_playwright
             cls._playwright = await async_playwright().start()
@@ -318,19 +330,43 @@ class HTMLFrameGenerator:
                     '--disable-extensions',
                 ]
             )
+            cls._browser_loop_id = current_loop_id
             logger.debug("Initialized Playwright Chromium browser")
         return cls._browser
 
     @classmethod
+    def _discard_browser_references(cls):
+        """Drop stale Playwright objects that belong to another event loop."""
+        cls._browser = None
+        cls._playwright = None
+        cls._browser_loop_id = None
+
+    @classmethod
+    async def _reset_browser(cls):
+        """Best-effort reset for stale or broken Playwright connections."""
+        if cls._browser:
+            try:
+                if cls._browser.is_connected():
+                    await asyncio.wait_for(cls._browser.close(), timeout=5)
+            except Exception as e:
+                logger.debug(f"Ignoring error while closing stale browser: {e}")
+            finally:
+                cls._browser = None
+
+        if cls._playwright:
+            try:
+                await asyncio.wait_for(cls._playwright.stop(), timeout=5)
+            except Exception as e:
+                logger.debug(f"Ignoring error while stopping stale Playwright: {e}")
+            finally:
+                cls._playwright = None
+                cls._browser_loop_id = None
+
+    @classmethod
     async def close_browser(cls):
         """Shutdown the shared browser instance (call on app teardown)"""
-        if cls._browser:
-            await cls._browser.close()
-            cls._browser = None
-        if cls._playwright:
-            await cls._playwright.stop()
-            cls._playwright = None
-            logger.debug("Playwright browser closed")
+        await cls._reset_browser()
+        logger.debug("Playwright browser closed")
 
     async def generate_frame(
         self,
@@ -386,12 +422,23 @@ class HTMLFrameGenerator:
         
         logger.debug(f"Rendering HTML template to {output_path} (size: {self.width}x{self.height})")
         tmp_html_path = None
+        page = None
         try:
-            browser = await self._ensure_browser()
-            page = await browser.new_page(
-                viewport={'width': self.width, 'height': self.height},
-                device_scale_factor=1,
-            )
+            try:
+                browser = await self._ensure_browser()
+                page = await browser.new_page(
+                    viewport={'width': self.width, 'height': self.height},
+                    device_scale_factor=1,
+                )
+            except Exception as e:
+                logger.warning(f"Playwright browser connection failed, restarting once: {e}")
+                await self._reset_browser()
+                browser = await self._ensure_browser()
+                page = await browser.new_page(
+                    viewport={'width': self.width, 'height': self.height},
+                    device_scale_factor=1,
+                )
+
             try:
                 # Write HTML to a temp file and navigate via file:// URL so that
                 # local file:// image references are loaded under the same origin.
@@ -402,7 +449,8 @@ class HTMLFrameGenerator:
                 await page.goto(Path(tmp_html_path).as_uri(), wait_until='networkidle')
                 await page.screenshot(path=output_path, type='png', omit_background=True)
             finally:
-                await page.close()
+                if page:
+                    await page.close()
                 if tmp_html_path and os.path.exists(tmp_html_path):
                     os.unlink(tmp_html_path)
             

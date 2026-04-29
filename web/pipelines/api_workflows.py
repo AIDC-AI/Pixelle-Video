@@ -56,6 +56,7 @@ def render_api_video_controls(
     key_prefix: str,
     default_duration: int = 5,
     allow_audio_driven: bool = False,
+    show_duration: bool = True,
 ) -> dict:
     """Render common API video controls based on verified adapter capability metadata."""
     if not workflow or not is_api_workflow(workflow.get("key")):
@@ -81,15 +82,22 @@ def render_api_video_controls(
         duration_contract = capabilities.get("duration") or {}
         min_duration = int(duration_contract.get("min", 3))
         max_duration = int(duration_contract.get("max", 15))
-        default_value = min(max(int(default_duration or min_duration), min_duration), max_duration)
-        params["duration"] = st.slider(
-            "视频时长（秒）" if zh else "Duration (seconds)",
-            min_value=min_duration,
-            max_value=max_duration,
-            value=default_value,
-            step=1,
-            key=f"{key_prefix}_api_duration",
-        )
+        if show_duration:
+            default_value = min(max(int(default_duration or min_duration), min_duration), max_duration)
+            params["duration"] = st.slider(
+                "视频时长（秒）" if zh else "Duration (seconds)",
+                min_value=min_duration,
+                max_value=max_duration,
+                value=default_value,
+                step=1,
+                key=f"{key_prefix}_api_duration",
+            )
+        else:
+            st.caption(
+                f"视频时长将自动跟随每段旁白音频长度，并限制在模型支持范围 {min_duration}-{max_duration}s。"
+                if zh
+                else f"Duration follows each scene's narration audio and is clamped to the model range {min_duration}-{max_duration}s."
+            )
 
         resolutions = capabilities.get("resolutions") or []
         if resolutions:

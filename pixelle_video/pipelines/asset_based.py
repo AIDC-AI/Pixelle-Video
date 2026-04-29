@@ -34,6 +34,8 @@ Example:
 
 from typing import List, Dict, Any, Optional, Callable
 from pathlib import Path
+import math
+from datetime import datetime
 
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -675,18 +677,35 @@ class AssetBasedPipeline(LinearVideoPipeline):
             frame.duration = float(duration_result.stdout.strip())
 
             api_video_workflow = context.request.get("api_video_workflow")
+            api_video_generated_for_frame = False
             if api_video_workflow and frame.media_type == "image" and frame.image_path:
                 logger.info(f"Animating scene {i} image via API workflow: {api_video_workflow}")
                 api_video_path = get_task_frame_path(context.task_id, frame.index, "video")
                 api_video_params = dict(context.request.get("api_video_params") or {})
-                if api_video_params.pop("use_narration_audio_as_driving_audio", False):
+                api_video_params.pop("use_narration_audio_as_driving_audio", None)
+                workflow_info = self._get_api_workflow_info(api_video_workflow)
+                adapter_abilities = set((workflow_info or {}).get("adapter_ability_types") or [])
+
+                if "audio_driven_i2v" in adapter_abilities:
                     api_video_params["audio_path"] = frame.audio_path
-                api_duration = int(api_video_params.pop("duration", max(3, min(int(round(frame.duration or 5)), 15))))
+
+                # Asset-based scenes should follow narration duration, not the UI default duration.
+                api_video_params.pop("duration", None)
+                api_duration = max(1, int(math.ceil(frame.duration or 5)))
+
+                reference_image_path = frame.image_path
+                if getattr(context, "_last_api_video_tail_frame", None):
+                    reference_image_path = context._last_api_video_tail_frame
+                    logger.info(
+                        f"Scene {i}: using previous video tail frame as API first-frame reference: "
+                        f"{reference_image_path}"
+                    )
+
                 media_result = await self.core.media(
                     prompt=frame.narration or context.input_text or "",
                     workflow=api_video_workflow,
                     media_type="video",
-                    image_path=frame.image_path,
+                    image_path=reference_image_path,
                     output_path=api_video_path,
                     duration=api_duration,
                     width=config.media_width,
@@ -695,6 +714,14 @@ class AssetBasedPipeline(LinearVideoPipeline):
                 )
                 frame.media_type = "video"
                 frame.video_path = media_result.url
+                api_video_generated_for_frame = True
+                tail_frame_path = Path(context.task_dir) / "frames" / f"{i:02d}_api_tail_reference.png"
+                extracted_tail = self._extract_video_tail_frame(
+                    frame.video_path,
+                    str(tail_frame_path),
+                )
+                if extracted_tail:
+                    context._last_api_video_tail_frame = extracted_tail
                 logger.success(f"✅ API video generated for scene {i}: {frame.video_path}")
             
             # Emit progress for video composition
@@ -715,6 +742,17 @@ class AssetBasedPipeline(LinearVideoPipeline):
                 config=config,
                 total_frames=total_frames
             )
+
+            if api_video_workflow and not api_video_generated_for_frame and processed_frame.video_segment_path:
+                tail_frame_path = Path(context.task_dir) / "frames" / f"{i:02d}_tail_reference.png"
+                extracted_tail = self._extract_video_tail_frame(
+                    processed_frame.video_segment_path,
+                    str(tail_frame_path),
+                )
+                if extracted_tail:
+                    context._last_api_video_tail_frame = extracted_tail
+
+            storyboard.total_duration += processed_frame.duration or frame.duration or 0
             
             logger.success(f"✅ Scene {i} complete")
         
@@ -775,6 +813,10 @@ class AssetBasedPipeline(LinearVideoPipeline):
         
         context.final_video_path = str(final_video_path)
         context.storyboard.final_video_path = str(final_video_path)
+        context.storyboard.completed_at = datetime.now()
+
+        if not context.storyboard.total_duration:
+            context.storyboard.total_duration = self._probe_video_duration(str(final_video_path))
         
         logger.success(f"✅ Final video: {final_video_path}")
         
@@ -893,4 +935,108 @@ class AssetBasedPipeline(LinearVideoPipeline):
             return "video"
         else:
             return "unknown"
+
+    def _get_api_workflow_info(self, workflow_key: str) -> dict:
+        """Find API workflow metadata for capability-aware adapter behavior."""
+        try:
+            for workflow in self.core.api_media.list_workflows():
+                if workflow.get("key") == workflow_key:
+                    return workflow
+        except Exception as exc:
+            logger.warning(f"Failed to read API workflow metadata for {workflow_key}: {exc}")
+        return {}
+
+    def _extract_video_tail_frame(self, video_path: str, output_path: str) -> Optional[str]:
+        """Extract the last visible frame from a generated scene video."""
+        try:
+            import subprocess
+
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            extract_cmd = [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-sseof",
+                "-0.15",
+                "-i",
+                video_path,
+                "-frames:v",
+                "1",
+                "-q:v",
+                "2",
+                "-y",
+                output_path,
+            ]
+            subprocess.run(extract_cmd, capture_output=True, text=True, check=True)
+            if Path(output_path).exists():
+                logger.info(f"Extracted tail reference frame: {output_path}")
+                return output_path
+        except Exception as exc:
+            logger.debug(f"Primary tail-frame extraction failed for {video_path}: {exc}")
+
+        try:
+            import subprocess
+
+            probe_cmd = [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                video_path,
+            ]
+            probe = subprocess.run(probe_cmd, capture_output=True, text=True, check=True)
+            duration = float(probe.stdout.strip() or 0)
+            seek_time = max(duration - 0.5, 0)
+            fallback_cmd = [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                video_path,
+                "-ss",
+                f"{seek_time:.3f}",
+                "-frames:v",
+                "1",
+                "-q:v",
+                "2",
+                "-y",
+                output_path,
+            ]
+            subprocess.run(fallback_cmd, capture_output=True, text=True, check=True)
+            if Path(output_path).exists():
+                logger.info(f"Extracted tail reference frame with fallback: {output_path}")
+                return output_path
+        except Exception as exc:
+            logger.warning(f"Failed to extract tail frame from {video_path}: {exc}")
+        return None
+
+    def _probe_video_duration(self, video_path: str) -> float:
+        """Return video duration using ffprobe, or 0 on failure."""
+        try:
+            import subprocess
+
+            result = subprocess.run(
+                [
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-show_entries",
+                    "format=duration",
+                    "-of",
+                    "default=noprint_wrappers=1:nokey=1",
+                    video_path,
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return float(result.stdout.strip() or 0)
+        except Exception as exc:
+            logger.warning(f"Failed to probe video duration for {video_path}: {exc}")
+            return 0.0
     
