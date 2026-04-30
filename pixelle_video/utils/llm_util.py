@@ -41,19 +41,27 @@ def fetch_available_models(api_key: str, base_url: str, timeout: float = 10.0) -
     """
     # Normalize base_url - ensure it ends with /v1 or similar
     base_url = base_url.rstrip("/")
-    
+
+    for_gemini = False
     # Build the models endpoint URL
     # Handle cases where base_url might or might not include /v1
     if base_url.endswith("/v1"):
         models_url = f"{base_url}/models"
     else:
         models_url = f"{base_url}/v1/models"
-    
+
+    if base_url.endswith("v1beta"):
+        for_gemini = True
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    
+    if for_gemini:
+        models_url = f"{base_url}/models"
+        headers = {"x-goog-api-key": f"{api_key}",
+                   "Content-Type": "application/json"
+        }
     logger.debug(f"Fetching models from: {models_url}")
     
     with httpx.Client(timeout=timeout) as client:
@@ -62,7 +70,8 @@ def fetch_available_models(api_key: str, base_url: str, timeout: float = 10.0) -
         
         data = response.json()
         models = [model["id"] for model in data.get("data", [])]
-        
+        if for_gemini:
+            models = [model["name"] for model in data.get("models", [])]
         # Sort models alphabetically for better UX
         models.sort()
         
