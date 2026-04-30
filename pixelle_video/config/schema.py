@@ -26,6 +26,36 @@ class LLMConfig(BaseModel):
     model: str = Field(default="", description="LLM Model Name")
 
 
+class APIProviderCommonConfig(BaseModel):
+    """Common API provider settings"""
+    print_model_input: bool = Field(default=False, description="Print provider request parameters for debugging")
+    local_proxy: str = Field(default="", description="Local HTTP proxy for providers that need it")
+
+
+class APIKeyProviderConfig(BaseModel):
+    """Provider settings with API key and optional base URL"""
+    api_key: str = Field(default="", description="Provider API Key")
+    base_url: str = Field(default="", description="Provider API Base URL")
+
+
+class AccessSecretProviderConfig(BaseModel):
+    """Provider settings with access key / secret key credentials"""
+    base_url: str = Field(default="", description="Provider API Base URL")
+    access_key: str = Field(default="", description="Provider Access Key")
+    secret_key: str = Field(default="", description="Provider Secret Key")
+
+
+class APIProvidersConfig(BaseModel):
+    """Direct model provider API configuration"""
+    common: APIProviderCommonConfig = Field(default_factory=APIProviderCommonConfig)
+    openai: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
+    dashscope: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
+    deepseek: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
+    gemini: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
+    ark: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
+    kling: AccessSecretProviderConfig = Field(default_factory=AccessSecretProviderConfig)
+
+
 class TTSLocalConfig(BaseModel):
     """Local TTS configuration (Edge TTS)"""
     voice: str = Field(default="zh-CN-YunjianNeural", description="Edge TTS voice ID")
@@ -92,6 +122,7 @@ class PixelleVideoConfig(BaseModel):
     """Pixelle-Video main configuration"""
     project_name: str = Field(default="Pixelle-Video", description="Project name")
     llm: LLMConfig = Field(default_factory=LLMConfig)
+    api_providers: APIProvidersConfig = Field(default_factory=APIProvidersConfig)
     comfyui: ComfyUIConfig = Field(default_factory=ComfyUIConfig)
     template: TemplateConfig = Field(default_factory=TemplateConfig)
     
@@ -110,4 +141,3 @@ class PixelleVideoConfig(BaseModel):
     def to_dict(self) -> dict:
         """Convert to dictionary (for backward compatibility)"""
         return self.model_dump()
-

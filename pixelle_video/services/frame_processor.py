@@ -202,23 +202,35 @@ class FrameProcessor:
         """Step 2: Generate media (image or video) using ComfyKit"""
         logger.debug(f"  2/4: Generating media for frame {frame.index}...")
         
-        # Determine media type based on workflow
-        # video_ prefix in workflow name indicates video generation
+        # Determine media type based on workflow/template.
+        # video_ prefix in workflow name indicates ComfyUI video generation;
+        # video_* templates can also use direct API video workflows.
         workflow_name = config.media_workflow or ""
-        is_video_workflow = "video_" in workflow_name.lower()
+        from pixelle_video.utils.template_util import get_template_type
+        template_type = get_template_type(config.frame_template or "")
+        is_video_workflow = "video_" in workflow_name.lower() or template_type == "video"
         media_type = "video" if is_video_workflow else "image"
         
         logger.debug(f"  → Media type: {media_type} (workflow: {workflow_name})")
         
         # Build media generation parameters
+        from pixelle_video.utils.os_util import get_task_frame_path
+        output_path = get_task_frame_path(config.task_id, frame.index, media_type)
+        api_video_params = dict(config.api_video_params or {}) if media_type == "video" else {}
+        if media_type == "video" and workflow_name.startswith("api/"):
+            await self._prepare_api_video_inputs(frame, config, api_video_params)
+
         media_params = {
             "prompt": frame.image_prompt,
             "workflow": config.media_workflow,  # Pass workflow from config (None = use default)
             "media_type": media_type,
             "width": config.media_width,
             "height": config.media_height,
+            "output_path": output_path,
+            "image_path": frame.image_path,
             "index": frame.index + 1,  # 1-based index for workflow
         }
+        media_params.update(api_video_params)
         
         # For video workflows: pass audio duration as target video duration
         # This ensures video length matches audio length from the source
@@ -264,6 +276,43 @@ class FrameProcessor:
         
         else:
             raise ValueError(f"Unknown media type: {media_result.media_type}")
+
+    async def _prepare_api_video_inputs(
+        self,
+        frame: StoryboardFrame,
+        config: StoryboardConfig,
+        api_video_params: dict,
+    ) -> None:
+        """Prepare provider-specific inputs for API video models."""
+        from pixelle_video.utils.os_util import get_task_frame_path
+
+        if api_video_params.pop("use_narration_audio_as_driving_audio", False):
+            api_video_params["audio_path"] = frame.audio_path
+
+        if frame.image_path or api_video_params.get("first_clip_path") or api_video_params.get("first_video_path"):
+            return
+
+        first_frame_workflow = api_video_params.pop("first_frame_workflow", None)
+        if not first_frame_workflow:
+            return
+
+        first_frame_path = get_task_frame_path(config.task_id, frame.index, "image")
+        logger.info(f"  → Generating API video first frame via {first_frame_workflow}")
+        image_result = await self.core.media(
+            prompt=frame.image_prompt,
+            workflow=first_frame_workflow,
+            media_type="image",
+            width=config.media_width,
+            height=config.media_height,
+            output_path=first_frame_path,
+            index=frame.index + 1,
+        )
+        frame.image_path = await self._download_media(
+            image_result.url,
+            frame.index,
+            config.task_id,
+            media_type="image",
+        )
     
     async def _step_compose_frame(
         self,
@@ -420,8 +469,18 @@ class FrameProcessor:
         media_type: str
     ) -> str:
         """Download media (image or video) from URL to local file"""
+        import os
         from pixelle_video.utils.os_util import get_task_frame_path
         output_path = get_task_frame_path(task_id, frame_index, media_type)
+
+        if url.startswith("file://"):
+            local_path = url[7:]
+            if not os.path.exists(local_path):
+                raise FileNotFoundError(f"Generated media file not found: {local_path}")
+            return local_path
+
+        if os.path.exists(url):
+            return url
         
         timeout = httpx.Timeout(connect=10.0, read=60, write=60, pool=60)
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -444,4 +503,3 @@ class FrameProcessor:
             logger.warning(f"Failed to get video duration: {e}, using audio duration")
             # Fallback: use audio duration if available
             return 1.0  # Default to 1 second if unable to determine
-

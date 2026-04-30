@@ -8,9 +8,11 @@ from loguru import logger
 import httpx
 from web.i18n import tr, get_language
 from web.pipelines.base import PipelineUI, register_pipeline_ui
+from web.pipelines.api_workflows import list_api_media_workflows, render_api_video_controls
 from web.components.content_input import render_version_info
 from web.components.digital_tts_config import render_style_config
 from web.utils.async_helpers import run_async
+from web.utils.history_persistence import save_web_generation_history
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
 from pixelle_video.config import config_manager
 from pixelle_video.utils.os_util import create_task_output_dir
@@ -49,7 +51,7 @@ class DigitalHumanPipelineUI(PipelineUI):
         # ====================================================================
         with middle_col:
             # Style configuration ()
-            workflow_path = self.workflow_path_config()
+            workflow_path = self.workflow_path_config(pixelle_video)
             mode_params = self.render_digital_human_mode(asset_params["character_assets"])
         
         # ====================================================================
@@ -117,7 +119,7 @@ class DigitalHumanPipelineUI(PipelineUI):
 
             return {"character_assets": character_asset_paths}
 
-    def workflow_path_config(self) -> dict:
+    def workflow_path_config(self, pixelle_video: Any) -> dict:
         # Workflow source selection
         with st.container(border=True):
             st.markdown(f"**{tr('asset_based.section.source')}**")
@@ -178,6 +180,61 @@ class DigitalHumanPipelineUI(PipelineUI):
                     # Warn for the first workflow as representative
                     # TODO: need to check if the workflow is valid
                     # check_and_warn_selfhost_workflow("selfhost/digital_image.json")
+
+            api_image_workflows = list_api_media_workflows(pixelle_video, "image")
+            api_image_options = ["使用原工作流生成图片" if get_language() == "zh_CN" else "Use original image workflow"]
+            api_image_options.extend([wf["display_name"] for wf in api_image_workflows])
+
+            selected_api_image = st.selectbox(
+                "API 图片生成模型" if get_language() == "zh_CN" else "API image generation model",
+                api_image_options,
+                index=0,
+                help=(
+                    "可选：在 digital 模式下用 API 图像模型替代前置商品/人物图片生成，后续数字人视频合成仍使用原工作流。"
+                    if get_language() == "zh_CN"
+                    else "Optional: replace the first digital-mode image generation step with an API image model. The talking-video synthesis still uses the original workflow."
+                ),
+                key="digital_human_api_image_workflow",
+            )
+
+            workflow_config["api_image_workflow"] = None
+            if selected_api_image != api_image_options[0] and api_image_workflows:
+                selected_index = api_image_options.index(selected_api_image) - 1
+                workflow_config["api_image_workflow"] = api_image_workflows[selected_index]["key"]
+
+            api_video_workflows = list_api_media_workflows(
+                pixelle_video,
+                "video",
+                required_adapter_abilities=["digital_human"],
+                verified_only=True,
+            )
+            api_video_options = ["使用原工作流合成口播视频" if get_language() == "zh_CN" else "Use original talking-video workflow"]
+            api_video_options.extend([wf["display_name"] for wf in api_video_workflows])
+
+            selected_api_video = st.selectbox(
+                "API 参考生视频模型" if get_language() == "zh_CN" else "API reference-to-video model",
+                api_video_options,
+                index=0,
+                help=(
+                    "可选：用 DashScope 参考生视频模型直接生成数字人口播成片，跳过原第二步数字人视频合成 workflow。"
+                    if get_language() == "zh_CN"
+                    else "Optional: use a DashScope reference-to-video model to generate the talking video directly, bypassing the original second-step talking-video workflow."
+                ),
+                key="digital_human_api_video_workflow",
+            )
+
+            workflow_config["api_video_workflow"] = None
+            workflow_config["api_video_params"] = {}
+            if selected_api_video != api_video_options[0] and api_video_workflows:
+                selected_index = api_video_options.index(selected_api_video) - 1
+                selected_workflow = api_video_workflows[selected_index]
+                workflow_config["api_video_workflow"] = selected_workflow["key"]
+                workflow_config["api_video_params"] = render_api_video_controls(
+                    selected_workflow,
+                    key_prefix="digital_human",
+                    default_duration=5,
+                )
+
             return workflow_config
 
     def render_digital_human_mode(self, character_asset_paths: list) -> dict:
@@ -370,11 +427,98 @@ class DigitalHumanPipelineUI(PipelineUI):
                     # Define async generation function
                     async def generate_digital_human_video():
                         task_dir, task_id = create_task_output_dir()
-                        kit = await pixelle_video._get_or_create_comfykit()
                         workflow_path = video_params["workflow_path"]
+                        api_video_workflow = workflow_path.get("api_video_workflow")
+                        api_video_params = dict(workflow_path.get("api_video_params") or {})
 
                         import json
                         from pathlib import Path
+
+                        async def generate_tts_reference(text: str) -> str:
+                            audio_path = os.path.join(task_dir, "narration.mp3")
+                            tts_inference_mode = video_params.get("tts_inference_mode", "local")
+                            tts_voice = video_params.get("tts_voice")
+                            tts_speed = video_params.get("tts_speed")
+                            tts_workflow = video_params.get("tts_workflow")
+                            ref_audio = video_params.get("ref_audio")
+
+                            tts_kwargs = {
+                                "text": text,
+                                "output_path": audio_path,
+                                "inference_mode": tts_inference_mode,
+                            }
+                            if tts_inference_mode == "local":
+                                tts_kwargs["voice"] = tts_voice
+                                tts_kwargs["speed"] = tts_speed
+                            elif tts_inference_mode == "comfyui":
+                                if tts_workflow:
+                                    tts_kwargs["workflow"] = tts_workflow
+                                if ref_audio:
+                                    tts_kwargs["ref_audio"] = ref_audio
+
+                            await pixelle_video.tts(**tts_kwargs)
+                            return audio_path
+
+                        async def generate_api_digital_human(text: str) -> str:
+                            status_text.text(tr("progress.step_audio"))
+                            progress_bar.progress(25)
+                            audio_path = await generate_tts_reference(text)
+
+                            reference_image_paths = [character_assets[0]]
+                            if mode == "digital" and goods_assets:
+                                reference_image_paths.append(goods_assets[0])
+
+                            subject_prompt = (
+                                "参考图1中的人物面对镜头自然口播。"
+                                if get_language() == "zh_CN"
+                                else "The person in reference image 1 speaks naturally to camera."
+                            )
+                            if mode == "digital" and goods_assets:
+                                subject_prompt += (
+                                    "结合参考图2中的商品，生成竖屏商业口播视频。"
+                                    if get_language() == "zh_CN"
+                                    else "Use the product in reference image 2 and create a vertical product-promotion talking video."
+                                )
+                            prompt = f"{subject_prompt} 口播文案：{text}"
+
+                            final_video_path = os.path.join(task_dir, "final.mp4")
+                            duration = int(api_video_params.pop("duration", 5))
+                            media_params = {
+                                **api_video_params,
+                                "prompt": prompt,
+                                "workflow": api_video_workflow,
+                                "media_type": "video",
+                                "output_path": final_video_path,
+                                "duration": duration,
+                                "reference_image_paths": reference_image_paths,
+                                "reference_audio_path": audio_path,
+                                "audio": True,
+                                "video_ratio": api_video_params.get("video_ratio", "9:16"),
+                            }
+                            progress_bar.progress(60)
+                            status_text.text(tr("progress.generation"))
+                            media_result = await pixelle_video.media(**media_params)
+                            progress_bar.progress(100)
+                            status_text.text(tr("status.success"))
+                            return media_result.url
+
+                        if api_video_workflow:
+                            if mode == "customize":
+                                generated_text = goods_text
+                            elif goods_text and goods_text.strip():
+                                generated_text = goods_text
+                            else:
+                                generated_text = await pixelle_video.llm(
+                                    prompt=(
+                                        f"请为商品“{goods_title}”写一段适合数字人口播短视频的中文推广文案。"
+                                        "要求自然、有吸引力，控制在80字以内，只输出文案正文。"
+                                    ),
+                                    temperature=0.7,
+                                    max_tokens=300,
+                                )
+                            return await generate_api_digital_human(generated_text)
+
+                        kit = await pixelle_video._get_or_create_comfykit()
 
                         if mode == "customize":
                             status_text.text(tr("progress.step_audio"))
@@ -456,26 +600,45 @@ class DigitalHumanPipelineUI(PipelineUI):
                             first_workflow_path = Path(workflow_path.get("first_workflow_path"))
                             third_workflow_path = Path(workflow_path.get("third_workflow_path"))
                             second_workflow_path = Path(workflow_path.get("second_workflow_path"))
+                            api_image_workflow = workflow_path.get("api_image_workflow")
                             assert first_workflow_path.exists(), "The first_workflow file does not exist."
                             assert third_workflow_path.exists(), "The third_workflow file does not exist."
                             assert second_workflow_path.exists(), "The  second_workflow file does not exist."
 
                             if goods_text and goods_text.strip():
-                                workflow_path = third_workflow_path
-                                workflow_params = {"firstimage": character_assets[0], "secondimage": goods_assets[0]}
                                 generated_text = goods_text
 
                                 status_text.text(tr("progress.step_image"))
-                                kit = await pixelle_video._get_or_create_comfykit()
-                                workflow_config = json.load(open(workflow_path, 'r', encoding='utf8'))
-                                if workflow_config.get("source") == "runninghub" and "workflow_id" in workflow_config:
-                                    workflow_input = workflow_config["workflow_id"]
+                                if api_image_workflow:
+                                    image_prompt = (
+                                        f"Create a polished digital-human product promotion image. "
+                                        f"Use the first reference image as the person/character, the second reference image as the product, "
+                                        f"and make the scene suitable for a short spoken ad. Script: {goods_text}"
+                                    )
+                                    generated_image_path = os.path.join(task_dir, "generated_digital_image.png")
+                                    media_result = await pixelle_video.media(
+                                        prompt=image_prompt,
+                                        workflow=api_image_workflow,
+                                        media_type="image",
+                                        image_paths=[character_assets[0], goods_assets[0]],
+                                        output_path=generated_image_path,
+                                        width=1080,
+                                        height=1920,
+                                    )
+                                    generated_image_url = media_result.url
                                 else:
-                                    workflow_input = str(workflow_config)
-                                combine_image = await kit.execute(workflow_input, workflow_params)
-                                if combine_image.status != "completed":
-                                    raise Exception(f"workflow execution failed: {combine_image.msg}")
-                                generated_image_url = getattr(combine_image, "images", [None])[0]
+                                    workflow_path = third_workflow_path
+                                    workflow_params = {"firstimage": character_assets[0], "secondimage": goods_assets[0]}
+                                    kit = await pixelle_video._get_or_create_comfykit()
+                                    workflow_config = json.load(open(workflow_path, 'r', encoding='utf8'))
+                                    if workflow_config.get("source") == "runninghub" and "workflow_id" in workflow_config:
+                                        workflow_input = workflow_config["workflow_id"]
+                                    else:
+                                        workflow_input = str(workflow_config)
+                                    combine_image = await kit.execute(workflow_input, workflow_params)
+                                    if combine_image.status != "completed":
+                                        raise Exception(f"workflow execution failed: {combine_image.msg}")
+                                    generated_image_url = getattr(combine_image, "images", [None])[0]
                                 status_text.text(tr("progress.step_audio"))
                                 audio_path = os.path.join(task_dir, "narration.mp3")
                                 tts_inference_mode = video_params.get("tts_inference_mode", "local")
@@ -541,21 +704,46 @@ class DigitalHumanPipelineUI(PipelineUI):
                                 return final_video_path
                                 
                             else:
-                                workflow_path = first_workflow_path
-                                workflow_params = {"firstimage": character_assets[0], "secondimage": goods_assets[0], "goodstype": goods_title}
-                                
                                 status_text.text(tr("progress.step_image"))
-                                kit = await pixelle_video._get_or_create_comfykit()
-                                workflow_config = json.load(open(workflow_path, 'r', encoding='utf8'))
-                                if workflow_config.get("source") == "runninghub" and "workflow_id" in workflow_config:
-                                    workflow_input = workflow_config["workflow_id"]
+                                if api_image_workflow:
+                                    image_prompt = (
+                                        f"Create a polished digital-human product promotion image for '{goods_title}'. "
+                                        f"Use the first reference image as the person/character and the second reference image as the product. "
+                                        f"Make it vertical, clean, commercial, and suitable for a spoken short video."
+                                    )
+                                    generated_image_path = os.path.join(task_dir, "generated_digital_image.png")
+                                    media_result = await pixelle_video.media(
+                                        prompt=image_prompt,
+                                        workflow=api_image_workflow,
+                                        media_type="image",
+                                        image_paths=[character_assets[0], goods_assets[0]],
+                                        output_path=generated_image_path,
+                                        width=1080,
+                                        height=1920,
+                                    )
+                                    generated_image_url = media_result.url
+                                    generated_text = await pixelle_video.llm(
+                                        prompt=(
+                                            f"请为商品“{goods_title}”写一段适合数字人口播短视频的中文推广文案。"
+                                            "要求自然、有吸引力，控制在80字以内，只输出文案正文。"
+                                        ),
+                                        temperature=0.7,
+                                        max_tokens=300,
+                                    )
                                 else:
-                                    workflow_input = str(workflow_config)
-                                synthesis_result = await kit.execute(workflow_input, workflow_params)
-                                if synthesis_result.status != "completed":
-                                    raise Exception(f"workflow execution failed: {synthesis_result.msg}")
-                                generated_image_url = getattr(synthesis_result, "images", [None])[0]
-                                generated_text = getattr(synthesis_result, "texts", [None])[0]
+                                    workflow_path = first_workflow_path
+                                    workflow_params = {"firstimage": character_assets[0], "secondimage": goods_assets[0], "goodstype": goods_title}
+                                    kit = await pixelle_video._get_or_create_comfykit()
+                                    workflow_config = json.load(open(workflow_path, 'r', encoding='utf8'))
+                                    if workflow_config.get("source") == "runninghub" and "workflow_id" in workflow_config:
+                                        workflow_input = workflow_config["workflow_id"]
+                                    else:
+                                        workflow_input = str(workflow_config)
+                                    synthesis_result = await kit.execute(workflow_input, workflow_params)
+                                    if synthesis_result.status != "completed":
+                                        raise Exception(f"workflow execution failed: {synthesis_result.msg}")
+                                    generated_image_url = getattr(synthesis_result, "images", [None])[0]
+                                    generated_text = getattr(synthesis_result, "texts", [None])[0]
                                 
                                 status_text.text(tr("progress.step_audio"))
                                 audio_path = os.path.join(task_dir, "narration.mp3")
@@ -623,6 +811,25 @@ class DigitalHumanPipelineUI(PipelineUI):
                                 
                     # Execute async generation
                     final_video_path = run_async(generate_digital_human_video())
+                    run_async(save_web_generation_history(
+                        pixelle_video,
+                        task_id=Path(final_video_path).parent.name,
+                        video_path=final_video_path,
+                        pipeline="digital_human",
+                        title="数字人口播" if get_language() == "zh_CN" else "Digital Human",
+                        input_params={
+                            "text": goods_text or goods_title,
+                            "mode": mode,
+                            "goods_title": goods_title,
+                            "goods_text": goods_text,
+                            "character_assets": character_assets,
+                            "goods_assets": goods_assets,
+                            "workflow_path": video_params.get("workflow_path"),
+                            "tts_voice": video_params.get("tts_voice"),
+                            "tts_speed": video_params.get("tts_speed"),
+                            "tts_inference_mode": video_params.get("tts_inference_mode"),
+                        },
+                    ))
                     
                     total_time = time.time() - start_time
                     progress_bar.progress(100)
@@ -672,4 +879,3 @@ class DigitalHumanPipelineUI(PipelineUI):
 
 # Register self
 register_pipeline_ui(DigitalHumanPipelineUI)
-

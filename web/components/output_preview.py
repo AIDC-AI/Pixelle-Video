@@ -60,6 +60,7 @@ def render_single_output(pixelle_video, video_params):
     frame_template = video_params.get("frame_template")
     custom_values_for_video = video_params.get("template_params", {})
     workflow_key = video_params.get("media_workflow")
+    api_video_params = video_params.get("api_video_params")
     prompt_prefix = video_params.get("prompt_prefix", "")
     
     with st.container(border=True):
@@ -79,6 +80,15 @@ def render_single_output(pixelle_video, video_params):
             # Validate input
             if not text:
                 st.error(tr("error.input_required"))
+                st.stop()
+
+            from pixelle_video.utils.template_util import get_template_type
+            if frame_template and get_template_type(frame_template) == "video" and not workflow_key:
+                st.error(
+                    "请选择 API 视频生成模型后再生成。"
+                    if get_language() == "zh_CN"
+                    else "Please select an API video generation model before generating."
+                )
                 st.stop()
             
             # Show progress
@@ -132,6 +142,7 @@ def render_single_output(pixelle_video, video_params):
                     "n_scenes": n_scenes,
                     "split_mode": split_mode,
                     "media_workflow": workflow_key,
+                    "api_video_params": api_video_params,
                     "frame_template": frame_template,
                     "prompt_prefix": prompt_prefix,
                     "bgm_path": bgm_path,
@@ -140,7 +151,6 @@ def render_single_output(pixelle_video, video_params):
                     "media_width": st.session_state.get('template_media_width'),
                     "media_height": st.session_state.get('template_media_height'),
                 }
-                
                 # Add TTS parameters based on mode
                 video_params["tts_inference_mode"] = tts_mode
                 if tts_mode == "local":
@@ -250,6 +260,7 @@ def render_batch_output(pixelle_video, video_params):
                 "title_prefix": video_params.get("title_prefix"),
                 "n_scenes": video_params.get("n_scenes") or 5,
                 "media_workflow": video_params.get("media_workflow"),
+                "api_video_params": video_params.get("api_video_params"),
                 "frame_template": video_params.get("frame_template"),
                 "prompt_prefix": video_params.get("prompt_prefix") or "",
                 "bgm_path": video_params.get("bgm_path"),
@@ -258,7 +269,6 @@ def render_batch_output(pixelle_video, video_params):
                 "media_width": video_params.get("media_width"),
                 "media_height": video_params.get("media_height"),
             }
-            
             # Add TTS parameters based on mode (only add non-None values)
             if shared_config["tts_inference_mode"] == "local":
                 tts_voice = video_params.get("tts_voice")

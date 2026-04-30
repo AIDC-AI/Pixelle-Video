@@ -26,6 +26,7 @@ from loguru import logger
 
 from web.i18n import tr, get_language
 from web.pipelines.base import PipelineUI, register_pipeline_ui
+from web.pipelines.api_workflows import list_api_media_workflows, render_api_video_controls
 from web.components.content_input import render_bgm_section, render_version_info
 from web.utils.async_helpers import run_async
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
@@ -187,21 +188,34 @@ class AssetBasedPipelineUI(PipelineUI):
                 st.markdown(tr("asset_based.source.how"))
             
             source_options = {
+                "api": "API VLM 素材分析" if get_language() == "zh_CN" else "API VLM asset analysis",
                 "runninghub": tr("asset_based.source.runninghub"),
                 "selfhost": tr("asset_based.source.selfhost")
             }
             
             # Check if RunningHub API key is configured
             comfyui_config = config_manager.get_comfyui_config()
+            api_provider_config = config_manager.config.to_dict().get("api_providers", {})
             has_runninghub = bool(comfyui_config.get("runninghub_api_key"))
             has_selfhost = bool(comfyui_config.get("comfyui_url"))
+            has_api_analysis = any(
+                bool((api_provider_config.get(provider, {}) or {}).get("api_key"))
+                for provider in ("dashscope", "openai", "gemini")
+            )
             
-            # Default to runninghub always
-            default_source_index = 0
+            # Prefer API VLM when configured, so API media workflows do not depend on RunningHub.
+            source_keys = list(source_options.keys())
+            if has_api_analysis:
+                default_source = "api"
+            elif has_runninghub:
+                default_source = "runninghub"
+            else:
+                default_source = "selfhost"
+            default_source_index = source_keys.index(default_source)
             
             source = st.radio(
                 tr("asset_based.source.select"),
-                options=list(source_options.keys()),
+                options=source_keys,
                 format_func=lambda x: source_options[x],
                 index=default_source_index,
                 horizontal=True,
@@ -210,7 +224,20 @@ class AssetBasedPipelineUI(PipelineUI):
             )
             
             # Show hint based on selection
-            if source == "runninghub":
+            if source == "api":
+                if not has_api_analysis:
+                    st.warning(
+                        "未配置可用于 VLM 素材分析的 API Key（DashScope/OpenAI/Gemini）。"
+                        if get_language() == "zh_CN"
+                        else "No API key configured for VLM asset analysis (DashScope/OpenAI/Gemini)."
+                    )
+                else:
+                    st.info(
+                        "使用 API VLM 分析上传素材，不依赖 RunningHub/ComfyUI。"
+                        if get_language() == "zh_CN"
+                        else "Use API VLM to analyze uploaded assets without RunningHub/ComfyUI."
+                    )
+            elif source == "runninghub":
                 if not has_runninghub:
                     st.warning(tr("asset_based.source.runninghub_not_configured"))
                 else:
@@ -223,6 +250,47 @@ class AssetBasedPipelineUI(PipelineUI):
                     # Check and warn for selfhost mode (auto popup if not confirmed)
                     # Use analyse_image.json as representative workflow
                     check_and_warn_selfhost_workflow("selfhost/analyse_image.json")
+
+            api_video_workflows = list_api_media_workflows(
+                pixelle_video,
+                "video",
+                required_adapter_abilities=["first_frame_i2v"],
+                verified_only=True,
+            )
+            api_video_options = ["使用原工作流生成图片" if get_language() == "zh_CN" else "Use original image workflow"]
+            api_video_options.extend([wf["display_name"] for wf in api_video_workflows])
+
+            selected_api_video = st.selectbox(
+                "API 图生视频模型" if get_language() == "zh_CN" else "API image-to-video model",
+                api_video_options,
+                index=0,
+                help=(
+                    "可选：将匹配到的图片素材先用 API 图生视频模型动画化，再进入后续字幕和合成。"
+                    if get_language() == "zh_CN"
+                    else "Optional: animate matched image assets with an API image-to-video model before subtitles and composition."
+                ),
+                key="asset_api_video_workflow",
+            )
+
+            api_video_workflow = None
+            api_video_params = {}
+            if selected_api_video != api_video_options[0] and api_video_workflows:
+                selected_index = api_video_options.index(selected_api_video) - 1
+                selected_workflow = api_video_workflows[selected_index]
+                api_video_workflow = selected_workflow["key"]
+                api_video_params = render_api_video_controls(
+                    selected_workflow,
+                    key_prefix="asset",
+                    default_duration=5,
+                    allow_audio_driven=True,
+                    show_duration=False,
+                )
+                if source == "runninghub" and not has_runninghub:
+                    st.info(
+                        "已选择 API 视频模型；如不想配置 RunningHub，请把素材分析来源切换为 API VLM。"
+                        if get_language() == "zh_CN"
+                        else "API video generation is selected; switch asset analysis to API VLM if you do not want to configure RunningHub."
+                    )
         
         # TTS configuration
         with st.container(border=True):
@@ -280,6 +348,8 @@ class AssetBasedPipelineUI(PipelineUI):
         return {
             "duration": duration,
             "source": source,
+            "api_video_workflow": api_video_workflow,
+            "api_video_params": api_video_params,
             "voice_id": voice_id,
             "tts_speed": tts_speed
         }
@@ -387,6 +457,8 @@ class AssetBasedPipelineUI(PipelineUI):
                         bgm_path=video_params.get("bgm_path"),
                         bgm_volume=video_params.get("bgm_volume", 0.2),
                         bgm_mode=video_params.get("bgm_mode", "loop"),
+                        api_video_workflow=video_params.get("api_video_workflow"),
+                        api_video_params=video_params.get("api_video_params"),
                         voice_id=video_params.get("voice_id", "zh-CN-YunjianNeural"),
                         tts_speed=video_params.get("tts_speed", 1.2),
                         progress_callback=update_progress
@@ -443,4 +515,3 @@ class AssetBasedPipelineUI(PipelineUI):
 
 # Register self
 register_pipeline_ui(AssetBasedPipelineUI)
-
