@@ -15,6 +15,7 @@ Style configuration components for web UI (middle column)
 """
 
 import os
+import base64
 from pathlib import Path
 
 import streamlit as st
@@ -23,6 +24,7 @@ from loguru import logger
 from web.i18n import tr, get_language
 from web.utils.async_helpers import run_async
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
+from web.pipelines.api_workflows import list_api_media_workflows, render_api_video_controls
 from pixelle_video.config import config_manager
 
 
@@ -298,6 +300,7 @@ def render_style_config(pixelle_video):
         template_type_options = {
             'static': tr('template.type.static'),
             'image': tr('template.type.image'),
+            'video': tr('template.type.video'),
         }
         
         # Radio buttons in horizontal layout
@@ -316,6 +319,8 @@ def render_style_config(pixelle_video):
             st.info(tr('template.type.static_hint'))
         elif selected_template_type == 'image':
             st.info(tr('template.type.image_hint'))
+        elif selected_template_type == 'video':
+            st.info(tr('template.type.video_hint'))
         
         # Get templates grouped by size, filtered by selected type
         grouped_templates = get_templates_grouped_by_size_and_type(selected_template_type)
@@ -343,6 +348,7 @@ def render_style_config(pixelle_video):
         type_default_templates = {
             'static': '1080x1920/static_default.html',
             'image': '1080x1920/image_default.html',
+            'video': '1080x1920/video_default.html',
         }
         type_specific_default = type_default_templates.get(selected_template_type, config_default_template)
         
@@ -680,10 +686,19 @@ def render_style_config(pixelle_video):
     template_media_type = st.session_state.get('template_media_type', 'image')
     template_requires_media = st.session_state.get('template_requires_media', True)
     
+    api_video_params = {}
+    video_workflow_key = None
+
     if template_requires_media:
-        # Template requires media - show Media Generation Section
+        # Template requires image/video media. Video templates still need a first-frame image.
         with st.container(border=True):
             st.markdown(f"**{tr('section.image')}**")
+            if template_media_type == "video":
+                st.caption(
+                    "动态视频会先生成首帧插图，再用下方视频生成模型把首帧转成视频片段。"
+                    if get_language() == "zh_CN"
+                    else "Dynamic video first creates an illustration as the first frame, then animates it with the video model below."
+                )
         
             # 1. ComfyUI Workflow selection
             with st.expander(tr("help.feature_description"), expanded=False):
@@ -784,11 +799,11 @@ def render_style_config(pixelle_video):
                             # Build final prompt with prefix
                             final_prompt = build_image_prompt(test_prompt, prompt_prefix)
 
-                            # Generate preview media (use user-specified size and media type)
+                            # Generate preview first-frame image.
                             media_result = run_async(pixelle_video.media(
                                 prompt=final_prompt,
                                 workflow=workflow_key,
-                                media_type=template_media_type,
+                                media_type="image",
                                 width=int(media_width),
                                 height=int(media_height)
                             ))
@@ -820,6 +835,105 @@ def render_style_config(pixelle_video):
                         except Exception as e:
                             st.error(tr("style.preview_failed", error=str(e)))
                             logger.exception(e)
+
+        if template_media_type == "video":
+            with st.container(border=True):
+                st.markdown(f"**{tr('section.video')}**")
+
+                with st.expander(tr("help.feature_description"), expanded=False):
+                    st.markdown(f"**{tr('help.what')}**")
+                    st.markdown(tr("style.video_workflow_what"))
+                    st.markdown(f"**{tr('help.how')}**")
+                    st.markdown(
+                        "当前快速创作的动态视频仅支持直连 API 视频模型，暂不使用 ComfyUI workflow。"
+                        if get_language() == "zh_CN"
+                        else "Dynamic video in Quick Create currently supports direct API video models only; ComfyUI workflows are not used yet."
+                    )
+
+                api_video_workflows = list_api_media_workflows(
+                    pixelle_video,
+                    "video",
+                    required_adapter_abilities=["first_frame_i2v"],
+                    verified_only=True,
+                )
+                video_workflow_options = [wf["display_name"] for wf in api_video_workflows]
+                video_workflow_keys = [wf["key"] for wf in api_video_workflows]
+
+                if not api_video_workflows:
+                    st.warning(
+                        "没有找到已验证的 API 图生视频模型，请先配置 DashScope/Kling/Seedance 等提供商。"
+                        if get_language() == "zh_CN"
+                        else "No verified API image-to-video model found. Please configure a provider first."
+                    )
+                    video_workflow_key = None
+                else:
+                    video_workflow_display = st.selectbox(
+                        "API 视频模型" if get_language() == "zh_CN" else "API video model",
+                        video_workflow_options,
+                        index=0,
+                        label_visibility="visible",
+                        key="standard_api_video_workflow_select",
+                    )
+                    selected_video_index = video_workflow_options.index(video_workflow_display)
+                    selected_video_workflow = api_video_workflows[selected_video_index]
+                    video_workflow_key = video_workflow_keys[selected_video_index]
+
+                    video_size_info = tr('style.video_size_info', width=media_width, height=media_height)
+                    st.info(f"📐 {video_size_info}")
+                    if media_width and media_height:
+                        default_video_ratio = "1:1" if media_width == media_height else ("9:16" if media_height > media_width else "16:9")
+                    else:
+                        default_video_ratio = "9:16"
+
+                    api_video_params = render_api_video_controls(
+                        selected_video_workflow,
+                        key_prefix="standard_video",
+                        default_duration=5,
+                        allow_audio_driven=True,
+                        show_duration=False,
+                        default_ratio=default_video_ratio,
+                    )
+                    api_video_params["first_frame_workflow"] = workflow_key
+
+                    with st.expander(tr("style.video_preview_title"), expanded=False):
+                        test_video_prompt = st.text_input(
+                            tr("style.test_prompt"),
+                            value="a peaceful lake, gentle camera movement",
+                            help=tr("style.test_prompt_help"),
+                            key="standard_video_test_prompt",
+                        )
+                        if st.button(tr("style.video_preview"), key="preview_standard_video", use_container_width=True):
+                            with st.spinner(tr("style.video_previewing")):
+                                try:
+                                    from pixelle_video.utils.prompt_helper import build_image_prompt
+
+                                    final_prompt = build_image_prompt(test_video_prompt, prompt_prefix)
+                                    first_frame_result = run_async(pixelle_video.media(
+                                        prompt=final_prompt,
+                                        workflow=workflow_key,
+                                        media_type="image",
+                                        width=int(media_width),
+                                        height=int(media_height),
+                                    ))
+                                    preview_video_params = dict(api_video_params)
+                                    preview_video_params.pop("first_frame_workflow", None)
+                                    preview_video = run_async(pixelle_video.media(
+                                        prompt=final_prompt,
+                                        workflow=video_workflow_key,
+                                        media_type="video",
+                                        image_path=first_frame_result.url,
+                                        width=int(media_width),
+                                        height=int(media_height),
+                                        duration=5,
+                                        **preview_video_params,
+                                    ))
+                                    st.success(tr("style.video_preview_success"))
+                                    st.video(preview_video.url)
+                                    st.info(f"**{tr('style.final_prompt_label')}**\n{final_prompt}")
+                                    st.caption(f"📁 {preview_video.url}")
+                                except Exception as e:
+                                    st.error(tr("style.preview_failed", error=str(e)))
+                                    logger.exception(e)
         
     
     else:
@@ -838,6 +952,10 @@ def render_style_config(pixelle_video):
             prompt_prefix = ""
     
     # Return all style configuration parameters
+    final_media_workflow = video_workflow_key if template_media_type == "video" else workflow_key
+    if template_media_type == "video" and not video_workflow_key:
+        final_media_workflow = None
+
     return {
         "tts_inference_mode": tts_mode,
         "tts_voice": selected_voice if tts_mode == "local" else None,
@@ -846,7 +964,8 @@ def render_style_config(pixelle_video):
         "ref_audio": str(ref_audio_path) if ref_audio_path else None,
         "frame_template": frame_template,
         "template_params": custom_values_for_video if custom_values_for_video else None,
-        "media_workflow": workflow_key,
+        "media_workflow": final_media_workflow,
+        "api_video_params": api_video_params if template_media_type == "video" else None,
         "prompt_prefix": prompt_prefix if prompt_prefix else "",
         "media_width": media_width,
         "media_height": media_height

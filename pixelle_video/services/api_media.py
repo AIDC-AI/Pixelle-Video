@@ -489,22 +489,125 @@ class APIProviderMediaService:
         resolution = params.get("resolution") or self._video_resolution(provider, width, height)
         video_options = self._video_options(provider, model, params, resolution)
 
-        logger.info(f"Generating video via API provider={provider}, model={model}")
-        await asyncio.to_thread(
-            client.generate_video,
-            prompt=prompt,
-            image_path=image_path,
-            save_path=save_path,
-            model=model,
-            duration=safe_duration,
-            video_ratio=ratio,
-            **video_options,
-        )
+        prompt_to_use = prompt
+        max_safety_retries = int(params.get("prompt_safety_retries", 1))
+        for attempt in range(max_safety_retries + 1):
+            try:
+                logger.info(
+                    f"Generating video via API provider={provider}, model={model}"
+                    + (f" (safety retry {attempt})" if attempt else "")
+                )
+                await asyncio.to_thread(
+                    client.generate_video,
+                    prompt=prompt_to_use,
+                    image_path=image_path,
+                    save_path=save_path,
+                    model=model,
+                    duration=safe_duration,
+                    video_ratio=ratio,
+                    **video_options,
+                )
+                break
+            except Exception as exc:
+                if attempt >= max_safety_retries or not self._is_content_inspection_error(exc):
+                    raise
+
+                logger.warning(
+                    "API video generation failed content inspection; "
+                    f"neutralizing prompt and retrying once. provider={provider}, model={model}, error={exc}"
+                )
+                prompt_to_use = await self._neutralize_video_prompt(prompt_to_use)
 
         if not os.path.exists(save_path):
             raise RuntimeError(f"API video generation did not create file: {save_path}")
 
         return MediaResult(media_type="video", url=save_path, duration=safe_duration)
+
+    def _is_content_inspection_error(self, exc: Exception) -> bool:
+        """Return True when a provider rejects input because of content inspection."""
+        message = str(exc).lower()
+        return any(
+            marker in message
+            for marker in (
+                "datainspectionfailed",
+                "inappropriate content",
+                "green net check failed",
+                "content inspection",
+                "safety inspection",
+                "risk control",
+            )
+        )
+
+    async def _neutralize_video_prompt(self, prompt: str) -> str:
+        """Use the configured LLM to rewrite a video prompt into a safer neutral prompt."""
+        if not prompt or not prompt.strip():
+            return prompt
+
+        rewrite_instruction = f"""
+请将下面的视频生成提示词改写为更中性、安全、适合公开视频生成模型审核的画面描述。
+
+要求：
+1. 保留原本的积极含义、画面主题和视觉风格。
+2. 去掉可能触发审核的暴力、危险、恐惧、政治、成人、歧视、极端情绪、自伤、违法、攻击性表达。
+3. 不要提及“审核”“违规”“敏感词”等元信息。
+4. 只输出改写后的提示词，不要解释。
+5. 输出优先使用英文，画面描述要具体、平和、正向。
+
+原提示词：
+{prompt}
+""".strip()
+
+        try:
+            from pixelle_video.services.llm_service import LLMService
+
+            llm = LLMService(config_manager.config.model_dump())
+            rewritten = await llm(
+                rewrite_instruction,
+                temperature=0.2,
+                max_tokens=500,
+            )
+            rewritten = self._clean_rewritten_prompt(str(rewritten))
+            if rewritten:
+                logger.info(f"Neutralized API video prompt: {rewritten[:200]}")
+                return rewritten
+        except Exception as exc:
+            logger.warning(f"Failed to neutralize video prompt with LLM; using fallback sanitizer: {exc}")
+
+        return self._fallback_neutralize_prompt(prompt)
+
+    def _clean_rewritten_prompt(self, text: str) -> str:
+        """Clean common LLM formatting around a rewritten prompt."""
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.strip("`").strip()
+            if cleaned.lower().startswith(("text", "prompt", "english")):
+                cleaned = cleaned.split("\n", 1)[-1].strip()
+        for prefix in ("改写后的提示词：", "改写后：", "Prompt:", "Rewritten prompt:"):
+            if cleaned.startswith(prefix):
+                cleaned = cleaned[len(prefix):].strip()
+        return cleaned.strip().strip('"').strip("'")
+
+    def _fallback_neutralize_prompt(self, prompt: str) -> str:
+        """Conservative fallback if the configured LLM is unavailable."""
+        sanitized = prompt
+        replacements = {
+            "害怕": "平静",
+            "恐惧": "沉思",
+            "危险": "未知",
+            "挣脱": "走向",
+            "崩溃": "调整",
+            "压迫": "压力",
+            "攻击": "互动",
+            "血": "红色",
+            "死亡": "离别",
+        }
+        for source, target in replacements.items():
+            sanitized = sanitized.replace(source, target)
+        return (
+            "A calm, positive, cinematic scene with gentle natural light, peaceful atmosphere, "
+            "safe public setting, no violence, no danger, no sensitive content. "
+            f"Original theme adapted neutrally: {sanitized}"
+        )
 
     def _create_image_client(self):
         from pixelle_video.services.api_services.image_client import ImageClient

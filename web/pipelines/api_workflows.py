@@ -57,6 +57,7 @@ def render_api_video_controls(
     default_duration: int = 5,
     allow_audio_driven: bool = False,
     show_duration: bool = True,
+    default_ratio: str | None = None,
 ) -> dict:
     """Render common API video controls based on verified adapter capability metadata."""
     if not workflow or not is_api_workflow(workflow.get("key")):
@@ -110,7 +111,8 @@ def render_api_video_controls(
 
         ratios = capabilities.get("ratios") or []
         if ratios:
-            default_ratio_index = ratios.index("9:16") if "9:16" in ratios else 0
+            preferred_ratio = default_ratio or "9:16"
+            default_ratio_index = ratios.index(preferred_ratio) if preferred_ratio in ratios else 0
             params["video_ratio"] = st.selectbox(
                 "画幅比例" if zh else "Aspect ratio",
                 ratios,

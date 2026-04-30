@@ -202,10 +202,13 @@ class FrameProcessor:
         """Step 2: Generate media (image or video) using ComfyKit"""
         logger.debug(f"  2/4: Generating media for frame {frame.index}...")
         
-        # Determine media type based on workflow
-        # video_ prefix in workflow name indicates video generation
+        # Determine media type based on workflow/template.
+        # video_ prefix in workflow name indicates ComfyUI video generation;
+        # video_* templates can also use direct API video workflows.
         workflow_name = config.media_workflow or ""
-        is_video_workflow = "video_" in workflow_name.lower()
+        from pixelle_video.utils.template_util import get_template_type
+        template_type = get_template_type(config.frame_template or "")
+        is_video_workflow = "video_" in workflow_name.lower() or template_type == "video"
         media_type = "video" if is_video_workflow else "image"
         
         logger.debug(f"  → Media type: {media_type} (workflow: {workflow_name})")
