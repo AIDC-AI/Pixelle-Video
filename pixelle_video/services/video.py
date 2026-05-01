@@ -57,33 +57,29 @@ def check_ffmpeg() -> None:
         )
 
 
-# Check FFmpeg availability on module import
-check_ffmpeg()
-
-
 class VideoService:
     """
     Video compositor for common video processing tasks
-    
+
     Uses ffmpeg-python for high-performance video processing.
     All operations preserve video quality when possible (stream copy).
-    
+
     Examples:
         >>> compositor = VideoCompositor()
-        >>> 
+        >>>
         >>> # Concatenate videos
         >>> compositor.concat_videos(
         ...     ["intro.mp4", "main.mp4", "outro.mp4"],
         ...     "final.mp4"
         ... )
-        >>> 
+        >>>
         >>> # Add voiceover
         >>> compositor.merge_audio_video(
         ...     "visual.mp4",
         ...     "voiceover.mp3",
         ...     "final.mp4"
         ... )
-        >>> 
+        >>>
         >>> # Add background music
         >>> compositor.add_bgm(
         ...     "video.mp4",
@@ -91,7 +87,7 @@ class VideoService:
         ...     "final.mp4",
         ...     bgm_volume=0.3
         ... )
-        >>> 
+        >>>
         >>> # Create video from image + audio
         >>> compositor.create_video_from_image(
         ...     "frame.png",
@@ -99,7 +95,16 @@ class VideoService:
         ...     "segment.mp4"
         ... )
     """
-    
+
+    def __init__(self):
+        self._ffmpeg_checked = False
+
+    def _ensure_ffmpeg(self):
+        """Lazily check FFmpeg availability on first use, not at import time"""
+        if not self._ffmpeg_checked:
+            check_ffmpeg()
+            self._ffmpeg_checked = True
+
     def concat_videos(
         self,
         videos: List[str],
@@ -111,7 +116,7 @@ class VideoService:
     ) -> str:
         """
         Concatenate multiple videos into one
-        
+
         Args:
             videos: List of video file paths to concatenate
             output: Output video file path
@@ -120,25 +125,9 @@ class VideoService:
                 - "filter": Slower but handles different formats
             bgm_path: Background music file path (optional)
                 - None: No BGM
-                - Filename (e.g., "default.mp3", "happy.mp3"): Use built-in BGM from bgm/ folder
-                - Custom path: Use custom BGM file
-            bgm_volume: BGM volume level (0.0-1.0), default 0.2
-            bgm_mode: BGM playback mode
-                - "once": Play BGM once
-                - "loop": Loop BGM to match video duration
-        
-        Returns:
-            Path to the output video file
-        
-        Raises:
-            ValueError: If videos list is empty
-            RuntimeError: If FFmpeg execution fails
-        
-        Note:
-            - demuxer method requires all videos to have identical:
-              resolution, codec, fps, etc.
-            - filter method re-encodes videos, slower but more compatible
         """
+        self._ensure_ffmpeg()
+
         if not videos:
             raise ValueError("Videos list cannot be empty")
         
@@ -363,6 +352,8 @@ class VideoService:
             - When replace_audio=True and video has audio, original audio is removed
             - When replace_audio=False and video has audio, original and new audio are mixed
         """
+        self._ensure_ffmpeg()
+
         # Get durations of video and audio
         video_duration = self._get_video_duration(video)
         audio_duration = self._get_audio_duration(audio)
@@ -551,6 +542,7 @@ class VideoService:
             - Final video size matches overlay image size
             - Video codec is re-encoded to support overlay
         """
+        self._ensure_ffmpeg()
         logger.info(f"Overlaying image on video (scale_mode={scale_mode})")
         
         try:
@@ -640,6 +632,7 @@ class VideoService:
             ...     "segment.mp4"
             ... )
         """
+        self._ensure_ffmpeg()
         logger.info("Creating video from image and audio")
         
         try:
@@ -714,6 +707,7 @@ class VideoService:
             - If loop=True, BGM repeats until video ends
             - Fade effects are applied to BGM only
         """
+        self._ensure_ffmpeg()
         logger.info(f"Adding BGM to video (volume={bgm_volume}, loop={loop})")
         
         try:
