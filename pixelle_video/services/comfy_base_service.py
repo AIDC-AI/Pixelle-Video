@@ -70,7 +70,9 @@ class ComfyBaseService:
     def _scan_workflows(self) -> List[Dict[str, Any]]:
         """
         Scan workflows/source/*.json files from all source directories (merged from workflows/ and data/workflows/)
-        
+
+        Results are cached after first scan to avoid repeated filesystem I/O.
+
         Returns:
             List of workflow info dicts
             Example: [
@@ -83,7 +85,7 @@ class ComfyBaseService:
                 },
                 {
                     "name": "image_flux.json",
-                    "display_name": "image_flux.json - Runninghub", 
+                    "display_name": "image_flux.json - Runninghub",
                     "source": "runninghub",
                     "path": "workflows/runninghub/image_flux.json",
                     "key": "runninghub/image_flux.json",
@@ -91,6 +93,9 @@ class ComfyBaseService:
                 }
             ]
         """
+        if self._workflows_cache is not None:
+            return self._workflows_cache
+
         workflows = []
         
         # Get all workflow source directories (merged from workflows/ and data/workflows/)
@@ -122,7 +127,8 @@ class ComfyBaseService:
                     logger.error(f"Failed to parse workflow {source_name}/{filename}: {e}")
         
         # Sort by key (source/name)
-        return sorted(workflows, key=lambda w: w["key"])
+        self._workflows_cache = sorted(workflows, key=lambda w: w["key"])
+        return self._workflows_cache
     
     def _parse_workflow_file(self, file_path: Path, source: str) -> Dict[str, Any]:
         """
