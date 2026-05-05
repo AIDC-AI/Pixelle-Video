@@ -582,7 +582,7 @@ class AssetBasedPipeline(LinearVideoPipeline):
                 await self.core.tts(
                     text=narration_text,
                     output_path=str(audio_path),
-                    voice_id=config.voice_id,
+                    voice=config.voice_id,
                     speed=config.tts_speed
                 )
                 
