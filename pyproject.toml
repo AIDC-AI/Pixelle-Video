@@ -36,10 +36,6 @@ dev = [
     "ruff>=0.6.0",
 ]
 
-[project.scripts]
-pixelle-video = "pixelle_video.cli:main"
-pvideo = "pixelle_video.cli:main"
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
