@@ -14,8 +14,10 @@
 Frame/Template rendering API schemas
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field
+
+from api.schemas.base import SuccessResponse
 
 
 class FrameRenderRequest(BaseModel):
@@ -39,10 +41,8 @@ class FrameRenderRequest(BaseModel):
         }
 
 
-class FrameRenderResponse(BaseModel):
+class FrameRenderResponse(SuccessResponse):
     """Frame rendering response"""
-    success: bool = True
-    message: str = "Success"
     frame_path: str = Field(..., description="Path to generated frame image")
     width: int = Field(..., description="Frame width in pixels")
     height: int = Field(..., description="Frame height in pixels")
@@ -55,10 +55,8 @@ class TemplateParamConfig(BaseModel):
     label: str = Field(..., description="Display label for the parameter")
 
 
-class TemplateParamsResponse(BaseModel):
+class TemplateParamsResponse(SuccessResponse):
     """Template parameters response"""
-    success: bool = True
-    message: str = "Success"
     template: str = Field(..., description="Template path")
     media_width: int = Field(..., description="Media width from template meta tags")
     media_height: int = Field(..., description="Media height from template meta tags")
@@ -66,4 +64,3 @@ class TemplateParamsResponse(BaseModel):
         default_factory=dict,
         description="Custom parameters defined in template. Key is parameter name, value is config."
     )
-

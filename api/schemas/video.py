@@ -17,6 +17,8 @@ Video generation API schemas
 from typing import Optional, Literal, Dict, Any
 from pydantic import BaseModel, Field
 
+from api.schemas.base import SuccessResponse
+
 
 class VideoGenerateRequest(BaseModel):
     """Video generation request"""
@@ -99,18 +101,14 @@ class VideoGenerateRequest(BaseModel):
         }
 
 
-class VideoGenerateResponse(BaseModel):
+class VideoGenerateResponse(SuccessResponse):
     """Video generation response (synchronous)"""
-    success: bool = True
-    message: str = "Success"
     video_url: str = Field(..., description="URL to access generated video")
     duration: float = Field(..., description="Video duration in seconds")
     file_size: int = Field(..., description="File size in bytes")
 
 
-class VideoGenerateAsyncResponse(BaseModel):
+class VideoGenerateAsyncResponse(SuccessResponse):
     """Video generation async response"""
-    success: bool = True
     message: str = "Task created successfully"
     task_id: str = Field(..., description="Task ID for tracking progress")
-

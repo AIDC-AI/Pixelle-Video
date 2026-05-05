@@ -17,6 +17,8 @@ Content generation API schemas
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
+from api.schemas.base import SuccessResponse
+
 
 # ============================================================================
 # Narration Generation
@@ -40,10 +42,8 @@ class NarrationGenerateRequest(BaseModel):
         }
 
 
-class NarrationGenerateResponse(BaseModel):
+class NarrationGenerateResponse(SuccessResponse):
     """Narration generation response"""
-    success: bool = True
-    message: str = "Success"
     narrations: List[str] = Field(..., description="Generated narrations")
 
 
@@ -70,10 +70,8 @@ class ImagePromptGenerateRequest(BaseModel):
         }
 
 
-class ImagePromptGenerateResponse(BaseModel):
+class ImagePromptGenerateResponse(SuccessResponse):
     """Image prompt generation response"""
-    success: bool = True
-    message: str = "Success"
     image_prompts: List[str] = Field(..., description="Generated image prompts")
 
 
@@ -95,9 +93,6 @@ class TitleGenerateRequest(BaseModel):
         }
 
 
-class TitleGenerateResponse(BaseModel):
+class TitleGenerateResponse(SuccessResponse):
     """Title generation response"""
-    success: bool = True
-    message: str = "Success"
     title: str = Field(..., description="Generated title")
-

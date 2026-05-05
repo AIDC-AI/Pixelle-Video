@@ -18,10 +18,14 @@ from typing import Any, Optional
 from pydantic import BaseModel
 
 
-class BaseResponse(BaseModel):
-    """Base API response"""
+class SuccessResponse(BaseModel):
+    """Base successful API response fields"""
     success: bool = True
     message: str = "Success"
+
+
+class BaseResponse(SuccessResponse):
+    """Base API response"""
     data: Optional[Any] = None
 
 
@@ -30,4 +34,3 @@ class ErrorResponse(BaseModel):
     success: bool = False
     message: str
     error: Optional[str] = None
-

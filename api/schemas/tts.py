@@ -17,6 +17,8 @@ TTS API schemas
 from typing import Optional
 from pydantic import BaseModel, Field
 
+from api.schemas.base import SuccessResponse
+
 
 class TTSSynthesizeRequest(BaseModel):
     """TTS synthesis request"""
@@ -44,10 +46,7 @@ class TTSSynthesizeRequest(BaseModel):
         }
 
 
-class TTSSynthesizeResponse(BaseModel):
+class TTSSynthesizeResponse(SuccessResponse):
     """TTS synthesis response"""
-    success: bool = True
-    message: str = "Success"
     audio_path: str = Field(..., description="Path to generated audio file")
     duration: float = Field(..., description="Audio duration in seconds")
-
