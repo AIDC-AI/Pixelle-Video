@@ -907,10 +907,13 @@ class VideoService:
         
         try:
             # Use stream copy when possible for fast trimming
+            input_stream = ffmpeg.input(video, t=target_duration)
+            output_kwargs = {"vcodec": "copy"}
+            if self.has_audio_stream(video):
+                output_kwargs["acodec"] = "copy"
             (
-                ffmpeg
-                .input(video, t=target_duration)
-                .output(output, vcodec='copy', acodec='copy' if self.has_audio_stream(video) else 'copy')
+                input_stream
+                .output(output, **output_kwargs)
                 .overwrite_output()
                 .run(capture_stdout=True, capture_stderr=True, quiet=True)
             )
