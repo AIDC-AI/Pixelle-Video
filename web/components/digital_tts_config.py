@@ -162,7 +162,7 @@ def render_style_config(pixelle_video):
             )
             
             # Preview button
-            if st.button(tr("tts.preview_button"), key="gidital_preview_tts", use_container_width=True):
+            if st.button(tr("tts.preview_button"), key="gidital_preview_tts", width="stretch"):
                 with st.spinner(tr("tts.previewing")):
                     try:
                         # Build TTS params based on mode
