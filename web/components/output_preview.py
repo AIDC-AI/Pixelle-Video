@@ -70,7 +70,7 @@ def render_single_output(pixelle_video, video_params):
             st.warning(tr("settings.not_configured"))
         
         # Generate Button
-        if st.button(tr("btn.generate"), type="primary", use_container_width=True):
+        if st.button(tr("btn.generate"), type="primary", width="stretch"):
             # Validate system configuration
             if not config_manager.validate():
                 st.error(tr("settings.not_configured"))
@@ -199,7 +199,7 @@ def render_single_output(pixelle_video, video_params):
                             data=video_bytes,
                             file_name=video_filename,
                             mime="video/mp4",
-                            use_container_width=True
+                            width="stretch"
                         )
                 else:
                     st.error(tr("status.video_not_found", path=result.video_path))
@@ -242,7 +242,7 @@ def render_batch_output(pixelle_video, video_params):
         if st.button(
             tr("batch.generate_button", count=batch_count),
             type="primary",
-            use_container_width=True,
+            width="stretch",
             help=tr("batch.generate_help")
         ):
             # Prepare shared config

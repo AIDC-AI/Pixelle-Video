@@ -213,7 +213,7 @@ def render_grid_task_card(task: dict, pixelle_video):
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("👁️", key=f"view_{task_id}", help=tr("history.task_card.view_detail"), use_container_width=True):
+            if st.button("👁️", key=f"view_{task_id}", help=tr("history.task_card.view_detail"), width="stretch"):
                 st.session_state[f"detail_{task_id}"] = True
                 st.rerun()
         
@@ -227,13 +227,13 @@ def render_grid_task_card(task: dict, pixelle_video):
                         mime="video/mp4",
                         key=f"download_{task_id}",
                         help=tr("history.task_card.download"),
-                        use_container_width=True
+                        width="stretch"
                     )
             else:
-                st.button("⬇️", key=f"download_disabled_{task_id}", disabled=True, use_container_width=True)
+                st.button("⬇️", key=f"download_disabled_{task_id}", disabled=True, width="stretch")
         
         with col3:
-            if st.button("🗑️", key=f"delete_{task_id}", help=tr("history.task_card.delete"), use_container_width=True):
+            if st.button("🗑️", key=f"delete_{task_id}", help=tr("history.task_card.delete"), width="stretch"):
                 st.session_state[f"confirm_delete_{task_id}"] = True
                 st.rerun()
         
@@ -242,7 +242,7 @@ def render_grid_task_card(task: dict, pixelle_video):
             st.warning("⚠️ 确认删除?")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("✅", key=f"confirm_yes_{task_id}", use_container_width=True):
+                if st.button("✅", key=f"confirm_yes_{task_id}", width="stretch"):
                     try:
                         success = run_async(pixelle_video.history.delete_task(task_id))
                         if success:
@@ -254,7 +254,7 @@ def render_grid_task_card(task: dict, pixelle_video):
                     except Exception as e:
                         st.error(f"删除失败: {str(e)}")
             with col2:
-                if st.button("❌", key=f"confirm_no_{task_id}", use_container_width=True):
+                if st.button("❌", key=f"confirm_no_{task_id}", width="stretch"):
                     st.session_state[f"confirm_delete_{task_id}"] = False
                     st.rerun()
 
@@ -359,7 +359,7 @@ def render_task_detail_modal(task_id: str, pixelle_video):
                     data=f,
                     file_name=f"{title}.mp4",
                     mime="video/mp4",
-                    use_container_width=True
+                    width="stretch"
                 )
         else:
             st.warning("Video file not found")
@@ -444,7 +444,7 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         
         with col1:
-            if st.button("⬅️ Previous", disabled=st.session_state.history_page == 1, use_container_width=True):
+            if st.button("⬅️ Previous", disabled=st.session_state.history_page == 1, width="stretch"):
                 st.session_state.history_page -= 1
                 st.rerun()
         
@@ -457,7 +457,7 @@ def main():
             )
         
         with col3:
-            if st.button("Next ➡️", disabled=st.session_state.history_page == total_pages, use_container_width=True):
+            if st.button("Next ➡️", disabled=st.session_state.history_page == total_pages, width="stretch"):
                 st.session_state.history_page += 1
                 st.rerun()
 

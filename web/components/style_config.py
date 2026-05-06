@@ -192,7 +192,7 @@ def render_style_config(pixelle_video):
             )
             
             # Preview button
-            if st.button(tr("tts.preview_button"), key="preview_tts", use_container_width=True):
+            if st.button(tr("tts.preview_button"), key="preview_tts", width="stretch"):
                 with st.spinner(tr("tts.previewing")):
                     try:
                         # Build TTS params based on mode
@@ -426,7 +426,7 @@ def render_style_config(pixelle_video):
                                 
                                 # Display preview image or placeholder
                                 if preview_path and os.path.exists(preview_path):
-                                    st.image(preview_path, use_container_width=True)
+                                    st.image(preview_path, width="stretch")
                                 else:
                                     # Placeholder for templates without preview (fixed height, compact layout)
                                     st.markdown(
@@ -466,7 +466,7 @@ def render_style_config(pixelle_video):
                                 if st.button(
                                     button_label,
                                     key=f"template_{template.template_path}",
-                                    use_container_width=True,
+                                    width="stretch",
                                     type=button_type,
                                 ):
                                     st.session_state['selected_template'] = template.template_path
@@ -628,7 +628,7 @@ def render_style_config(pixelle_video):
             st.info(f"📐 {tr('template.size_info')}: {template_width} × {template_height}")
             
             # Preview button
-            if st.button(tr("template.preview_button"), key="btn_preview_template", use_container_width=True):
+            if st.button(tr("template.preview_button"), key="btn_preview_template", width="stretch"):
                 with st.spinner(tr("template.preview_generating")):
                     try:
                         from pixelle_video.services.frame_html import HTMLFrameGenerator
@@ -794,7 +794,7 @@ def render_style_config(pixelle_video):
             
                 # Preview button
                 preview_button_label = tr("style.video_preview") if template_media_type == "video" else tr("style.preview")
-                if st.button(preview_button_label, key="preview_style", use_container_width=True):
+                if st.button(preview_button_label, key="preview_style", width="stretch"):
                     previewing_text = tr("style.video_previewing") if template_media_type == "video" else tr("style.previewing")
                     with st.spinner(previewing_text):
                         try:

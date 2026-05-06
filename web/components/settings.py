@@ -148,7 +148,7 @@ def render_advanced_settings():
                         f"🔄 {tr('settings.llm.load_models')}",
                         help=tr("settings.llm.load_models_help"),
                         key="load_models_btn",
-                        use_container_width=True
+                        width="stretch"
                     )
                 
                 with test_col:
@@ -157,7 +157,7 @@ def render_advanced_settings():
                         f"🔌 {tr('settings.llm.test_connection')}",
                         help=tr("settings.llm.test_connection_help"),
                         key="test_llm_connection_btn",
-                        use_container_width=True
+                        width="stretch"
                     )
                 
                 # Handle load models button click
@@ -232,7 +232,7 @@ def render_advanced_settings():
                     )
                 
                 # Test connection button
-                if st.button(tr("btn.test_connection"), key="test_comfyui", use_container_width=True):
+                if st.button(tr("btn.test_connection"), key="test_comfyui", width="stretch"):
                     try:
                         import requests
                         response = requests.get(f"{comfyui_url}/system_stats", timeout=5)
@@ -297,7 +297,7 @@ def render_advanced_settings():
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button(tr("btn.save_config"), use_container_width=True, key="save_config_btn"):
+            if st.button(tr("btn.save_config"), width="stretch", key="save_config_btn"):
                 try:
                     # Validate and save LLM configuration
                     if not (llm_api_key and llm_base_url and llm_model):
@@ -325,7 +325,7 @@ def render_advanced_settings():
                     st.error(f"{tr('status.save_failed')}: {str(e)}")
         
         with col2:
-            if st.button(tr("btn.reset_config"), use_container_width=True, key="reset_config_btn"):
+            if st.button(tr("btn.reset_config"), width="stretch", key="reset_config_btn"):
                 # Reset to default
                 from pixelle_video.config.schema import PixelleVideoConfig
                 config_manager.config = PixelleVideoConfig()
