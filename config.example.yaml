@@ -16,6 +16,8 @@ llm:
 # OpenAI GPT-4o:   base_url: "https://api.openai.com/v1"                          model: "gpt-4o"
 # DeepSeek:        base_url: "https://api.deepseek.com"                           model: "deepseek-chat"
 # Ollama (Local):  base_url: "http://localhost:11434/v1"                          model: "llama3.2"
+# Astraflow:        base_url: "https://api-us-ca.umodelverse.ai/v1"              model: "gpt-4o"
+# Astraflow CN:      base_url: "https://api.modelverse.cn/v1"                    model: "gpt-4o"
 
 # ==================== ComfyUI Configuration ====================
 comfyui:
