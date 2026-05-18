@@ -20,6 +20,7 @@ Key Feature:
   to ensure perfect sync between audio and video (no padding, no trimming needed)
 """
 
+from pathlib import Path
 from typing import Callable, Optional
 
 import httpx
@@ -233,24 +234,32 @@ class FrameProcessor:
         frame.media_type = media_result.media_type
         
         if media_result.is_image:
-            # Download image to local (pass task_id)
-            local_path = await self._download_media(
-                media_result.url,
-                frame.index,
-                config.task_id,
-                media_type="image"
-            )
+            # Use local path if available, otherwise download from URL
+            if media_result.local_path and Path(media_result.local_path).exists():
+                local_path = media_result.local_path
+                logger.debug(f"  ✓ Image already local: {local_path}")
+            else:
+                local_path = await self._download_media(
+                    media_result.url,
+                    frame.index,
+                    config.task_id,
+                    media_type="image"
+                )
             frame.image_path = local_path
             logger.debug(f"  ✓ Image generated: {local_path}")
         
         elif media_result.is_video:
-            # Download video to local (pass task_id)
-            local_path = await self._download_media(
-                media_result.url,
-                frame.index,
-                config.task_id,
-                media_type="video"
-            )
+            # Use local path if available, otherwise download from URL
+            if media_result.local_path and Path(media_result.local_path).exists():
+                local_path = media_result.local_path
+                logger.debug(f"  ✓ Video already local: {local_path}")
+            else:
+                local_path = await self._download_media(
+                    media_result.url,
+                    frame.index,
+                    config.task_id,
+                    media_type="video"
+                )
             frame.video_path = local_path
             
             # Update duration from video if available
