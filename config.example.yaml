@@ -17,6 +17,24 @@ llm:
 # DeepSeek:        base_url: "https://api.deepseek.com"                           model: "deepseek-chat"
 # Ollama (Local):  base_url: "http://localhost:11434/v1"                          model: "llama3.2"
 
+# ==================== Image Provider Selection ====================
+# Choose your image generation backend
+image_provider:
+  provider: comfyui  # Options: "comfyui" (default) or "azure_openai"
+
+# ==================== Azure OpenAI Configuration ====================
+# Required if image_provider.provider is set to "azure_openai"
+azure_openai:
+  image:
+    endpoint: ""  # e.g., "https://your-resource.openai.azure.com"
+    api_key: ""   # Your Azure OpenAI API key
+    deployment: "gpt-image-1"  # Deployment name (gpt-image-1 for GPT-image-2, or dall-e-3)
+    api_version: "2025-04-01-preview"
+    default_size: "1024x1024"  # Options: 1024x1024, 1024x1536, 1536x1024 (gpt-image-1)
+    default_quality: "auto"    # Options: auto, high, medium, low
+    output_format: "png"       # Options: png, jpeg, webp
+    output_dir: "output/images"
+
 # ==================== ComfyUI Configuration ====================
 comfyui:
   # Global ComfyUI settings
@@ -28,9 +46,14 @@ comfyui:
   
   # TTS-specific configuration
   tts:
-    default_workflow: selfhost/tts_edge.json  # TTS workflow to use
+    inference_mode: local  # Options: "local" (Edge TTS) or "comfyui" (workflow-based)
+    local:
+      voice: "zh-CN-YunjianNeural"  # Edge TTS voice ID
+      speed: 1.2  # Speech speed multiplier (0.5-2.0)
+    comfyui:
+      default_workflow: selfhost/tts_edge.json  # TTS workflow (when inference_mode: comfyui)
   
-  # Image-specific configuration
+  # Image-specific configuration (used when image_provider.provider is "comfyui")
   image:
     # Required: Default workflow to use (no fallback)
     # Options: runninghub/image_flux.json (recommended, no local setup)

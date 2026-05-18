@@ -11,43 +11,47 @@
 # limitations under the License.
 
 """
-Media Generation Service - ComfyUI Workflow-based implementation
+Media Generation Service - Multi-provider implementation
 
-Supports both image and video generation workflows.
-Automatically detects output type based on ExecuteResult.
+Supports multiple image generation backends:
+- ComfyUI workflows (default)
+- Azure OpenAI GPT-image-2 / DALL-E 3
+
+Automatically routes to configured provider based on config.
 """
 
 from typing import Optional
 
-from comfykit import ComfyKit
 from loguru import logger
 
-from pixelle_video.services.comfy_base_service import ComfyBaseService
 from pixelle_video.models.media import MediaResult
+from pixelle_video.services.azure_image_service import AzureImageService
+from pixelle_video.services.comfy_base_service import ComfyBaseService
 
 
 class MediaService(ComfyBaseService):
     """
-    Media generation service - Workflow-based
+    Media generation service - Multi-provider
     
-    Uses ComfyKit to execute image/video generation workflows.
-    Supports both image_ and video_ workflow prefixes.
+    Routes image generation to configured provider:
+    - comfyui: Uses ComfyKit workflows (default, existing behavior)
+    - azure_openai: Uses Azure OpenAI GPT-image-2 / DALL-E 3
+    
+    Video generation always uses ComfyUI workflows.
     
     Usage:
-        # Use default workflow (workflows/image_flux.json)
+        # Use configured provider (from config.yaml)
         media = await pixelle_video.media(prompt="a cat")
         if media.is_image:
             print(f"Generated image: {media.url}")
-        elif media.is_video:
-            print(f"Generated video: {media.url} ({media.duration}s)")
         
-        # Use specific workflow
+        # Force specific provider
         media = await pixelle_video.media(
             prompt="a cat",
-            workflow="image_flux.json"
+            provider="azure_openai"  # Override config
         )
         
-        # List available workflows
+        # List available workflows (ComfyUI only)
         workflows = pixelle_video.media.list_workflows()
     """
     
@@ -63,7 +67,25 @@ class MediaService(ComfyBaseService):
             config: Full application config dict
             core: PixelleVideoCore instance (for accessing shared ComfyKit)
         """
-        super().__init__(config, service_name="image", core=core)  # Keep "image" for config compatibility
+        super().__init__(config, service_name="image", core=core)
+        
+        # Store full config for provider routing
+        self._full_config = config
+        
+        # Initialize Azure Image Service (lazy - only if configured)
+        self._azure_service: Optional[AzureImageService] = None
+        
+        # Get default provider from config
+        image_provider_config = config.get("image_provider", {})
+        self._default_provider = image_provider_config.get("provider", "comfyui")
+        
+        logger.info(f"MediaService initialized with default provider: {self._default_provider}")
+    
+    def _get_azure_service(self) -> AzureImageService:
+        """Get or create Azure Image Service"""
+        if self._azure_service is None:
+            self._azure_service = AzureImageService(self._full_config, core=self.core)
+        return self._azure_service
     
     def _scan_workflows(self):
         """
@@ -71,8 +93,13 @@ class MediaService(ComfyBaseService):
         
         Override parent method to support multiple prefixes
         """
-        from pixelle_video.utils.os_util import list_resource_dirs, list_resource_files, get_resource_path
         from pathlib import Path
+
+        from pixelle_video.utils.os_util import (
+            get_resource_path,
+            list_resource_dirs,
+            list_resource_files,
+        )
         
         workflows = []
         
@@ -111,6 +138,8 @@ class MediaService(ComfyBaseService):
         self,
         prompt: str,
         workflow: Optional[str] = None,
+        # Provider selection
+        provider: Optional[str] = None,  # "comfyui" or "azure_openai" - overrides config
         # Media type specification (required for proper handling)
         media_type: str = "image",  # "image" or "video"
         # ComfyUI connection (optional overrides)
@@ -125,77 +154,149 @@ class MediaService(ComfyBaseService):
         seed: Optional[int] = None,
         cfg: Optional[float] = None,
         sampler: Optional[str] = None,
+        # Azure-specific parameters
+        size: Optional[str] = None,  # e.g., "1024x1024"
+        quality: Optional[str] = None,  # "auto", "high", "medium", "low"
         **params
     ) -> MediaResult:
         """
-        Generate media (image or video) using workflow
+        Generate media (image or video) using configured provider
         
-        Media type must be specified explicitly via media_type parameter.
-        Returns a MediaResult object containing media type and URL.
+        For images: Routes to ComfyUI or Azure OpenAI based on config/provider param.
+        For videos: Always uses ComfyUI workflows.
         
         Args:
             prompt: Media generation prompt
-            workflow: Workflow filename (default: from config or "image_flux.json")
+            workflow: Workflow filename (ComfyUI only)
+            provider: Override provider ("comfyui" or "azure_openai")
             media_type: Type of media to generate - "image" or "video" (default: "image")
             comfyui_url: ComfyUI URL (optional, overrides config)
             runninghub_api_key: RunningHub API key (optional, overrides config)
-            width: Media width
-            height: Media height
-            duration: Target video duration in seconds (only for video workflows, typically from TTS audio duration)
-            negative_prompt: Negative prompt
-            steps: Sampling steps
-            seed: Random seed
-            cfg: CFG scale
-            sampler: Sampler name
-            **params: Additional workflow parameters
+            width: Media width (ComfyUI) or converted to size (Azure)
+            height: Media height (ComfyUI) or converted to size (Azure)
+            duration: Target video duration in seconds (only for video workflows)
+            negative_prompt: Negative prompt (ComfyUI only)
+            steps: Sampling steps (ComfyUI only)
+            seed: Random seed (ComfyUI only)
+            cfg: CFG scale (ComfyUI only)
+            sampler: Sampler name (ComfyUI only)
+            size: Image size for Azure (e.g., "1024x1024")
+            quality: Image quality for Azure ("auto", "high", "medium", "low")
+            **params: Additional provider-specific parameters
         
         Returns:
             MediaResult object with media_type ("image" or "video") and url
         
         Examples:
-            # Simplest: use default workflow (workflows/image_flux.json)
+            # Use default provider from config
             media = await pixelle_video.media(prompt="a beautiful cat")
-            if media.is_image:
-                print(f"Image: {media.url}")
             
-            # Use specific workflow
+            # Force Azure OpenAI
             media = await pixelle_video.media(
                 prompt="a cat",
-                workflow="image_flux.json"
+                provider="azure_openai",
+                size="1024x1024",
+                quality="high"
             )
             
-            # Video workflow
+            # Force ComfyUI workflow
+            media = await pixelle_video.media(
+                prompt="a cat",
+                provider="comfyui",
+                workflow="runninghub/image_flux.json"
+            )
+            
+            # Video (always ComfyUI)
             media = await pixelle_video.media(
                 prompt="a cat running",
-                workflow="image_video.json"
-            )
-            if media.is_video:
-                print(f"Video: {media.url}, duration: {media.duration}s")
-            
-            # With additional parameters
-            media = await pixelle_video.media(
-                prompt="a cat",
-                workflow="image_flux.json",
-                width=1024,
-                height=1024,
-                steps=20,
-                seed=42
-            )
-            
-            # With absolute path
-            media = await pixelle_video.media(
-                prompt="a cat",
-                workflow="/path/to/custom.json"
-            )
-            
-            # With custom ComfyUI server
-            media = await pixelle_video.media(
-                prompt="a cat",
-                comfyui_url="http://192.168.1.100:8188"
+                media_type="video",
+                workflow="runninghub/video_wan2.1_fusionx.json"
             )
         """
+        # Determine effective provider
+        effective_provider = provider or self._default_provider
+        
+        # Video always uses ComfyUI
+        if media_type == "video":
+            effective_provider = "comfyui"
+            logger.debug("Video generation - forcing ComfyUI provider")
+        
+        # Route to appropriate provider
+        if effective_provider == "azure_openai":
+            return await self._generate_with_azure(
+                prompt=prompt,
+                width=width,
+                height=height,
+                size=size,
+                quality=quality,
+                **params
+            )
+        else:
+            return await self._generate_with_comfyui(
+                prompt=prompt,
+                workflow=workflow,
+                media_type=media_type,
+                comfyui_url=comfyui_url,
+                runninghub_api_key=runninghub_api_key,
+                width=width,
+                height=height,
+                duration=duration,
+                negative_prompt=negative_prompt,
+                steps=steps,
+                seed=seed,
+                cfg=cfg,
+                sampler=sampler,
+                **params
+            )
+    
+    async def _generate_with_azure(
+        self,
+        prompt: str,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        size: Optional[str] = None,
+        quality: Optional[str] = None,
+        **params
+    ) -> MediaResult:
+        """Generate image using Azure OpenAI"""
+        azure_service = self._get_azure_service()
+        
+        # Convert width/height to size if provided and size not specified
+        if size is None and width and height:
+            size = f"{width}x{height}"
+            logger.debug(f"Converted width={width}, height={height} to size={size}")
+        
+        logger.info("🎨 Routing to Azure OpenAI for image generation")
+        
+        return await azure_service(
+            prompt=prompt,
+            size=size,
+            quality=quality,
+            **params
+        )
+    
+    async def _generate_with_comfyui(
+        self,
+        prompt: str,
+        workflow: Optional[str] = None,
+        media_type: str = "image",
+        comfyui_url: Optional[str] = None,
+        runninghub_api_key: Optional[str] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        duration: Optional[float] = None,
+        negative_prompt: Optional[str] = None,
+        steps: Optional[int] = None,
+        seed: Optional[int] = None,
+        cfg: Optional[float] = None,
+        sampler: Optional[str] = None,
+        **params
+    ) -> MediaResult:
+        """Generate media using ComfyUI workflow (original implementation)"""
         # 1. Resolve workflow (returns structured info)
         workflow_info = self._resolve_workflow(workflow=workflow)
+        
+        logger.info(f"🎨 Routing to ComfyUI for {media_type} generation")
         
         # 2. Build workflow parameters (ComfyKit config is now managed by core)
         workflow_params = {"prompt": prompt}
@@ -285,3 +386,21 @@ class MediaService(ComfyBaseService):
         except Exception as e:
             logger.error(f"Media generation error: {e}")
             raise
+    
+    @property
+    def active_provider(self) -> str:
+        """Get currently active image provider"""
+        return self._default_provider
+    
+    @property
+    def azure_available(self) -> bool:
+        """Check if Azure OpenAI is configured and available"""
+        azure_service = self._get_azure_service()
+        return azure_service.is_configured()
+    
+    def __repr__(self) -> str:
+        """String representation"""
+        providers = [self._default_provider]
+        if self._default_provider == "comfyui" and self.azure_available:
+            providers.append("azure_openai (available)")
+        return f"<MediaService provider={self._default_provider!r} workflows={len(self.available)}>"

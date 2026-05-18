@@ -15,6 +15,7 @@ Media generation result models
 """
 
 from typing import Literal, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -22,17 +23,25 @@ class MediaResult(BaseModel):
     """
     Media generation result from workflow execution
     
-    Supports both image and video outputs from ComfyUI workflows.
+    Supports both image and video outputs from ComfyUI workflows and Azure OpenAI.
     The media_type indicates what kind of media was generated.
     
     Attributes:
         media_type: Type of media generated ("image" or "video")
         url: URL or path to the generated media
+        local_path: Local file path if media was downloaded/saved locally
         duration: Duration in seconds (only for video, None for image)
     
     Examples:
-        # Image result
+        # Image result (URL only)
         MediaResult(media_type="image", url="http://example.com/image.png")
+        
+        # Image result (with local path)
+        MediaResult(
+            media_type="image", 
+            url="http://example.com/image.png",
+            local_path="output/images/azure_abc123.png"
+        )
         
         # Video result
         MediaResult(media_type="video", url="http://example.com/video.mp4", duration=5.2)
@@ -43,6 +52,10 @@ class MediaResult(BaseModel):
     )
     url: str = Field(
         description="URL or path to the generated media file"
+    )
+    local_path: Optional[str] = Field(
+        None,
+        description="Local file path if media was downloaded/saved locally"
     )
     duration: Optional[float] = Field(
         None,
@@ -58,4 +71,8 @@ class MediaResult(BaseModel):
     def is_video(self) -> bool:
         """Check if this is a video result"""
         return self.media_type == "video"
-
+    
+    @property
+    def path(self) -> str:
+        """Get best available path (local preferred, fallback to url)"""
+        return self.local_path or self.url

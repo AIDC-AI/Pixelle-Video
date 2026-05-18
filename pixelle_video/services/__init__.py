@@ -18,7 +18,8 @@ Core services providing atomic capabilities.
 Services:
 - LLMService: LLM text generation
 - TTSService: Text-to-speech
-- MediaService: Media generation (image & video)
+- MediaService: Media generation (image & video) - supports ComfyUI and Azure OpenAI
+- AzureImageService: Azure OpenAI GPT-image-2 / DALL-E 3 image generation
 - VideoService: Video processing
 - FrameProcessor: Frame processing orchestrator
 - PersistenceService: Task metadata and storyboard persistence
@@ -30,6 +31,7 @@ from pixelle_video.services.comfy_base_service import ComfyBaseService
 from pixelle_video.services.llm_service import LLMService
 from pixelle_video.services.tts_service import TTSService
 from pixelle_video.services.media import MediaService
+from pixelle_video.services.azure_image_service import AzureImageService
 from pixelle_video.services.video import VideoService
 from pixelle_video.services.frame_processor import FrameProcessor
 from pixelle_video.services.persistence import PersistenceService
@@ -43,10 +45,10 @@ __all__ = [
     "LLMService",
     "TTSService",
     "MediaService",
+    "AzureImageService",
     "ImageService",  # Backward compatibility
     "VideoService",
     "FrameProcessor",
     "PersistenceService",
     "HistoryManager",
 ]
-

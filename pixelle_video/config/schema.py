@@ -15,7 +15,8 @@ Configuration schema with Pydantic models
 
 Single source of truth for all configuration defaults and validation.
 """
-from typing import Optional
+from typing import Literal, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -80,6 +81,44 @@ class ComfyUIConfig(BaseModel):
     video: VideoSubConfig = Field(default_factory=VideoSubConfig, description="Video-specific configuration")
 
 
+# ==================== Azure OpenAI Configuration ====================
+
+class AzureOpenAIImageConfig(BaseModel):
+    """Azure OpenAI Image Generation configuration (GPT-image-2 / DALL-E 3)"""
+    endpoint: Optional[str] = Field(default=None, description="Azure OpenAI endpoint URL")
+    api_key: Optional[str] = Field(default=None, description="Azure OpenAI API key")
+    deployment: str = Field(default="gpt-image-1", description="Deployment name (e.g., gpt-image-1, dall-e-3)")
+    api_version: str = Field(default="2025-04-01-preview", description="API version")
+    default_size: str = Field(default="1024x1024", description="Default image size")
+    default_quality: str = Field(default="auto", description="Default quality: auto, high, medium, low")
+    output_format: str = Field(default="png", description="Output format: png, jpeg, webp")
+    output_dir: str = Field(default="output/images", description="Directory for saving generated images")
+
+
+class AzureOpenAIConfig(BaseModel):
+    """Azure OpenAI configuration (umbrella for all Azure OpenAI services)"""
+    image: AzureOpenAIImageConfig = Field(
+        default_factory=AzureOpenAIImageConfig, 
+        description="Azure OpenAI Image Generation (GPT-image-2)"
+    )
+
+
+# ==================== Image Provider Selection ====================
+
+class ImageProviderConfig(BaseModel):
+    """
+    Image provider selection configuration
+    
+    Allows switching between different image generation backends:
+    - comfyui: Use ComfyUI workflows (default, existing behavior)
+    - azure_openai: Use Azure OpenAI GPT-image-2 / DALL-E 3
+    """
+    provider: Literal["comfyui", "azure_openai"] = Field(
+        default="comfyui",
+        description="Image generation provider: 'comfyui' or 'azure_openai'"
+    )
+
+
 class TemplateConfig(BaseModel):
     """Template configuration"""
     default_template: str = Field(
@@ -93,6 +132,8 @@ class PixelleVideoConfig(BaseModel):
     project_name: str = Field(default="Pixelle-Video", description="Project name")
     llm: LLMConfig = Field(default_factory=LLMConfig)
     comfyui: ComfyUIConfig = Field(default_factory=ComfyUIConfig)
+    azure_openai: AzureOpenAIConfig = Field(default_factory=AzureOpenAIConfig)
+    image_provider: ImageProviderConfig = Field(default_factory=ImageProviderConfig)
     template: TemplateConfig = Field(default_factory=TemplateConfig)
     
     def is_llm_configured(self) -> bool:
@@ -103,6 +144,18 @@ class PixelleVideoConfig(BaseModel):
             self.llm.model and self.llm.model.strip()
         )
     
+    def is_azure_image_configured(self) -> bool:
+        """Check if Azure OpenAI Image is properly configured"""
+        return bool(
+            self.azure_openai.image.endpoint and 
+            self.azure_openai.image.api_key and 
+            self.azure_openai.image.deployment
+        )
+    
+    def get_image_provider(self) -> str:
+        """Get active image provider"""
+        return self.image_provider.provider
+    
     def validate_required(self) -> bool:
         """Validate required configuration"""
         return self.is_llm_configured()
@@ -110,4 +163,3 @@ class PixelleVideoConfig(BaseModel):
     def to_dict(self) -> dict:
         """Convert to dictionary (for backward compatibility)"""
         return self.model_dump()
-
