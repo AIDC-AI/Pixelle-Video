@@ -14,16 +14,19 @@
 LLM (Large Language Model) Service - Direct OpenAI SDK implementation
 
 Supports structured output via response_type parameter (Pydantic model).
+
+API Styles:
+- chat_completions: Standard OpenAI chat.completions.create() (default)
+- azure_responses: Azure OpenAI Responses API for GPT-5.5, o3, etc.
 """
 
 import json
 import re
 from typing import Optional, Type, TypeVar, Union
 
-from openai import AsyncOpenAI
-from pydantic import BaseModel
 from loguru import logger
-
+from openai import AsyncAzureOpenAI, AsyncOpenAI
+from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -41,6 +44,7 @@ class LLMService:
     - DeepSeek (deepseek-chat)
     - Moonshot Kimi (moonshot-v1-8k, moonshot-v1-32k, moonshot-v1-128k)
     - Ollama (llama3.2, qwen2.5, mistral, codellama) - FREE & LOCAL!
+    - Azure OpenAI Responses API (gpt-5.5, o3) - via api_style: azure_responses
     - Any custom provider with OpenAI-compatible API
     
     Usage:
@@ -65,6 +69,7 @@ class LLMService:
         # Note: We no longer cache config here to support hot reload
         # Config is read dynamically from config_manager in _get_config_value()
         self._client: Optional[AsyncOpenAI] = None
+        self._azure_client: Optional[AsyncAzureOpenAI] = None
     
     def _get_config_value(self, key: str, default=None):
         """
@@ -80,13 +85,17 @@ class LLMService:
         from pixelle_video.config import config_manager
         return getattr(config_manager.config.llm, key, default)
     
+    def _get_api_style(self) -> str:
+        """Get the configured API style"""
+        return self._get_config_value("api_style", "chat_completions")
+    
     def _create_client(
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
     ) -> AsyncOpenAI:
         """
-        Create OpenAI client
+        Create OpenAI client for chat_completions style
         
         Args:
             api_key: API key (optional, uses config if not provided)
@@ -115,6 +124,29 @@ class LLMService:
         
         return AsyncOpenAI(**client_kwargs)
     
+    def _create_azure_client(self) -> AsyncAzureOpenAI:
+        """
+        Create Azure OpenAI client for azure_responses style
+        
+        Returns:
+            AsyncAzureOpenAI client instance
+        """
+        endpoint = self._get_config_value("azure_endpoint")
+        api_key = self._get_config_value("azure_api_key")
+        api_version = self._get_config_value("azure_api_version", "2025-03-01-preview")
+        
+        if not endpoint or not api_key:
+            raise ValueError(
+                "Azure Responses API requires azure_endpoint and azure_api_key in config. "
+                "Set llm.azure_endpoint and llm.azure_api_key, or use api_style: chat_completions"
+            )
+        
+        return AsyncAzureOpenAI(
+            azure_endpoint=endpoint,
+            api_key=api_key,
+            api_version=api_version,
+        )
+    
     async def __call__(
         self,
         prompt: str,
@@ -124,6 +156,7 @@ class LLMService:
         temperature: float = 0.7,
         max_tokens: int = 2000,
         response_type: Optional[Type[T]] = None,
+        api_style: Optional[str] = None,  # Override config api_style
         **kwargs
     ) -> Union[str, T]:
         """
@@ -138,6 +171,7 @@ class LLMService:
             max_tokens: Maximum tokens to generate
             response_type: Optional Pydantic model class for structured output.
                           If provided, returns parsed model instance instead of string.
+            api_style: Override API style ("chat_completions" or "azure_responses")
             **kwargs: Additional provider-specific parameters
         
         Returns:
@@ -159,6 +193,44 @@ class LLMService:
             )
             print(review.title)  # Structured access
         """
+        # Determine API style
+        effective_api_style = api_style or self._get_api_style()
+        
+        if effective_api_style == "azure_responses":
+            return await self._call_azure_responses(
+                prompt=prompt,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_type=response_type,
+                **kwargs
+            )
+        else:
+            return await self._call_chat_completions(
+                prompt=prompt,
+                api_key=api_key,
+                base_url=base_url,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_type=response_type,
+                **kwargs
+            )
+    
+    async def _call_chat_completions(
+        self,
+        prompt: str,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        response_type: Optional[Type[T]] = None,
+        **kwargs
+    ) -> Union[str, T]:
+        """
+        Call LLM using standard chat.completions API
+        """
         # Create client (new instance each time to support parameter overrides)
         client = self._create_client(api_key=api_key, base_url=base_url)
         
@@ -169,11 +241,11 @@ class LLMService:
             or "gpt-3.5-turbo"  # Default fallback
         )
         
-        logger.debug(f"LLM call: model={final_model}, base_url={client.base_url}, response_type={response_type}")
+        logger.debug(f"LLM call (chat_completions): model={final_model}, base_url={client.base_url}, response_type={response_type}")
         
         try:
             if response_type is not None:
-                # Structured output mode - try beta.chat.completions.parse first
+                # Structured output mode
                 return await self._call_with_structured_output(
                     client=client,
                     model=final_model,
@@ -202,6 +274,79 @@ class LLMService:
             logger.error(f"LLM call error (model={final_model}, base_url={client.base_url}): {e}")
             raise
     
+    async def _call_azure_responses(
+        self,
+        prompt: str,
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        response_type: Optional[Type[T]] = None,
+        **kwargs
+    ) -> Union[str, T]:
+        """
+        Call LLM using Azure OpenAI Responses API
+        
+        The Responses API uses a different format:
+        - responses.create() instead of chat.completions.create()
+        - input: str instead of messages: list
+        - Returns response.output_text instead of choices[0].message.content
+        """
+        client = self._create_azure_client()
+        
+        # Get deployment (model) name
+        final_model = (
+            model
+            or self._get_config_value("azure_deployment")
+            or self._get_config_value("model")
+            or "gpt-55"  # Default fallback for Azure
+        )
+        
+        logger.debug(f"LLM call (azure_responses): deployment={final_model}, endpoint={client._azure_endpoint}")
+        
+        try:
+            # For structured output, enhance the prompt with JSON schema instructions
+            effective_prompt = prompt
+            if response_type is not None:
+                json_instruction = self._get_json_schema_instruction(response_type)
+                effective_prompt = f"{prompt}\n\n{json_instruction}"
+            
+            # Azure Responses API call
+            # Note: The responses.create() method may have different parameter names
+            # Based on Azure documentation for GPT-5.5/o3 models
+            response = await client.responses.create(
+                model=final_model,
+                input=effective_prompt,
+                max_output_tokens=max_tokens,
+                temperature=temperature,
+                **kwargs
+            )
+            
+            # Extract text from response
+            # The Responses API returns output_text directly
+            if hasattr(response, 'output_text'):
+                result = response.output_text
+            elif hasattr(response, 'output') and isinstance(response.output, list):
+                # Handle array output format
+                result = "".join(
+                    item.content[0].text if hasattr(item, 'content') else str(item)
+                    for item in response.output
+                    if hasattr(item, 'type') and item.type == 'message'
+                )
+            else:
+                # Fallback: try to get content from first choice if available
+                result = str(response)
+            
+            logger.debug(f"Azure Responses API response length: {len(result)} chars")
+            
+            if response_type is not None:
+                return self._parse_response_as_model(result, response_type)
+            
+            return result
+        
+        except Exception as e:
+            logger.error(f"Azure Responses API error (deployment={final_model}): {e}")
+            raise
+    
     async def _call_with_structured_output(
         self,
         client: AsyncOpenAI,
@@ -213,7 +358,7 @@ class LLMService:
         **kwargs
     ) -> T:
         """
-        Call LLM with structured output support
+        Call LLM with structured output support (chat_completions style)
         
         Uses JSON schema instruction appended to prompt for maximum compatibility
         across all OpenAI-compatible providers (Qwen, DeepSeek, etc.).
@@ -330,11 +475,28 @@ You MUST respond with ONLY a valid JSON object (no markdown, no extra text)."""
         Example:
             print(f"Using model: {pixelle_video.llm.active}")
         """
+        api_style = self._get_api_style()
+        if api_style == "azure_responses":
+            return self._get_config_value("azure_deployment") or self._get_config_value("model", "gpt-55")
         return self._get_config_value("model", "gpt-3.5-turbo")
+    
+    @property
+    def api_style(self) -> str:
+        """
+        Get active API style
+        
+        Returns:
+            API style ("chat_completions" or "azure_responses")
+        """
+        return self._get_api_style()
     
     def __repr__(self) -> str:
         """String representation"""
         model = self.active
-        base_url = self._get_config_value("base_url", "default")
-        return f"<LLMService model={model!r} base_url={base_url!r}>"
-
+        api_style = self._get_api_style()
+        if api_style == "azure_responses":
+            endpoint = self._get_config_value("azure_endpoint", "not configured")
+            return f"<LLMService api_style={api_style!r} model={model!r} endpoint={endpoint!r}>"
+        else:
+            base_url = self._get_config_value("base_url", "default")
+            return f"<LLMService api_style={api_style!r} model={model!r} base_url={base_url!r}>"

@@ -6,16 +6,65 @@ project_name: Pixelle-Video
 
 # ==================== LLM Configuration ====================
 # Supports any OpenAI SDK compatible API
+#
+# api_style controls the API format used:
+#   - "chat_completions" (default): Standard OpenAI chat.completions.create()
+#   - "azure_responses": Azure OpenAI Responses API (GPT-5.5, o3, etc.)
+#
+# For chat_completions style:
+#   - Uses chat.completions.create() with messages array
+#   - Works with OpenAI, Qwen, DeepSeek, Ollama, Azure (older models)
+#
+# For azure_responses style:
+#   - Uses responses.create() with input string
+#   - Required for Azure GPT-5.5, o3, and newer Responses-only models
+#   - Set azure_endpoint, azure_api_key, and azure_deployment
+#
 llm:
   api_key: ""
   base_url: ""
   model: ""
+  api_style: "chat_completions"  # Options: "chat_completions" (default), "azure_responses"
+  
+  # Azure Responses API settings (used when api_style: azure_responses)
+  azure_endpoint: ""     # e.g., "https://your-resource.openai.azure.com"
+  azure_api_key: ""      # Your Azure OpenAI API key
+  azure_deployment: ""   # Deployment name (e.g., "gpt-55", "o3")
+  azure_api_version: "2025-03-01-preview"  # API version
 
 # Popular presets:
-# Qwen Max:        base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"  model: "qwen-max"
-# OpenAI GPT-4o:   base_url: "https://api.openai.com/v1"                          model: "gpt-4o"
-# DeepSeek:        base_url: "https://api.deepseek.com"                           model: "deepseek-chat"
-# Ollama (Local):  base_url: "http://localhost:11434/v1"                          model: "llama3.2"
+# --------------------------------------------------
+# OpenAI GPT-4o (chat_completions):
+#   base_url: "https://api.openai.com/v1"
+#   model: "gpt-4o"
+#   api_style: "chat_completions"
+#
+# Qwen Max (chat_completions):
+#   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+#   model: "qwen-max"
+#   api_style: "chat_completions"
+#
+# DeepSeek (chat_completions):
+#   base_url: "https://api.deepseek.com"
+#   model: "deepseek-chat"
+#   api_style: "chat_completions"
+#
+# Ollama Local (chat_completions):
+#   base_url: "http://localhost:11434/v1"
+#   model: "llama3.2"
+#   api_style: "chat_completions"
+#
+# Azure GPT-5.5 (azure_responses):
+#   api_style: "azure_responses"
+#   azure_endpoint: "https://your-resource.openai.azure.com"
+#   azure_deployment: "gpt-55"
+#   azure_api_version: "2025-03-01-preview"
+#
+# Azure o3 (azure_responses):
+#   api_style: "azure_responses"
+#   azure_endpoint: "https://your-resource.openai.azure.com"
+#   azure_deployment: "o3"
+#   azure_api_version: "2025-03-01-preview"
 
 # ==================== Image Provider Selection ====================
 # Choose your image generation backend
@@ -28,8 +77,8 @@ azure_openai:
   image:
     endpoint: ""  # e.g., "https://your-resource.openai.azure.com"
     api_key: ""   # Your Azure OpenAI API key
-    deployment: "gpt-image-1"  # Deployment name (gpt-image-1 for GPT-image-2, or dall-e-3)
-    api_version: "2025-04-01-preview"
+    deployment: "gpt-image-1"  # Deployment name for GPT-image-2 (gpt-image-1 in Azure naming)
+    api_version: "2025-04-01-preview"  # API version supporting image generation
     default_size: "1024x1024"  # Options: 1024x1024, 1024x1536, 1536x1024 (gpt-image-1)
     default_quality: "auto"    # Options: auto, high, medium, low
     output_format: "png"       # Options: png, jpeg, webp
@@ -48,7 +97,14 @@ comfyui:
   tts:
     inference_mode: local  # Options: "local" (Edge TTS) or "comfyui" (workflow-based)
     local:
-      voice: "zh-CN-YunjianNeural"  # Edge TTS voice ID
+      # Edge TTS voice ID - see pixelle_video/tts_voices.py for full list
+      # Popular options:
+      #   Chinese: zh-CN-YunjianNeural (male), zh-CN-XiaoxiaoNeural (female)
+      #   English US: en-US-GuyNeural (male), en-US-AriaNeural (female)
+      #   English AU: en-AU-WilliamNeural (male), en-AU-NatashaNeural (female) 
+      #   English GB: en-GB-RyanNeural (male), en-GB-SoniaNeural (female)
+      voice: "zh-CN-YunjianNeural"  # Default: Chinese male voice
+      # For English content, consider: "en-AU-NatashaNeural" or "en-AU-WilliamNeural"
       speed: 1.2  # Speech speed multiplier (0.5-2.0)
     comfyui:
       default_workflow: selfhost/tts_edge.json  # TTS workflow (when inference_mode: comfyui)

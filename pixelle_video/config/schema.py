@@ -25,6 +25,18 @@ class LLMConfig(BaseModel):
     api_key: str = Field(default="", description="LLM API Key")
     base_url: str = Field(default="", description="LLM API Base URL")
     model: str = Field(default="", description="LLM Model Name")
+    
+    # API style selection
+    api_style: Literal["chat_completions", "azure_responses"] = Field(
+        default="chat_completions",
+        description="API style: chat_completions (OpenAI standard) or azure_responses (Azure Responses API)"
+    )
+    
+    # Azure Responses API settings (used when api_style is azure_responses)
+    azure_endpoint: str = Field(default="", description="Azure OpenAI endpoint URL")
+    azure_api_key: str = Field(default="", description="Azure OpenAI API key")
+    azure_deployment: str = Field(default="", description="Azure deployment name (e.g., gpt-55, o3)")
+    azure_api_version: str = Field(default="2025-03-01-preview", description="Azure API version")
 
 
 class TTSLocalConfig(BaseModel):
@@ -40,7 +52,7 @@ class TTSComfyUIConfig(BaseModel):
 
 class TTSSubConfig(BaseModel):
     """TTS-specific configuration (under comfyui.tts)"""
-    inference_mode: str = Field(default="local", description="TTS inference mode: 'local' or 'comfyui'")
+    inference_mode: str = Field(default="local", description="TTS inference mode: local or comfyui")
     local: TTSLocalConfig = Field(default_factory=TTSLocalConfig, description="Local TTS (Edge TTS) configuration")
     comfyui: TTSComfyUIConfig = Field(default_factory=TTSComfyUIConfig, description="ComfyUI TTS configuration")
     
@@ -75,7 +87,7 @@ class ComfyUIConfig(BaseModel):
     comfyui_api_key: Optional[str] = Field(default=None, description="ComfyUI API Key (optional)")
     runninghub_api_key: Optional[str] = Field(default=None, description="RunningHub API Key (optional)")
     runninghub_concurrent_limit: int = Field(default=1, ge=1, le=10, description="RunningHub concurrent execution limit (1-10)")
-    runninghub_instance_type: Optional[str] = Field(default=None, description="RunningHub instance type (optional, set to 'plus' for 48GB VRAM)")
+    runninghub_instance_type: Optional[str] = Field(default=None, description="RunningHub instance type (optional, set to plus for 48GB VRAM)")
     tts: TTSSubConfig = Field(default_factory=TTSSubConfig, description="TTS-specific configuration")
     image: ImageSubConfig = Field(default_factory=ImageSubConfig, description="Image-specific configuration")
     video: VideoSubConfig = Field(default_factory=VideoSubConfig, description="Video-specific configuration")
@@ -115,7 +127,7 @@ class ImageProviderConfig(BaseModel):
     """
     provider: Literal["comfyui", "azure_openai"] = Field(
         default="comfyui",
-        description="Image generation provider: 'comfyui' or 'azure_openai'"
+        description="Image generation provider: comfyui or azure_openai"
     )
 
 
@@ -138,11 +150,21 @@ class PixelleVideoConfig(BaseModel):
     
     def is_llm_configured(self) -> bool:
         """Check if LLM is properly configured"""
-        return bool(
-            self.llm.api_key and self.llm.api_key.strip() and
-            self.llm.base_url and self.llm.base_url.strip() and
-            self.llm.model and self.llm.model.strip()
-        )
+        # For chat_completions style
+        if self.llm.api_style == "chat_completions":
+            return bool(
+                self.llm.api_key and self.llm.api_key.strip() and
+                self.llm.base_url and self.llm.base_url.strip() and
+                self.llm.model and self.llm.model.strip()
+            )
+        # For azure_responses style
+        elif self.llm.api_style == "azure_responses":
+            return bool(
+                self.llm.azure_endpoint and self.llm.azure_endpoint.strip() and
+                self.llm.azure_api_key and self.llm.azure_api_key.strip() and
+                self.llm.azure_deployment and self.llm.azure_deployment.strip()
+            )
+        return False
     
     def is_azure_image_configured(self) -> bool:
         """Check if Azure OpenAI Image is properly configured"""
