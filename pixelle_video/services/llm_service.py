@@ -311,13 +311,15 @@ class LLMService:
                 effective_prompt = f"{prompt}\n\n{json_instruction}"
             
             # Azure Responses API call
-            # Note: The responses.create() method may have different parameter names
-            # Based on Azure documentation for GPT-5.5/o3 models
+            # Note: GPT-5.5/o3 via Azure Responses API does NOT support temperature
+            # Remove temperature from kwargs if present to avoid 400 errors
+            kwargs.pop("temperature", None)
+            
             response = await client.responses.create(
                 model=final_model,
                 input=effective_prompt,
                 max_output_tokens=max_tokens,
-                temperature=temperature,
+                # temperature not supported by GPT-5.5 Responses API
                 **kwargs
             )
             
