@@ -191,3 +191,134 @@ class TestAzureImageServiceRepr:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+class TestAzureImageServiceRetry:
+    """Tests for Azure Image Service retry behavior on 429/EngineOverloaded"""
+
+    def test_retry_config_defaults(self):
+        """Service should have correct default retry config"""
+        AzureImageService = load_azure_image_service()
+        
+        config = {
+            "azure_openai": {
+                "image": {
+                    "endpoint": "https://test.openai.azure.com",
+                    "api_key": "test-key",
+                    "deployment": "gpt-image-1",
+                }
+            }
+        }
+        service = AzureImageService(config)
+        
+        assert service.max_retry_attempts == 7
+        assert service.retry_initial_seconds == 30.0
+        assert service.retry_max_seconds == 300.0
+
+    def test_retry_config_custom_values(self):
+        """Service should use custom retry config when provided"""
+        AzureImageService = load_azure_image_service()
+        
+        config = {
+            "azure_openai": {
+                "image": {
+                    "endpoint": "https://test.openai.azure.com",
+                    "api_key": "test-key",
+                    "deployment": "gpt-image-1",
+                    "max_retry_attempts": 5,
+                    "retry_initial_seconds": 15.0,
+                    "retry_max_seconds": 120.0,
+                }
+            }
+        }
+        service = AzureImageService(config)
+        
+        assert service.max_retry_attempts == 5
+        assert service.retry_initial_seconds == 15.0
+        assert service.retry_max_seconds == 120.0
+
+    def test_is_retryable_429_status_code(self):
+        """429 status code should be retryable"""
+        AzureImageService = load_azure_image_service()
+        service = AzureImageService({})
+        
+        class MockException(Exception):
+            status_code = 429
+        
+        assert service._is_retryable_provider_error(MockException("rate limited")) is True
+
+    def test_is_retryable_engine_overloaded_message(self):
+        """EngineOverloaded in message should be retryable"""
+        AzureImageService = load_azure_image_service()
+        service = AzureImageService({})
+        
+        exc = Exception("Error code: 429 - EngineOverloaded")
+        assert service._is_retryable_provider_error(exc) is True
+
+    def test_is_retryable_too_many_requests(self):
+        """'too many requests' in message should be retryable"""
+        AzureImageService = load_azure_image_service()
+        service = AzureImageService({})
+        
+        exc = Exception("Too Many Requests")
+        assert service._is_retryable_provider_error(exc) is True
+
+    def test_is_retryable_rate_limit(self):
+        """'rate limit' in message should be retryable"""
+        AzureImageService = load_azure_image_service()
+        service = AzureImageService({})
+        
+        exc = Exception("Rate limit exceeded")
+        assert service._is_retryable_provider_error(exc) is True
+
+    def test_is_not_retryable_other_error(self):
+        """Other errors should not be retryable"""
+        AzureImageService = load_azure_image_service()
+        service = AzureImageService({})
+        
+        exc = Exception("Invalid API key")
+        assert service._is_retryable_provider_error(exc) is False
+
+    def test_is_not_retryable_400_error(self):
+        """400 status code should not be retryable"""
+        AzureImageService = load_azure_image_service()
+        service = AzureImageService({})
+        
+        class MockException(Exception):
+            status_code = 400
+        
+        assert service._is_retryable_provider_error(MockException("bad request")) is False
+
+    def test_retry_after_extracts_header(self):
+        """Should extract Retry-After header when present"""
+        AzureImageService = load_azure_image_service()
+        service = AzureImageService({})
+        
+        class MockResponse:
+            headers = {"Retry-After": "60"}
+        
+        class MockException(Exception):
+            response = MockResponse()
+        
+        assert service._retry_after_seconds(MockException("rate limited")) == 60.0
+
+    def test_retry_after_returns_none_when_missing(self):
+        """Should return None when Retry-After header is missing"""
+        AzureImageService = load_azure_image_service()
+        service = AzureImageService({})
+        
+        exc = Exception("no retry-after")
+        assert service._retry_after_seconds(exc) is None
+
+    def test_retry_after_handles_invalid_value(self):
+        """Should return None for invalid Retry-After value"""
+        AzureImageService = load_azure_image_service()
+        service = AzureImageService({})
+        
+        class MockResponse:
+            headers = {"Retry-After": "not-a-number"}
+        
+        class MockException(Exception):
+            response = MockResponse()
+        
+        assert service._retry_after_seconds(MockException("rate limited")) is None

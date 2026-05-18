@@ -16,7 +16,9 @@ Azure OpenAI Image Service - GPT-image-2 (gpt-image-1, DALL-E 3) support
 Direct image generation via Azure OpenAI without ComfyUI workflows.
 """
 
+import asyncio
 import os
+import random
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -74,6 +76,22 @@ class AzureImageService:
         
         # Output directory for saving generated images
         self.output_dir = azure_config.get("output_dir", "output/images")
+
+        # Provider overload / rate-limit retry policy. Azure image generation can
+        # return transient 429 EngineOverloaded responses even after the OpenAI
+        # SDK's short built-in retry window. Keep the video task alive and wait.
+        self.max_retry_attempts = int(
+            azure_config.get("max_retry_attempts")
+            or os.getenv("AZURE_OPENAI_IMAGE_MAX_RETRY_ATTEMPTS", "7")
+        )
+        self.retry_initial_seconds = float(
+            azure_config.get("retry_initial_seconds")
+            or os.getenv("AZURE_OPENAI_IMAGE_RETRY_INITIAL_SECONDS", "30")
+        )
+        self.retry_max_seconds = float(
+            azure_config.get("retry_max_seconds")
+            or os.getenv("AZURE_OPENAI_IMAGE_RETRY_MAX_SECONDS", "300")
+        )
         
         self._client: Optional[AsyncAzureOpenAI] = None
     
@@ -178,8 +196,10 @@ class AzureImageService:
             if style and "dall-e-3" in model_name:
                 request_params["style"] = style
             
-            # Make API call
-            response = await client.images.generate(**request_params)
+            # Make API call. Azure image generation may intermittently return
+            # 429 EngineOverloaded for several minutes. Retry with exponential
+            # backoff + jitter and honour Retry-After when present.
+            response = await self._generate_with_retry(client, request_params)
             
             if not response.data:
                 raise Exception("No images returned from Azure OpenAI")
@@ -243,6 +263,69 @@ class AzureImageService:
             logger.error(f"Azure OpenAI image generation failed: {e}")
             raise
     
+    def _is_retryable_provider_error(self, exc: Exception) -> bool:
+        """Return True for transient Azure/OpenAI provider overload errors."""
+        status_code = getattr(exc, "status_code", None)
+        response = getattr(exc, "response", None)
+        if status_code is None and response is not None:
+            status_code = getattr(response, "status_code", None)
+
+        message = str(exc)
+        return (
+            status_code == 429
+            or "EngineOverloaded" in message
+            or "too many requests" in message.lower()
+            or "rate limit" in message.lower()
+        )
+
+    def _retry_after_seconds(self, exc: Exception) -> Optional[float]:
+        """Extract Retry-After header if the provider supplied one."""
+        response = getattr(exc, "response", None)
+        headers = getattr(response, "headers", None) if response is not None else None
+        if not headers:
+            return None
+
+        value = headers.get("retry-after") or headers.get("Retry-After")
+        if not value:
+            return None
+
+        try:
+            return max(0.0, float(value))
+        except (TypeError, ValueError):
+            return None
+
+    async def _generate_with_retry(self, client: AsyncAzureOpenAI, request_params: dict):
+        """Generate an image with extended retry for transient provider overload."""
+        last_error = None
+
+        for attempt in range(1, self.max_retry_attempts + 1):
+            try:
+                return await client.images.generate(**request_params)
+            except Exception as exc:
+                last_error = exc
+                if not self._is_retryable_provider_error(exc) or attempt >= self.max_retry_attempts:
+                    raise
+
+                retry_after = self._retry_after_seconds(exc)
+                if retry_after is None:
+                    base_delay = min(
+                        self.retry_max_seconds,
+                        self.retry_initial_seconds * (2 ** (attempt - 1))
+                    )
+                    jitter = random.uniform(0, min(10.0, base_delay * 0.2))
+                    delay = base_delay + jitter
+                else:
+                    delay = min(self.retry_max_seconds, retry_after)
+
+                logger.warning(
+                    "Azure OpenAI image generation overloaded/rate-limited "
+                    f"(attempt {attempt}/{self.max_retry_attempts}); "
+                    f"retrying in {delay:.1f}s: {exc}"
+                )
+                await asyncio.sleep(delay)
+
+        raise last_error
+
     @property
     def available(self) -> bool:
         """Check if service is available (configured)"""
