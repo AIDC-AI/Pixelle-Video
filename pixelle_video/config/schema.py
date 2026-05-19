@@ -15,7 +15,8 @@ Configuration schema with Pydantic models
 
 Single source of truth for all configuration defaults and validation.
 """
-from typing import Optional
+from typing import Literal, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -24,6 +25,18 @@ class LLMConfig(BaseModel):
     api_key: str = Field(default="", description="LLM API Key")
     base_url: str = Field(default="", description="LLM API Base URL")
     model: str = Field(default="", description="LLM Model Name")
+    
+    # API style selection
+    api_style: Literal["chat_completions", "azure_responses"] = Field(
+        default="chat_completions",
+        description="API style: chat_completions (OpenAI standard) or azure_responses (Azure Responses API)"
+    )
+    
+    # Azure Responses API settings (used when api_style is azure_responses)
+    azure_endpoint: str = Field(default="", description="Azure OpenAI endpoint URL")
+    azure_api_key: str = Field(default="", description="Azure OpenAI API key")
+    azure_deployment: str = Field(default="", description="Azure deployment name (e.g., gpt-55, o3)")
+    azure_api_version: str = Field(default="2025-03-01-preview", description="Azure API version")
 
 
 class TTSLocalConfig(BaseModel):
@@ -39,7 +52,7 @@ class TTSComfyUIConfig(BaseModel):
 
 class TTSSubConfig(BaseModel):
     """TTS-specific configuration (under comfyui.tts)"""
-    inference_mode: str = Field(default="local", description="TTS inference mode: 'local' or 'comfyui'")
+    inference_mode: str = Field(default="local", description="TTS inference mode: local or comfyui")
     local: TTSLocalConfig = Field(default_factory=TTSLocalConfig, description="Local TTS (Edge TTS) configuration")
     comfyui: TTSComfyUIConfig = Field(default_factory=TTSComfyUIConfig, description="ComfyUI TTS configuration")
     
@@ -74,10 +87,48 @@ class ComfyUIConfig(BaseModel):
     comfyui_api_key: Optional[str] = Field(default=None, description="ComfyUI API Key (optional)")
     runninghub_api_key: Optional[str] = Field(default=None, description="RunningHub API Key (optional)")
     runninghub_concurrent_limit: int = Field(default=1, ge=1, le=10, description="RunningHub concurrent execution limit (1-10)")
-    runninghub_instance_type: Optional[str] = Field(default=None, description="RunningHub instance type (optional, set to 'plus' for 48GB VRAM)")
+    runninghub_instance_type: Optional[str] = Field(default=None, description="RunningHub instance type (optional, set to plus for 48GB VRAM)")
     tts: TTSSubConfig = Field(default_factory=TTSSubConfig, description="TTS-specific configuration")
     image: ImageSubConfig = Field(default_factory=ImageSubConfig, description="Image-specific configuration")
     video: VideoSubConfig = Field(default_factory=VideoSubConfig, description="Video-specific configuration")
+
+
+# ==================== Azure OpenAI Configuration ====================
+
+class AzureOpenAIImageConfig(BaseModel):
+    """Azure OpenAI Image Generation configuration (GPT-image-2 / DALL-E 3)"""
+    endpoint: Optional[str] = Field(default=None, description="Azure OpenAI endpoint URL")
+    api_key: Optional[str] = Field(default=None, description="Azure OpenAI API key")
+    deployment: str = Field(default="gpt-image-1", description="Deployment name (e.g., gpt-image-1, dall-e-3)")
+    api_version: str = Field(default="2025-04-01-preview", description="API version")
+    default_size: str = Field(default="1024x1024", description="Default image size")
+    default_quality: str = Field(default="auto", description="Default quality: auto, high, medium, low")
+    output_format: str = Field(default="png", description="Output format: png, jpeg, webp")
+    output_dir: str = Field(default="output/images", description="Directory for saving generated images")
+
+
+class AzureOpenAIConfig(BaseModel):
+    """Azure OpenAI configuration (umbrella for all Azure OpenAI services)"""
+    image: AzureOpenAIImageConfig = Field(
+        default_factory=AzureOpenAIImageConfig, 
+        description="Azure OpenAI Image Generation (GPT-image-2)"
+    )
+
+
+# ==================== Image Provider Selection ====================
+
+class ImageProviderConfig(BaseModel):
+    """
+    Image provider selection configuration
+    
+    Allows switching between different image generation backends:
+    - comfyui: Use ComfyUI workflows (default, existing behavior)
+    - azure_openai: Use Azure OpenAI GPT-image-2 / DALL-E 3
+    """
+    provider: Literal["comfyui", "azure_openai"] = Field(
+        default="comfyui",
+        description="Image generation provider: comfyui or azure_openai"
+    )
 
 
 class TemplateConfig(BaseModel):
@@ -93,15 +144,39 @@ class PixelleVideoConfig(BaseModel):
     project_name: str = Field(default="Pixelle-Video", description="Project name")
     llm: LLMConfig = Field(default_factory=LLMConfig)
     comfyui: ComfyUIConfig = Field(default_factory=ComfyUIConfig)
+    azure_openai: AzureOpenAIConfig = Field(default_factory=AzureOpenAIConfig)
+    image_provider: ImageProviderConfig = Field(default_factory=ImageProviderConfig)
     template: TemplateConfig = Field(default_factory=TemplateConfig)
     
     def is_llm_configured(self) -> bool:
         """Check if LLM is properly configured"""
+        # For chat_completions style
+        if self.llm.api_style == "chat_completions":
+            return bool(
+                self.llm.api_key and self.llm.api_key.strip() and
+                self.llm.base_url and self.llm.base_url.strip() and
+                self.llm.model and self.llm.model.strip()
+            )
+        # For azure_responses style
+        elif self.llm.api_style == "azure_responses":
+            return bool(
+                self.llm.azure_endpoint and self.llm.azure_endpoint.strip() and
+                self.llm.azure_api_key and self.llm.azure_api_key.strip() and
+                self.llm.azure_deployment and self.llm.azure_deployment.strip()
+            )
+        return False
+    
+    def is_azure_image_configured(self) -> bool:
+        """Check if Azure OpenAI Image is properly configured"""
         return bool(
-            self.llm.api_key and self.llm.api_key.strip() and
-            self.llm.base_url and self.llm.base_url.strip() and
-            self.llm.model and self.llm.model.strip()
+            self.azure_openai.image.endpoint and 
+            self.azure_openai.image.api_key and 
+            self.azure_openai.image.deployment
         )
+    
+    def get_image_provider(self) -> str:
+        """Get active image provider"""
+        return self.image_provider.provider
     
     def validate_required(self) -> bool:
         """Validate required configuration"""
@@ -110,4 +185,3 @@ class PixelleVideoConfig(BaseModel):
     def to_dict(self) -> dict:
         """Convert to dictionary (for backward compatibility)"""
         return self.model_dump()
-

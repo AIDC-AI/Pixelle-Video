@@ -106,6 +106,19 @@ EDGE_TTS_VOICES: List[Dict[str, Any]] = [
         "locale": "en-GB",
         "gender": "male"
     },
+    # Australian English voices
+    {
+        "id": "en-AU-NatashaNeural",
+        "label_key": "tts.voice.en_AU_NatashaNeural",
+        "locale": "en-AU",
+        "gender": "female"
+    },
+    {
+        "id": "en-AU-WilliamNeural",
+        "label_key": "tts.voice.en_AU_WilliamNeural",
+        "locale": "en-AU",
+        "gender": "male"
+    },
     {
         "id": "ko-KR-InJoonNeural",
         "label_key": "tts.voice.ko-KR-InJoonNeural",
