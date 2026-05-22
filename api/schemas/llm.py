@@ -17,6 +17,8 @@ LLM API schemas
 from typing import Optional
 from pydantic import BaseModel, Field
 
+from api.schemas.base import SuccessResponse
+
 
 class LLMChatRequest(BaseModel):
     """LLM chat request"""
@@ -34,10 +36,7 @@ class LLMChatRequest(BaseModel):
         }
 
 
-class LLMChatResponse(BaseModel):
+class LLMChatResponse(SuccessResponse):
     """LLM chat response"""
-    success: bool = True
-    message: str = "Success"
     content: str = Field(..., description="Generated response")
     tokens_used: Optional[int] = Field(None, description="Tokens used (if available)")
-

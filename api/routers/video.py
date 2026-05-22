@@ -17,6 +17,9 @@ Supports both synchronous and asynchronous video generation.
 """
 
 import os
+from pathlib import Path
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
 
@@ -27,6 +30,8 @@ from api.schemas.video import (
     VideoGenerateAsyncResponse,
 )
 from api.tasks import task_manager, TaskType
+from pixelle_video.services.frame_html import HTMLFrameGenerator
+from pixelle_video.utils.template_util import resolve_template_path
 
 router = APIRouter(prefix="/video", tags=["Video Generation"])
 
@@ -54,9 +59,6 @@ def path_to_url(request: Request, file_path: str) -> str:
         
         Domain:  With domain request -> https://your-domain.com/api/files/...
     """
-    from pathlib import Path
-    import os
-    
     # Normalize path separators to forward slashes first (for cross-platform compatibility)
     file_path = file_path.replace("\\", "/")
     
@@ -85,6 +87,64 @@ def path_to_url(request: Request, file_path: str) -> str:
     return f"{base_url}/api/files/{file_path}"
 
 
+def get_template_media_size(frame_template: str) -> tuple[int, int]:
+    if not frame_template:
+        raise ValueError("frame_template is required to determine media size")
+
+    template_path = resolve_template_path(frame_template)
+    generator = HTMLFrameGenerator(template_path)
+    media_width, media_height = generator.get_media_size()
+    logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
+    return media_width, media_height
+
+
+def build_video_params(request_body: VideoGenerateRequest) -> dict[str, Any]:
+    media_width, media_height = get_template_media_size(request_body.frame_template)
+
+    video_params = {
+        "text": request_body.text,
+        "mode": request_body.mode,
+        "title": request_body.title,
+        "n_scenes": request_body.n_scenes,
+        "min_narration_words": request_body.min_narration_words,
+        "max_narration_words": request_body.max_narration_words,
+        "min_image_prompt_words": request_body.min_image_prompt_words,
+        "max_image_prompt_words": request_body.max_image_prompt_words,
+        "media_width": media_width,
+        "media_height": media_height,
+        "media_workflow": request_body.media_workflow,
+        "video_fps": request_body.video_fps,
+        "frame_template": request_body.frame_template,
+        "prompt_prefix": request_body.prompt_prefix,
+        "bgm_path": request_body.bgm_path,
+        "bgm_volume": request_body.bgm_volume,
+    }
+
+    if request_body.tts_workflow:
+        video_params["tts_workflow"] = request_body.tts_workflow
+
+    if request_body.ref_audio:
+        video_params["ref_audio"] = request_body.ref_audio
+
+    if request_body.voice_id:
+        logger.warning("voice_id parameter is deprecated, please use tts_workflow instead")
+        video_params["voice_id"] = request_body.voice_id
+
+    if request_body.template_params:
+        video_params["template_params"] = request_body.template_params
+
+    return video_params
+
+
+def video_result_payload(request: Request, result: Any) -> dict[str, Any]:
+    file_size = os.path.getsize(result.video_path) if os.path.exists(result.video_path) else 0
+    return {
+        "video_url": path_to_url(request, result.video_path),
+        "duration": result.duration,
+        "file_size": file_size,
+    }
+
+
 @router.post("/generate/sync", response_model=VideoGenerateResponse)
 async def generate_video_sync(
     request_body: VideoGenerateRequest,
@@ -106,69 +166,8 @@ async def generate_video_sync(
     """
     try:
         logger.info(f"Sync video generation: {request_body.text[:50]}...")
-        
-        # Auto-determine media_width and media_height from template meta tags (required)
-        if not request_body.frame_template:
-            raise ValueError("frame_template is required to determine media size")
-        
-        from pixelle_video.services.frame_html import HTMLFrameGenerator
-        from pixelle_video.utils.template_util import resolve_template_path
-        template_path = resolve_template_path(request_body.frame_template)
-        generator = HTMLFrameGenerator(template_path)
-        media_width, media_height = generator.get_media_size()
-        logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
-        
-        # Build video generation parameters
-        video_params = {
-            "text": request_body.text,
-            "mode": request_body.mode,
-            "title": request_body.title,
-            "n_scenes": request_body.n_scenes,
-            "min_narration_words": request_body.min_narration_words,
-            "max_narration_words": request_body.max_narration_words,
-            "min_image_prompt_words": request_body.min_image_prompt_words,
-            "max_image_prompt_words": request_body.max_image_prompt_words,
-            "media_width": media_width,
-            "media_height": media_height,
-            "media_workflow": request_body.media_workflow,
-            "video_fps": request_body.video_fps,
-            "frame_template": request_body.frame_template,
-            "prompt_prefix": request_body.prompt_prefix,
-            "bgm_path": request_body.bgm_path,
-            "bgm_volume": request_body.bgm_volume,
-        }
-        
-        # Add TTS workflow if specified
-        if request_body.tts_workflow:
-            video_params["tts_workflow"] = request_body.tts_workflow
-        
-        # Add ref_audio if specified
-        if request_body.ref_audio:
-            video_params["ref_audio"] = request_body.ref_audio
-        
-        # Legacy voice_id support (deprecated)
-        if request_body.voice_id:
-            logger.warning("voice_id parameter is deprecated, please use tts_workflow instead")
-            video_params["voice_id"] = request_body.voice_id
-        
-        # Add custom template parameters if specified
-        if request_body.template_params:
-            video_params["template_params"] = request_body.template_params
-        
-        # Call video generator service
-        result = await pixelle_video.generate_video(**video_params)
-        
-        # Get file size
-        file_size = os.path.getsize(result.video_path) if os.path.exists(result.video_path) else 0
-        
-        # Convert path to URL
-        video_url = path_to_url(request, result.video_path)
-        
-        return VideoGenerateResponse(
-            video_url=video_url,
-            duration=result.duration,
-            file_size=file_size
-        )
+        result = await pixelle_video.generate_video(**build_video_params(request_body))
+        return VideoGenerateResponse(**video_result_payload(request, result))
         
     except Exception as e:
         logger.error(f"Sync video generation error: {e}")
@@ -210,69 +209,8 @@ async def generate_video_async(
         # Define async execution function
         async def execute_video_generation():
             """Execute video generation in background"""
-            # Auto-determine media_width and media_height from template meta tags (required)
-            if not request_body.frame_template:
-                raise ValueError("frame_template is required to determine media size")
-            
-            from pixelle_video.services.frame_html import HTMLFrameGenerator
-            from pixelle_video.utils.template_util import resolve_template_path
-            template_path = resolve_template_path(request_body.frame_template)
-            generator = HTMLFrameGenerator(template_path)
-            media_width, media_height = generator.get_media_size()
-            logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
-            
-            # Build video generation parameters
-            video_params = {
-                "text": request_body.text,
-                "mode": request_body.mode,
-                "title": request_body.title,
-                "n_scenes": request_body.n_scenes,
-                "min_narration_words": request_body.min_narration_words,
-                "max_narration_words": request_body.max_narration_words,
-                "min_image_prompt_words": request_body.min_image_prompt_words,
-                "max_image_prompt_words": request_body.max_image_prompt_words,
-                "media_width": media_width,
-                "media_height": media_height,
-                "media_workflow": request_body.media_workflow,
-                "video_fps": request_body.video_fps,
-                "frame_template": request_body.frame_template,
-                "prompt_prefix": request_body.prompt_prefix,
-                "bgm_path": request_body.bgm_path,
-                "bgm_volume": request_body.bgm_volume,
-                # Progress callback can be added here if needed
-                # "progress_callback": lambda event: task_manager.update_progress(...)
-            }
-            
-            # Add TTS workflow if specified
-            if request_body.tts_workflow:
-                video_params["tts_workflow"] = request_body.tts_workflow
-            
-            # Add ref_audio if specified
-            if request_body.ref_audio:
-                video_params["ref_audio"] = request_body.ref_audio
-            
-            # Legacy voice_id support (deprecated)
-            if request_body.voice_id:
-                logger.warning("voice_id parameter is deprecated, please use tts_workflow instead")
-                video_params["voice_id"] = request_body.voice_id
-            
-            # Add custom template parameters if specified
-            if request_body.template_params:
-                video_params["template_params"] = request_body.template_params
-            
-            result = await pixelle_video.generate_video(**video_params)
-            
-            # Get file size
-            file_size = os.path.getsize(result.video_path) if os.path.exists(result.video_path) else 0
-            
-            # Convert path to URL
-            video_url = path_to_url(request, result.video_path)
-            
-            return {
-                "video_url": video_url,
-                "duration": result.duration,
-                "file_size": file_size
-            }
+            result = await pixelle_video.generate_video(**build_video_params(request_body))
+            return video_result_payload(request, result)
         
         # Start execution
         await task_manager.execute_task(
@@ -287,4 +225,3 @@ async def generate_video_async(
     except Exception as e:
         logger.error(f"Async video generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-

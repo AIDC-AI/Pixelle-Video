@@ -14,7 +14,7 @@
 API Schemas (Pydantic models)
 """
 
-from api.schemas.base import BaseResponse, ErrorResponse
+from api.schemas.base import BaseResponse, ErrorResponse, SuccessResponse
 from api.schemas.llm import LLMChatRequest, LLMChatResponse
 from api.schemas.tts import TTSSynthesizeRequest, TTSSynthesizeResponse
 from api.schemas.image import ImageGenerateRequest, ImageGenerateResponse
@@ -36,6 +36,7 @@ __all__ = [
     # Base
     "BaseResponse",
     "ErrorResponse",
+    "SuccessResponse",
     # LLM
     "LLMChatRequest",
     "LLMChatResponse",
@@ -57,4 +58,3 @@ __all__ = [
     "VideoGenerateResponse",
     "VideoGenerateAsyncResponse",
 ]
-

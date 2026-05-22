@@ -17,6 +17,8 @@ Image generation API schemas
 from typing import Optional
 from pydantic import BaseModel, Field
 
+from api.schemas.base import SuccessResponse
+
 
 class ImageGenerateRequest(BaseModel):
     """Image generation request"""
@@ -35,9 +37,6 @@ class ImageGenerateRequest(BaseModel):
         }
 
 
-class ImageGenerateResponse(BaseModel):
+class ImageGenerateResponse(SuccessResponse):
     """Image generation response"""
-    success: bool = True
-    message: str = "Success"
     image_path: str = Field(..., description="Path to generated image")
-

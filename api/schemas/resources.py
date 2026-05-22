@@ -17,6 +17,8 @@ Resource discovery API schemas
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
+from api.schemas.base import SuccessResponse
+
 
 class WorkflowInfo(BaseModel):
     """Workflow information"""
@@ -28,10 +30,8 @@ class WorkflowInfo(BaseModel):
     workflow_id: Optional[str] = Field(None, description="RunningHub workflow ID (if applicable)")
 
 
-class WorkflowListResponse(BaseModel):
+class WorkflowListResponse(SuccessResponse):
     """Workflow list response"""
-    success: bool = True
-    message: str = "Success"
     workflows: List[WorkflowInfo] = Field(..., description="List of available workflows")
 
 
@@ -47,10 +47,8 @@ class TemplateInfo(BaseModel):
     key: str = Field(..., description="Template key (size/name)")
 
 
-class TemplateListResponse(BaseModel):
+class TemplateListResponse(SuccessResponse):
     """Template list response"""
-    success: bool = True
-    message: str = "Success"
     templates: List[TemplateInfo] = Field(..., description="List of available templates")
 
 
@@ -61,9 +59,6 @@ class BGMInfo(BaseModel):
     source: str = Field(..., description="Source (default or custom)")
 
 
-class BGMListResponse(BaseModel):
+class BGMListResponse(SuccessResponse):
     """BGM list response"""
-    success: bool = True
-    message: str = "Success"
     bgm_files: List[BGMInfo] = Field(..., description="List of available BGM files")
-
