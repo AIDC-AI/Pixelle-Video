@@ -72,7 +72,9 @@ async def get_file(file_path: str):
         if full_path is None:
             full_path = f"output/{file_path}"
         
-        abs_path = Path.cwd() / full_path
+        # Resolve to absolute path, following symlinks and normalizing ../
+        cwd = Path.cwd().resolve()
+        abs_path = (cwd / full_path).resolve()
         
         if not abs_path.exists():
             raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
@@ -81,20 +83,18 @@ async def get_file(file_path: str):
             raise HTTPException(status_code=400, detail=f"Path is not a file: {file_path}")
         
         # Security: only allow access to specified directories
-        try:
-            rel_path = abs_path.relative_to(Path.cwd())
-            rel_path_str = str(rel_path)
-            
-            # Check if path starts with any allowed prefix
-            is_allowed = any(rel_path_str.startswith(prefix.rstrip('/')) for prefix in allowed_prefixes)
-            
-            if not is_allowed:
-                raise HTTPException(
-                    status_code=403, 
-                    detail=f"Access denied: only {', '.join(p.rstrip('/') for p in allowed_prefixes)} directories are accessible"
-                )
-        except ValueError:
-            raise HTTPException(status_code=403, detail="Access denied")
+        # Build resolved allowed directory paths and check containment
+        allowed_dirs = [cwd / prefix.rstrip('/') for prefix in allowed_prefixes]
+        is_allowed = any(
+            abs_path == allowed_dir or abs_path.is_relative_to(allowed_dir)
+            for allowed_dir in allowed_dirs
+        )
+        
+        if not is_allowed:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Access denied: only {', '.join(p.rstrip('/') for p in allowed_prefixes)} directories are accessible"
+            )
         
         # Determine media type
         suffix = abs_path.suffix.lower()
@@ -125,4 +125,3 @@ async def get_file(file_path: str):
     except Exception as e:
         logger.error(f"File access error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
