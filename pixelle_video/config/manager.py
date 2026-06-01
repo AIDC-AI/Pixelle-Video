@@ -112,15 +112,17 @@ class ConfigManager:
             "api_key": self.config.llm.api_key,
             "base_url": self.config.llm.base_url,
             "model": self.config.llm.model,
+            "stream": self.config.llm.stream,
         }
-    
-    def set_llm_config(self, api_key: str, base_url: str, model: str):
+
+    def set_llm_config(self, api_key: str, base_url: str, model: str, stream: bool = False):
         """Set LLM configuration"""
         self.update({
             "llm": {
                 "api_key": api_key,
                 "base_url": base_url,
                 "model": model,
+                "stream": stream,
             }
         })
     
