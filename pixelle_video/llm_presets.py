@@ -57,6 +57,12 @@ LLM_PRESETS: List[Dict[str, Any]] = [
         "model": "moonshot-v1-8k",
         "api_key_url": "https://platform.moonshot.cn/console/api-keys",
     },
+    {
+        "name": "Gemini",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta",
+        "model": "gemini-3-flash-preview",
+        "api_key_url": "https://aistudio.google.com/app/api-keys",
+    },
 ]
 
 
