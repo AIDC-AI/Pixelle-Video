@@ -14,12 +14,16 @@
 LLM (Large Language Model) Service - Direct OpenAI SDK implementation
 
 Supports structured output via response_type parameter (Pydantic model).
+Also supports Anthropic-compatible APIs (e.g., BigModel GLM Coding Plan).
 """
 
+import asyncio
 import json
+import random
 import re
 from typing import Optional, Type, TypeVar, Union
 
+import httpx
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 from loguru import logger
@@ -27,26 +31,35 @@ from loguru import logger
 
 T = TypeVar("T", bound=BaseModel)
 
+# Retry configuration for LLM API calls
+_LLM_RETRY_COUNT = 3           # Max retries for transient errors
+_LLM_RETRY_BASE_DELAY = 2.0    # Base delay in seconds
+_LLM_RETRY_MAX_DELAY = 15.0    # Max delay in seconds
+
 
 class LLMService:
     """
     LLM (Large Language Model) service
-    
-    Direct implementation using OpenAI SDK. No capability layer needed.
-    
+
+    Direct implementation using OpenAI SDK. Also supports Anthropic-compatible
+    providers via direct HTTP calls when llm.provider is set to "anthropic".
+
     Supports all OpenAI SDK compatible providers:
     - OpenAI (gpt-4o, gpt-4o-mini, gpt-3.5-turbo)
     - Alibaba Qwen (qwen-max, qwen-plus, qwen-turbo)
-    - Anthropic Claude (claude-sonnet-4-5, claude-opus-4, claude-haiku-4)
     - DeepSeek (deepseek-chat)
     - Moonshot Kimi (moonshot-v1-8k, moonshot-v1-32k, moonshot-v1-128k)
     - Ollama (llama3.2, qwen2.5, mistral, codellama) - FREE & LOCAL!
     - Any custom provider with OpenAI-compatible API
-    
+
+    Also supports Anthropic-compatible providers:
+    - BigModel GLM (GLM-5.1, etc.) via Anthropic API
+    - Anthropic Claude
+
     Usage:
         # Direct call
         answer = await pixelle_video.llm("Explain atomic habits")
-        
+
         # With parameters
         answer = await pixelle_video.llm(
             prompt="Explain atomic habits in 3 sentences",
@@ -54,31 +67,37 @@ class LLMService:
             max_tokens=2000
         )
     """
-    
+
     def __init__(self, config: dict):
         """
         Initialize LLM service
-        
+
         Args:
             config: Full application config dict (kept for backward compatibility)
         """
         # Note: We no longer cache config here to support hot reload
         # Config is read dynamically from config_manager in _get_config_value()
         self._client: Optional[AsyncOpenAI] = None
-    
+
     def _get_config_value(self, key: str, default=None):
         """
         Get config value dynamically from config_manager (supports hot reload)
-        
+
         Args:
             key: Config key name
             default: Default value if not found
-        
+
         Returns:
             Config value
         """
         from pixelle_video.config import config_manager
         return getattr(config_manager.config.llm, key, default)
+
+    def _is_anthropic_provider(self) -> bool:
+        """Check if the configured base_url points to an Anthropic-compatible API."""
+        base_url = self._get_config_value("base_url") or ""
+        provider = self._get_config_value("provider") or ""
+        return provider.lower() == "anthropic" or "/anthropic" in base_url.lower()
     
     def _create_client(
         self,
@@ -128,7 +147,10 @@ class LLMService:
     ) -> Union[str, T]:
         """
         Generate text using LLM
-        
+
+        Automatically detects whether to use OpenAI SDK or Anthropic HTTP API
+        based on the configured base_url.
+
         Args:
             prompt: The prompt to generate from
             api_key: API key (optional, uses config if not provided)
@@ -139,68 +161,177 @@ class LLMService:
             response_type: Optional Pydantic model class for structured output.
                           If provided, returns parsed model instance instead of string.
             **kwargs: Additional provider-specific parameters
-        
+
         Returns:
             Generated text (str) or parsed Pydantic model instance (if response_type provided)
-        
-        Examples:
-            # Basic text generation
-            answer = await pixelle_video.llm("Explain atomic habits")
-            
-            # Structured output with Pydantic model
-            class MovieReview(BaseModel):
-                title: str
-                rating: int
-                summary: str
-            
-            review = await pixelle_video.llm(
-                prompt="Review the movie Inception",
-                response_type=MovieReview
-            )
-            print(review.title)  # Structured access
         """
-        # Create client (new instance each time to support parameter overrides)
-        client = self._create_client(api_key=api_key, base_url=base_url)
-        
-        # Get model (priority: parameter > config)
-        final_model = (
-            model
-            or self._get_config_value("model")
-            or "gpt-3.5-turbo"  # Default fallback
-        )
-        
-        logger.debug(f"LLM call: model={final_model}, base_url={client.base_url}, response_type={response_type}")
-        
+        # Get final config values
+        final_api_key = api_key or self._get_config_value("api_key") or "dummy-key"
+        final_base_url = base_url or self._get_config_value("base_url")
+        final_model = model or self._get_config_value("model") or "gpt-3.5-turbo"
+
+        # Build enhanced prompt for structured output
+        enhanced_prompt = prompt
+        if response_type is not None:
+            json_schema_instruction = self._get_json_schema_instruction(response_type)
+            enhanced_prompt = f"{prompt}\n\n{json_schema_instruction}"
+
+        logger.debug(f"LLM call: model={final_model}, base_url={final_base_url}, anthropic={self._is_anthropic_provider()}")
+
         try:
-            if response_type is not None:
-                # Structured output mode - try beta.chat.completions.parse first
-                return await self._call_with_structured_output(
-                    client=client,
-                    model=final_model,
-                    prompt=prompt,
-                    response_type=response_type,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    **kwargs
-                )
-            else:
-                # Standard text output mode
-                response = await client.chat.completions.create(
-                    model=final_model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    **kwargs
-                )
-                
-                result = response.choices[0].message.content
-                logger.debug(f"LLM response length: {len(result)} chars")
-                
-                return result
-        
+            return await self._call_with_retry(
+                api_key=final_api_key,
+                base_url=final_base_url,
+                model=final_model,
+                enhanced_prompt=enhanced_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_type=response_type,
+                api_key_param=api_key,
+                base_url_param=base_url,
+                kwargs=kwargs,
+            )
+
         except Exception as e:
-            logger.error(f"LLM call error (model={final_model}, base_url={client.base_url}): {e}")
+            logger.error(f"LLM call error (model={final_model}, base_url={final_base_url}): {e}")
             raise
+
+    async def _call_with_retry(
+        self,
+        api_key: str,
+        base_url: str,
+        model: str,
+        enhanced_prompt: str,
+        temperature: float,
+        max_tokens: int,
+        response_type: Optional[Type[T]],
+        api_key_param: Optional[str],
+        base_url_param: Optional[str],
+        kwargs: dict,
+    ) -> Union[str, T]:
+        """Call LLM with retry for transient errors (5xx, network timeouts)."""
+        last_error = None
+
+        for attempt in range(_LLM_RETRY_COUNT + 1):
+            try:
+                if self._is_anthropic_provider():
+                    content = await self._call_anthropic(
+                        api_key=api_key,
+                        base_url=base_url,
+                        model=model,
+                        prompt=enhanced_prompt,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                    )
+                else:
+                    client = self._create_client(api_key=api_key_param, base_url=base_url_param)
+                    response = await client.chat.completions.create(
+                        model=model,
+                        messages=[{"role": "user", "content": enhanced_prompt}],
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        **kwargs
+                    )
+                    content = response.choices[0].message.content
+
+                if attempt > 0:
+                    logger.success(f"✅ LLM retry succeeded on attempt {attempt + 1}")
+
+                if response_type is not None:
+                    return self._parse_response_as_model(content, response_type)
+                return content
+
+            except Exception as e:
+                last_error = e
+                is_retryable = self._is_retryable_error(e)
+
+                if is_retryable and attempt < _LLM_RETRY_COUNT:
+                    delay = min(
+                        _LLM_RETRY_BASE_DELAY * (2 ** attempt) + random.uniform(0, 1),
+                        _LLM_RETRY_MAX_DELAY,
+                    )
+                    logger.warning(
+                        f"⚠️ LLM transient error (attempt {attempt + 1}/{_LLM_RETRY_COUNT + 1}): {e}. "
+                        f"Retrying in {delay:.1f}s..."
+                    )
+                    await asyncio.sleep(delay)
+                else:
+                    raise
+
+    @staticmethod
+    def _is_retryable_error(e: Exception) -> bool:
+        """Check if the error is transient and worth retrying."""
+        error_str = str(e).lower()
+        # 5xx server errors
+        if "status=5" in error_str or "500" in error_str or "502" in error_str or "503" in error_str:
+            return True
+        # Network / timeout errors
+        if any(kw in error_str for kw in ["timeout", "network", "connection", "网络错误", "1234"]):
+            return True
+        # httpx network errors
+        if isinstance(e, (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError)):
+            return True
+        return False
+
+    async def _call_anthropic(
+        self,
+        api_key: str,
+        base_url: str,
+        model: str,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
+        """
+        Call Anthropic-compatible Messages API via HTTP.
+
+        Supports providers like BigModel GLM Coding Plan that expose
+        an Anthropic-compatible endpoint.
+
+        Args:
+            api_key: API key
+            base_url: Anthropic-compatible base URL (e.g., https://open.bigmodel.cn/api/anthropic)
+            model: Model name (e.g., GLM-5.1)
+            prompt: The prompt text
+            temperature: Sampling temperature
+            max_tokens: Max tokens to generate
+
+        Returns:
+            Generated text content
+        """
+        # Normalize base_url: ensure it ends with /v1/messages path
+        url = base_url.rstrip("/")
+        if not url.endswith("/v1/messages"):
+            if url.endswith("/v1"):
+                url += "/messages"
+            elif url.endswith("/anthropic"):
+                url += "/v1/messages"
+            else:
+                url += "/v1/messages"
+
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+        payload = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if temperature is not None:
+            payload["temperature"] = temperature
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(url, headers=headers, json=payload)
+            if response.status_code != 200:
+                error_detail = response.text[:500]
+                raise Exception(f"Anthropic API error (status={response.status_code}): {error_detail}")
+            data = response.json()
+            # Extract text from Anthropic Messages response format
+            content_blocks = data.get("content", [])
+            texts = [block.get("text", "") for block in content_blocks if block.get("type") == "text"]
+            return "".join(texts)
     
     async def _call_with_structured_output(
         self,

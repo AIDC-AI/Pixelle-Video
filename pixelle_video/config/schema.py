@@ -62,6 +62,7 @@ class TTSLocalConfig(BaseModel):
     """Local TTS configuration (Edge TTS)"""
     voice: str = Field(default="zh-CN-YunjianNeural", description="Edge TTS voice ID")
     speed: float = Field(default=1.2, ge=0.5, le=2.0, description="Speech speed multiplier (0.5-2.0)")
+    proxy: str = Field(default="", description="HTTP proxy for Edge TTS (e.g. http://127.0.0.1:7890). Falls back to EDGE_TTS_PROXY / HTTPS_PROXY env var")
 
 
 class TTSComfyUIConfig(BaseModel):

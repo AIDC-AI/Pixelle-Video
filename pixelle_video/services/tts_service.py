@@ -147,27 +147,39 @@ class TTSService(ComfyBaseService):
     ) -> str:
         """
         Generate speech using local Edge TTS
-        
+
         Args:
             text: Text to convert to speech
             voice: Edge TTS voice ID (default: from config)
             speed: Speech speed multiplier (default: from config)
             output_path: Custom output path (auto-generated if None)
-        
+
         Returns:
             Generated audio file path
         """
         # Get config defaults
         local_config = self.config.get("local", {})
-        
+
         # Determine voice and speed (param > config)
         final_voice = voice or local_config.get("voice", "zh-CN-YunjianNeural")
         final_speed = speed if speed is not None else local_config.get("speed", 1.2)
+
+        # Resolve proxy: config > EDGE_TTS_PROXY env > HTTPS_PROXY env
+        proxy = (
+            local_config.get("proxy")
+            or os.environ.get("EDGE_TTS_PROXY")
+            or os.environ.get("HTTPS_PROXY")
+            or os.environ.get("https_proxy")
+            or None
+        )
+        # Clean empty strings
+        if proxy is not None and not proxy.strip():
+            proxy = None
         
         # Convert speed to rate parameter
         rate = speed_to_rate(final_speed)
         
-        logger.info(f"🎙️  Using local Edge TTS: voice={final_voice}, speed={final_speed}x (rate={rate})")
+        logger.info(f"🎙️  Using local Edge TTS: voice={final_voice}, speed={final_speed}x (rate={rate}), proxy={proxy or 'none'}")
         
         # Generate output path if not provided
         if not output_path:
@@ -184,7 +196,8 @@ class TTSService(ComfyBaseService):
                 text=text,
                 voice=final_voice,
                 rate=rate,
-                output_path=output_path
+                output_path=output_path,
+                proxy=proxy
             )
             
             logger.info(f"✅ Generated audio (local Edge TTS): {output_path}")
