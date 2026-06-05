@@ -47,6 +47,7 @@ def render_single_output(pixelle_video, video_params):
     mode = video_params.get("mode", "generate")
     title = video_params.get("title")
     n_scenes = video_params.get("n_scenes", 5)
+    target_duration = video_params.get("target_duration", 60)
     split_mode = video_params.get("split_mode", "paragraph")
     bgm_path = video_params.get("bgm_path")
     bgm_volume = video_params.get("bgm_volume", 0.2)
@@ -140,6 +141,7 @@ def render_single_output(pixelle_video, video_params):
                     "mode": mode,
                     "title": title if title else None,
                     "n_scenes": n_scenes,
+                    "target_duration": target_duration,
                     "split_mode": split_mode,
                     "media_workflow": workflow_key,
                     "api_video_params": api_video_params,
@@ -259,6 +261,7 @@ def render_batch_output(pixelle_video, video_params):
             shared_config = {
                 "title_prefix": video_params.get("title_prefix"),
                 "n_scenes": video_params.get("n_scenes") or 5,
+                "target_duration": video_params.get("target_duration", 60),
                 "media_workflow": video_params.get("media_workflow"),
                 "api_video_params": video_params.get("api_video_params"),
                 "frame_template": video_params.get("frame_template"),

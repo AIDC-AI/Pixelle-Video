@@ -71,6 +71,7 @@ async def edge_tts(
     output_path: str = None,
     retry_count: int = _RETRY_COUNT,
     retry_base_delay: float = _RETRY_BASE_DELAY,
+    proxy: str = None,
 ) -> bytes:
     """
     Convert text to speech using Microsoft Edge TTS
@@ -157,6 +158,7 @@ async def edge_tts(
                     rate=rate,
                     volume=volume,
                     pitch=pitch,
+                    proxy=proxy,
                 )
                 
                 # Collect audio chunks

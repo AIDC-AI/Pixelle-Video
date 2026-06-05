@@ -85,18 +85,23 @@ def render_content_input():
             
             # Number of scenes (only show in generate mode)
             if mode == "generate":
-                n_scenes = st.slider(
-                    tr("video.frames"),
-                    min_value=3,
-                    max_value=30,
-                    value=5,
-                    help=tr("video.frames_help"),
-                    label_visibility="collapsed"
+                # Target duration slider
+                target_duration = st.slider(
+                    tr("video.target_duration"),
+                    min_value=15,
+                    max_value=180,
+                    value=60,
+                    step=5,
+                    help=tr("video.target_duration_help"),
                 )
-                st.caption(tr("video.frames_label", n=n_scenes))
+
+                # Auto-calculate scenes: 1 scene per 5 seconds
+                n_scenes = max(3, min(target_duration // 5, 30))
+                st.caption(tr("video.duration_scenes_label", seconds=target_duration, n=n_scenes))
             else:
                 # Fixed mode: n_scenes is ignored, set default value
                 n_scenes = 5
+                target_duration = 60  # default for fixed mode
                 st.info(tr("video.frames_fixed_mode_hint"))
             
             return {
@@ -105,6 +110,7 @@ def render_content_input():
                 "text": text,
                 "title": title,
                 "n_scenes": n_scenes,
+                "target_duration": target_duration,
                 "split_mode": split_mode
             }
         
@@ -165,15 +171,19 @@ def render_content_input():
                 help=tr("batch.title_prefix_help")
             )
             
-            # Number of scenes (unified for all videos)
-            n_scenes = st.slider(
-                tr("batch.n_scenes_label"),
-                min_value=3,
-                max_value=30,
-                value=5,
-                help=tr("batch.n_scenes_help")
+            # Target duration for batch
+            target_duration = st.slider(
+                tr("video.target_duration"),
+                min_value=15,
+                max_value=180,
+                value=60,
+                step=5,
+                help=tr("video.target_duration_help"),
             )
-            st.caption(tr("batch.n_scenes_caption", n=n_scenes))
+
+            # Auto-calculate scenes: 1 scene per 5 seconds
+            n_scenes = max(3, min(target_duration // 5, 30))
+            st.caption(tr("video.duration_scenes_label", seconds=target_duration, n=n_scenes))
             
             # Config info
             st.info(f"📌 {tr('batch.config_info')}")
@@ -184,6 +194,7 @@ def render_content_input():
                 "mode": "generate",  # Fixed to AI generate content
                 "title_prefix": title_prefix,
                 "n_scenes": n_scenes,
+                "target_duration": target_duration,
             }
 
 

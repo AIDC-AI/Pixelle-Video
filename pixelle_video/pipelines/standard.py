@@ -108,8 +108,19 @@ class StandardPipeline(LinearVideoPipeline):
         mode = ctx.params.get("mode", "generate")
         text = ctx.input_text
         n_scenes = ctx.params.get("n_scenes", 5)
-        min_words = ctx.params.get("min_narration_words", 5)
-        max_words = ctx.params.get("max_narration_words", 20)
+        target_duration = ctx.params.get("target_duration", 60)
+
+        # Calculate per-scene word count based on target duration
+        # TTS speed 1.2x → ~4.5 Chinese chars/second
+        if mode == "generate":
+            chars_per_second = 4.5
+            seconds_per_scene = target_duration / max(n_scenes, 1)
+            words_per_scene = int(seconds_per_scene * chars_per_second)
+            min_words = max(5, int(words_per_scene * 0.7))
+            max_words = max(min_words + 5, int(words_per_scene * 1.3))
+        else:
+            min_words = ctx.params.get("min_narration_words", 5)
+            max_words = ctx.params.get("max_narration_words", 20)
         
         if mode == "generate":
             self._report_progress(ctx.progress_callback, "generating_narrations", 0.05)
