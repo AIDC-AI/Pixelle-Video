@@ -184,24 +184,80 @@ class LLMService:
                     **kwargs
                 )
             else:
-                # Standard text output mode
-                response = await client.chat.completions.create(
-                    model=final_model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    **kwargs
-                )
-                
-                result = response.choices[0].message.content
+                # Check if streaming mode is enabled
+                use_stream = self._get_config_value("stream", False)
+
+                if use_stream:
+                    # Streaming mode - collect chunks
+                    result = await self._call_with_stream(
+                        client=client,
+                        model=final_model,
+                        prompt=prompt,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        **kwargs
+                    )
+                else:
+                    # Standard text output mode
+                    response = await client.chat.completions.create(
+                        model=final_model,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        **kwargs
+                    )
+
+                    result = response.choices[0].message.content
+
                 logger.debug(f"LLM response length: {len(result)} chars")
-                
+
                 return result
         
         except Exception as e:
             logger.error(f"LLM call error (model={final_model}, base_url={client.base_url}): {e}")
             raise
     
+    async def _call_with_stream(
+        self,
+        client: AsyncOpenAI,
+        model: str,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs
+    ) -> str:
+        """
+        Call LLM with streaming mode enabled
+
+        Collects all chunks and returns the complete response.
+
+        Args:
+            client: OpenAI client
+            model: Model name
+            prompt: The prompt
+            temperature: Sampling temperature
+            max_tokens: Max tokens
+            **kwargs: Additional parameters
+
+        Returns:
+            Complete response text
+        """
+        chunks = []
+        async for chunk in await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=True,
+            **kwargs
+        ):
+            if chunk.choices and len(chunk.choices) > 0:
+                delta = chunk.choices[0].delta
+                if delta and delta.content:
+                    chunks.append(delta.content)
+
+        return "".join(chunks)
+
     async def _call_with_structured_output(
         self,
         client: AsyncOpenAI,
@@ -233,16 +289,30 @@ class LLMService:
         # Build JSON schema instruction and append to prompt
         json_schema_instruction = self._get_json_schema_instruction(response_type)
         enhanced_prompt = f"{prompt}\n\n{json_schema_instruction}"
-        
-        # Call LLM with enhanced prompt
-        response = await client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": enhanced_prompt}],
-            temperature=temperature,
-            max_tokens=max_tokens,
-            **kwargs
-        )
-        content = response.choices[0].message.content
+
+        # Check if streaming mode is enabled
+        use_stream = self._get_config_value("stream", False)
+
+        if use_stream:
+            # Streaming mode
+            content = await self._call_with_stream(
+                client=client,
+                model=model,
+                prompt=enhanced_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs
+            )
+        else:
+            # Call LLM with enhanced prompt
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": enhanced_prompt}],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs
+            )
+            content = response.choices[0].message.content
         
         logger.debug(f"Structured output response length: {len(content)} chars")
         

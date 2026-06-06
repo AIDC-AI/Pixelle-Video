@@ -201,6 +201,15 @@ def render_advanced_settings():
                     )
                 else:
                     llm_model = selected_model_option
+
+                # Stream mode toggle
+                llm_config = config_manager.get_llm_config()
+                llm_stream = st.checkbox(
+                    "启用流式输出 (Stream Mode)",
+                    value=llm_config.get("stream", False),
+                    help="某些 API 服务只支持流式返回，勾选此项可兼容这类服务",
+                    key="llm_stream_toggle"
+                )
         
         # ====================================================================
         # Column 2: ComfyUI Settings
@@ -440,7 +449,7 @@ def render_advanced_settings():
                     if not (llm_api_key and llm_base_url and llm_model):
                         st.error(tr("status.llm_config_incomplete"))
                     else:
-                        config_manager.set_llm_config(llm_api_key, llm_base_url, llm_model)
+                        config_manager.set_llm_config(llm_api_key, llm_base_url, llm_model, llm_stream)
                     
                     # Save ComfyUI configuration (optional fields, always save what's provided)
                     # Convert checkbox to instance type: True -> "plus", False -> ""
