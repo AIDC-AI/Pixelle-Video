@@ -64,38 +64,91 @@ def render_single_output(pixelle_video, video_params):
     prompt_prefix = video_params.get("prompt_prefix", "")
 
     # ====================================================================
-    # Subtitle toggle (independent right-column widget, sits above the
-    # generate button). Rendered as a selectbox to match the look of the
-    # other dropdown-driven options in the page (TTS voice, template, etc.).
-    # The boolean is folded back into `template_params` so the existing
-    # frame_processor pickup at `_compose_frame_html` keeps working.
+    # Video settings (right-column widget, sits above the generate button).
+    # Two sub-sections collapsed under one container — pure UI grouping,
+    # no behavior change:
+    #   • Subtitles  — boolean folded into template_params (consumed by
+    #                  frame_processor → _compose_frame_html, unchanged).
+    #   • Scene transitions — forwarded via video_params to
+    #                  pixelle_video.pipelines.standard →
+    #                  VideoService.concat_videos(transition=...,
+    #                  transition_duration=...). "none" keeps today's
+    #                  zero-encode hard-cut fast path.
+    # Widget keys, default values and downstream contracts are preserved.
     # ====================================================================
+    transition_keys = [
+        "none", "fade", "fadeblack", "fadewhite", "dissolve",
+        "slideleft", "slideright", "slideup", "slidedown",
+        "wipeleft", "wiperight",
+        "circleopen", "circleclose",
+        "smoothleft", "smoothright",
+        "pixelize",
+    ]
+    transition_labels = {k: tr(f"transition.option.{k}") for k in transition_keys}
+
     with st.container(border=True):
-        st.markdown(f"**{tr('section.subtitle')}**")
+        st.markdown(f"**{tr('section.video_settings')}**")
 
-        # Selectbox is purely an interaction-style change: same boolean
-        # value, same downstream contract — only the widget type differs.
-        subtitle_options = {
-            True: tr('template.show_subtitle_option_on'),
-            False: tr('template.show_subtitle_option_off'),
-        }
-        show_subtitle = st.selectbox(
-            tr('template.show_subtitle'),
-            options=list(subtitle_options.keys()),
-            format_func=lambda v: subtitle_options[v],
-            index=1,  # default: OFF
-            key="quick_create_show_subtitle",
-            help=tr('template.show_subtitle_help'),
-        )
-        if show_subtitle:
-            st.caption(tr('template.show_subtitle_on_hint'))
-        else:
-            st.caption(tr('template.show_subtitle_off_hint'))
+        # --- Subsection 1: Subtitles -------------------------------------
+        with st.expander(tr("section.subtitle"), expanded=True):
+            # Selectbox is purely an interaction-style change: same boolean
+            # value, same downstream contract — only the widget type differs.
+            subtitle_options = {
+                True: tr('template.show_subtitle_option_on'),
+                False: tr('template.show_subtitle_option_off'),
+            }
+            show_subtitle = st.selectbox(
+                tr('template.show_subtitle'),
+                options=list(subtitle_options.keys()),
+                format_func=lambda v: subtitle_options[v],
+                index=1,  # default: OFF
+                key="quick_create_show_subtitle",
+                help=tr('template.show_subtitle_help'),
+            )
+            if show_subtitle:
+                st.caption(tr('template.show_subtitle_on_hint'))
+            else:
+                st.caption(tr('template.show_subtitle_off_hint'))
 
-    # Persist back into the params dict that downstream code reads.
+        # --- Subsection 2: Scene transitions -----------------------------
+        with st.expander(tr("section.transition"), expanded=True):
+            transition_choice = st.selectbox(
+                tr("transition.label"),
+                options=transition_keys,
+                format_func=lambda k: transition_labels[k],
+                index=0,  # default: none (hard cut) — preserve existing behavior
+                key="quick_create_transition",
+                help=tr("transition.help"),
+            )
+            if transition_choice == "none":
+                transition_duration = 0.0
+                st.caption(tr("transition.off_hint"))
+            else:
+                transition_duration = st.slider(
+                    tr("transition.duration_label"),
+                    min_value=0.2,
+                    max_value=2.0,
+                    value=0.5,
+                    step=0.1,
+                    key="quick_create_transition_duration",
+                    help=tr("transition.duration_help"),
+                )
+                st.caption(
+                    tr(
+                        "transition.on_hint",
+                        name=transition_labels[transition_choice],
+                        duration=f"{transition_duration:.1f}",
+                    )
+                )
+
+    # Persist subtitle choice into the params dict that downstream code reads.
     custom_values_for_video = dict(custom_values_for_video) if custom_values_for_video else {}
     custom_values_for_video["show_subtitle"] = bool(show_subtitle)
     video_params["template_params"] = custom_values_for_video
+
+    transition_param = transition_choice if transition_choice != "none" else None
+    video_params["transition"] = transition_param
+    video_params["transition_duration"] = transition_duration
 
     with st.container(border=True):
         st.markdown(f"**{tr('section.video_generation')}**")
@@ -181,6 +234,8 @@ def render_single_output(pixelle_video, video_params):
                     "prompt_prefix": prompt_prefix,
                     "bgm_path": bgm_path,
                     "bgm_volume": bgm_volume if bgm_path else 0.2,
+                    "transition": transition_param,
+                    "transition_duration": transition_duration,
                     "progress_callback": update_progress,
                     "media_width": st.session_state.get('template_media_width'),
                     "media_height": st.session_state.get('template_media_height'),
