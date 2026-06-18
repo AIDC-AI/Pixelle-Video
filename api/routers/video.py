@@ -17,9 +17,13 @@ Supports both synchronous and asynchronous video generation.
 """
 
 import os
-from fastapi import APIRouter, HTTPException, Request
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 
+from api.auth.dependencies import require_capability
+from api.auth.policy import VIDEO_GENERATE
 from api.dependencies import PixelleVideoDep
 from api.schemas.video import (
     VideoGenerateRequest,
@@ -28,7 +32,55 @@ from api.schemas.video import (
 )
 from api.tasks import task_manager, TaskType
 
+
+# Map pipeline ProgressEvent event_type to a user-facing label.
+_EVENT_LABELS: dict[str, str] = {
+    "generating_narrations": "Generating narrations via LLM…",
+    "splitting_script": "Splitting script into segments…",
+    "generating_title": "Generating video title…",
+    "generating_image_prompts": "Generating image prompts…",
+    "processing_frame": "Rendering frame {frame_current}/{frame_total}…",
+    "concatenating": "Composing final video…",
+    "completed": "Done",
+}
+
+
+def _progress_message(event) -> str:
+    """Derive a user-facing progress label from a pipeline ProgressEvent."""
+    label = _EVENT_LABELS.get(event.event_type, event.event_type)
+    if event.event_type == "processing_frame" and event.frame_current is not None:
+        return f"Rendering frame {event.frame_current}/{event.frame_total}…"
+    if event.action:
+        return f"{label} ({event.action})"
+    if event.extra_info:
+        return f"{label} {event.extra_info}"
+    return label
+
+
+def _make_progress_bridge(task_id: str):
+    """Return a sync progress callback that forwards a pipeline event to
+    `task_manager.update_progress`. Wrapping the lambda in a named
+    helper keeps the call site clean and gives us a stable place to add
+    logging / metrics in the future."""
+
+    def _on_progress(event) -> None:
+        logger.debug(
+            f"pipeline progress event_type={event.event_type} "
+            f"progress={event.progress:.3f} message={getattr(event, 'message', '')}"
+        )
+        task_manager.update_progress(
+            task_id=task_id,
+            current=int(event.progress * 100),
+            total=100,
+            message=_progress_message(event),
+        )
+
+    return _on_progress
+
+
 router = APIRouter(prefix="/video", tags=["Video Generation"])
+
+VideoGuard = Annotated[None, Depends(require_capability(VIDEO_GENERATE))]
 
 
 def path_to_url(request: Request, file_path: str) -> str:
@@ -47,10 +99,10 @@ def path_to_url(request: Request, file_path: str) -> str:
     
     Examples:
         Windows: G:\\...\\output\\20251205_233630_c939\\final.mp4
-              -> http://localhost:8000/api/files/20251205_233630_c939/final.mp4
+              -> http://localhost:8001/api/files/20251205_233630_c939/final.mp4
         
         Linux:   /home/user/.../output/20251205_233630_c939/final.mp4
-              -> http://localhost:8000/api/files/20251205_233630_c939/final.mp4
+              -> http://localhost:8001/api/files/20251205_233630_c939/final.mp4
         
         Domain:  With domain request -> https://your-domain.com/api/files/...
     """
@@ -89,7 +141,8 @@ def path_to_url(request: Request, file_path: str) -> str:
 async def generate_video_sync(
     request_body: VideoGenerateRequest,
     pixelle_video: PixelleVideoDep,
-    request: Request
+    request: Request,
+    _guard: VideoGuard,
 ):
     """
     Generate video synchronously
@@ -179,7 +232,8 @@ async def generate_video_sync(
 async def generate_video_async(
     request_body: VideoGenerateRequest,
     pixelle_video: PixelleVideoDep,
-    request: Request
+    request: Request,
+    _guard: VideoGuard,
 ):
     """
     Generate video asynchronously
@@ -239,8 +293,8 @@ async def generate_video_async(
                 "prompt_prefix": request_body.prompt_prefix,
                 "bgm_path": request_body.bgm_path,
                 "bgm_volume": request_body.bgm_volume,
-                # Progress callback can be added here if needed
-                # "progress_callback": lambda event: task_manager.update_progress(...)
+                # Bridge pipeline progress events -> task manager -> SSE stream
+                "progress_callback": _make_progress_bridge(task.task_id),
             }
             
             # Add TTS workflow if specified

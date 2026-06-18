@@ -1,0 +1,99 @@
+services:
+  # Init Service - Ensures config.yaml exists before other services start
+  init:
+    image: alpine:latest
+    volumes:
+      - ./:/workspace
+    command: >
+      sh -c '
+        if [ -d /workspace/config.yaml ]; then
+          echo "⚠️  config.yaml is a directory, removing it...";
+          rm -rf /workspace/config.yaml;
+        fi;
+        if [ ! -f /workspace/config.yaml ] && [ -f /workspace/config.example.yaml ]; then
+          echo "📋 Creating config.yaml from config.example.yaml...";
+          cp /workspace/config.example.yaml /workspace/config.yaml;
+          echo "✅ config.yaml created successfully!";
+        else
+          echo "✅ config.yaml already exists.";
+        fi
+      '
+    restart: "no"
+
+  # API Service - FastAPI backend
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+      args:
+        USE_CN_MIRROR: ${USE_CN_MIRROR:-false}
+    container_name: pixelle-video-api
+    command: uv run python api/app.py --host 0.0.0.0 --port 8001
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./data:/app/data
+      - ./output:/app/output
+    environment:
+      - TZ=Asia/Shanghai
+      - JWT_SECRET=${JWT_SECRET:-}
+      - AUTH_DB_PATH=${AUTH_DB_PATH:-data/auth.db}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_ENABLED=${GOOGLE_ENABLED:-false}
+      - MAIL_SMTP_HOST=${MAIL_SMTP_HOST:-}
+      - MAIL_SMTP_PORT=${MAIL_SMTP_PORT:-587}
+      - MAIL_USE_TLS=${MAIL_USE_TLS:-true}
+      - MAIL_SMTP_USER=${MAIL_SMTP_USER:-}
+      - MAIL_SMTP_PASSWORD=${MAIL_SMTP_PASSWORD:-}
+      - MAIL_FROM_EMAIL=${MAIL_FROM_EMAIL:-}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-Pixelle-Video}
+      - PASSWORD_RESET_URL_BASE=${PASSWORD_RESET_URL_BASE:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - pixelle-network
+
+  # Web Service - Next.js frontend.
+  #
+  # This is the full-stack deployment variant. It builds the production
+  # Next.js image and exposes it on port 8501.
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+      args:
+        USE_CN_MIRROR: ${USE_CN_MIRROR:-false}
+    container_name: pixelle-video-web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
+    environment:
+      - TZ=Asia/Shanghai
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8501/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - pixelle-network
+
+networks:
+  pixelle-network:
+    driver: bridge

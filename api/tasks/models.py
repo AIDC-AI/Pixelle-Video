@@ -42,6 +42,13 @@ class TaskProgress(BaseModel):
     message: str = ""
 
 
+class TaskErrorDetail(BaseModel):
+    """User-friendly error detail returned alongside the raw debug error."""
+    code: str
+    message: str
+    details: Optional[str] = None
+
+
 class Task(BaseModel):
     """Task model"""
     task_id: str
@@ -54,6 +61,7 @@ class Task(BaseModel):
     # Result
     result: Optional[Any] = None
     error: Optional[str] = None
+    error_detail: Optional[TaskErrorDetail] = None
     
     # Metadata
     created_at: datetime = Field(default_factory=datetime.now)

@@ -1,0 +1,208 @@
+{
+  "common": {
+    "appName": "Pixelle-Video",
+    "actions": {
+      "save": "保存",
+      "cancel": "取消",
+      "continue": "继续",
+      "back": "返回",
+      "submit": "提交",
+      "delete": "删除",
+      "confirm": "确认",
+      "close": "关闭",
+      "tryAgain": "重试",
+      "viewAll": "查看全部",
+      "reset": "重置"
+    },
+    "states": {
+      "loading": "加载中...",
+      "empty": "暂无内容",
+      "error": "出错了"
+    },
+    "yes": "是",
+    "no": "否"
+  },
+  "nav": {
+    "home": "首页",
+    "history": "历史",
+    "settings": "设置",
+    "admin": "管理",
+    "generate": "生成",
+    "signIn": "登录",
+    "signUp": "注册",
+    "signOut": "退出",
+    "language": "语言"
+  },
+  "auth": {
+    "login": {
+      "title": "登录",
+      "subtitle": "欢迎回来。登录后继续创作。",
+      "email": "邮箱",
+      "password": "密码",
+      "submit": "登录",
+      "noAccount": "还没有账号?",
+      "signUpLink": "立即注册",
+      "forgotLink": "忘记密码?",
+      "googleButton": "使用 Google 登录",
+      "googleUnavailable": "Google 登录未配置",
+      "orContinueWith": "或",
+      "errors": {
+        "invalid_credentials": "邮箱或密码不正确。",
+        "network_error": "网络错误，请重试。",
+        "timeout": "服务器响应超时。",
+        "user_inactive": "该账号已停用。",
+        "google_invalid": "Google 登录失败，令牌无效。",
+        "provider_error": "Google 登录暂时不可用。请重试或使用邮箱登录。",
+        "not_configured": "服务器未配置 Google 登录。"
+      },
+      "resetSuccess": "密码重置成功。请使用新密码登录。"
+    },
+    "signup": {
+      "title": "创建账号",
+      "subtitle": "几秒钟即可开始使用 Pixelle-Video。",
+      "email": "邮箱",
+      "password": "密码",
+      "confirmPassword": "确认密码",
+      "submit": "创建账号",
+      "haveAccount": "已有账号？",
+      "signInLink": "登录",
+      "orContinueWith": "或",
+      "errors": {
+        "email_exists": "该邮箱已被注册。",
+        "password_policy": "密码至少 8 位，且包含字母和数字。",
+        "password_mismatch": "两次输入的密码不一致。",
+        "google_invalid": "Google 登录失败，令牌无效。",
+        "provider_error": "Google 登录暂时不可用。请重试或使用邮箱注册。",
+        "not_configured": "服务器未配置 Google 登录。",
+        "provider_unavailable": "Google 登录不可用"
+      }
+    },
+    "forgot": {
+      "title": "重置密码",
+      "subtitle": "输入您的邮箱，我们会发送重置链接。",
+      "email": "邮箱",
+      "submit": "发送重置链接",
+      "backToLogin": "返回登录",
+      "successMessage": "如果该账号存在，重置链接已发送。",
+      "errors": {
+        "email_invalid": "请输入有效的邮箱地址。",
+        "mail_title": "邮件发送失败",
+        "mail_description": "邮件服务暂时不可用，请稍后再试。",
+        "mail_retry": "输入其他邮箱或返回",
+        "mail_subtext": "邮件服务器返回了临时错误。您的请求未处理——未发送任何邮件。"
+      }
+    },
+    "reset": {
+      "title": "设置新密码",
+      "title_missing": "缺少重置链接",
+      "subtitle": "为您的账号设置一个新密码。",
+      "newPassword": "新密码",
+      "confirmPassword": "确认新密码",
+      "submit": "更新密码",
+      "requestNewLink": "请求新的重置链接",
+      "errors": {
+        "password_mismatch": "两次输入的密码不一致。",
+        "password_policy": "密码至少 8 位,且包含字母和数字。",
+        "token_expired": "此重置链接已过期。",
+        "token_invalid": "此重置链接无效或已被使用。",
+        "user_inactive": "此账号已停用。",
+        "no_token": "未找到重置令牌。",
+        "no_token_guidance": "重置链接缺失。请重新请求。",
+        "token_guidance": "请重新请求密码重置链接。"
+      }
+    },
+    "loggedOut": "您已退出登录。"
+  },
+  "accessDenied": {
+    "title": "访问被拒绝",
+    "message": "您没有访问该区域的权限。",
+    "back": "返回首页"
+  },
+  "home": {
+    "title": "创建下一个视频",
+    "subtitle": "选择流水线,给出主题,Pixelle 完成剩下的工作。",
+    "newVideo": "新建视频",
+    "recent": "最近的生成",
+    "kpis": {
+      "videos": "已创建视频",
+      "minutes": "生成分钟数",
+      "templates": "可用模板"
+    }
+  },
+  "task": {
+    "error": {
+      "SERVICE_UNAVAILABLE": "Service is temporarily unavailable. Please try again later.",
+      "MEDIA_SERVICE_ERROR": "The media generation service encountered a problem. Please try again later.",
+      "NETWORK_ERROR": "Network connection interrupted. Please retry.",
+      "AI_SERVICE_ERROR": "The AI service failed to respond. Please try again later.",
+      "GENERATION_FAILED": "Video generation failed. Please try again."
+    }
+  },
+  "pipelines": {
+    "standard": {
+      "name": "标准",
+      "description": "主题 → 文案 → 语音 → 画面 → 视频。"
+    },
+    "asset_based": {
+      "name": "自定义素材",
+      "description": "上传您自己的照片和视频,AI 自动成片。"
+    },
+    "digital_human": {
+      "name": "数字人",
+      "description": "生成讲解您脚本的数字人形象。"
+    },
+    "i2v": {
+      "name": "图生视频",
+      "description": "使用动作提示将单张图片变成视频。"
+    },
+    "action_transfer": {
+      "name": "动作迁移",
+      "description": "将参考视频中的动作迁移到您的图片。"
+    }
+  },
+  "history": {
+    "title": "生成历史",
+    "empty": "暂无生成记录。",
+    "columns": {
+      "created": "创建时间",
+      "name": "名称",
+      "status": "状态",
+      "duration": "时长",
+      "actions": "操作"
+    },
+    "actions": {
+      "open": "打开",
+      "delete": "删除"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "sections": {
+      "llm": "大语言模型",
+      "comfyui": "ComfyUI",
+      "api_providers": "API 提供商"
+    },
+    "fields": {
+      "apiKey": "API Key",
+      "baseUrl": "Base URL",
+      "model": "Model"
+    }
+  },
+  "admin": {
+    "title": "管理",
+    "users": "用户",
+    "system": "系统",
+    "columns": {
+      "email": "邮箱",
+      "role": "角色",
+      "status": "状态",
+      "created": "创建时间"
+    }
+  },
+  "states": {
+    "loading": "加载中...",
+    "empty": "暂无内容",
+    "errorTitle": "出错了",
+    "errorDescription": "请稍后再试。"
+  }
+}

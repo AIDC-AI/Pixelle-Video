@@ -33,6 +33,7 @@ https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 
 ## 📋 最近更新
 
+- ✅ **2026-06-18**: 完整身份认证系统 — 邮箱/密码注册登录、JWT 刷新令牌、忘记密码邮件重置、Google OAuth 登录、基于角色的访问控制（admin/user）集中策略、基于能力的 API 守卫、Alembic 管理认证数据库迁移
 - ✅ **2026-06-01**: 新增直连 API 媒体模型配置，支持在 WebUI 中配置图像/视频模型供应商、Base URL 与代理开关
 - ✅ **2026-01-26**: 新增「动作迁移」模块，上传参考视频和图片进行动作迁移
 - ✅ **2026-01-14**: 新增「数字人口播」和「图生视频」流水线，新增多语言 TTS 音色支持
@@ -60,6 +61,10 @@ https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 - ✅ **灵活尺寸** - 支持竖屏、横屏等多种视频尺寸
 - ✅ **多种 AI 模型** - 支持 GPT、通义千问、DeepSeek、Ollama 等
 - ✅ **原子能力灵活组合** - 支持 ComfyUI / RunningHub 工作流，也支持直连 API 模型，可按需替换图像、视频、TTS、VLM 等能力
+- ✅ **用户认证系统** - 邮箱/密码注册登录，JWT 会话管理，自动刷新令牌
+- ✅ **基于角色的权限控制** - Admin 和 user 角色，集中式的授权策略
+- ✅ **Google OAuth 登录** - 一键 Google 登录，自动创建或关联账号
+- ✅ **密码邮件重置** - 安全的忘记密码流程，支持 SMTP 邮件发送和一次性重置令牌
 
 
 ## 📊 视频生成流程
@@ -239,11 +244,14 @@ cd Pixelle-Video
 #### 第二步：启动 Web 界面
 
 ```bash
-# 使用 uv 运行（推荐，会自动安装依赖）
-uv run streamlit run web/app.py
+# 启动 FastAPI 后端
+uv run python api/app.py --host 0.0.0.0 --port 8001
+
+# 另开终端，启动 Next.js 前端
+cd web-next && pnpm install && pnpm dev
 ```
 
-浏览器会自动打开 http://localhost:8501
+浏览器打开 http://localhost:8501
 
 #### 第三步：在 Web 界面配置
 

@@ -1,0 +1,247 @@
+/* Pixelle Motion Brand — global styles.
+ *
+ * CSS variables mirror the Tailwind theme so non-Tailwind code (e.g.
+ * inline styles, third-party widgets) can still pull from the same
+ * token surface. See `docs/ai/specs/theme-ui-moi-pixelle-motion-brand.md`.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-app: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-surface-subtle: #f4f7fb;
+    --text-heading: #1a2b4d;
+    --text-body: #3a3a3a;
+    --text-muted: #64748b;
+    --border-default: #e2e8f0;
+    --ring-focus: #aebed8;
+    --gradient-text: linear-gradient(90deg, #d4a853 0%, #e53e3e 100%);
+    --gradient-cta: linear-gradient(180deg, #d7ac38 0%, #ed3334 100%);
+    --gradient-surface-soft: linear-gradient(
+      135deg,
+      rgba(26, 43, 77, 0.04) 0%,
+      rgba(212, 168, 83, 0.1) 100%
+    );
+  }
+
+  html,
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-body);
+    font-family:
+      "Noto Sans JP",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Body text ≥15px on mobile per Accessibility Rules. */
+  body {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* Larger headings can use slightly tighter tracking. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  /* Inputs never go below 16px on mobile to avoid iOS auto-zoom. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Focus ring that respects the brand spec — always visible. */
+  *:focus-visible {
+    outline: 2px solid var(--ring-focus);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .text-gradient {
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .bg-cta {
+    background: var(--gradient-cta);
+  }
+
+  .bg-surface-soft {
+    background: var(--gradient-surface-soft);
+  }
+
+  /* Card variants */
+  .card {
+    @apply rounded-xl border border-neutral-200 bg-neutral-0 shadow-1 transition-shadow duration-200;
+  }
+
+  .card-featured {
+    @apply rounded-xl border border-brand-primary-100 bg-neutral-0 shadow-1 transition-shadow duration-200;
+    background-image: var(--gradient-surface-soft);
+  }
+
+  .card-hover {
+    @apply hover:-translate-y-0.5 hover:shadow-2;
+  }
+
+  /* Form controls */
+  .form-control {
+    @apply h-11 w-full rounded-md border border-neutral-300 bg-neutral-0 px-3 text-body
+      text-neutral-800 placeholder:text-neutral-400
+      focus:border-brand-primary-600 focus:ring-2 focus:ring-brand-primary-300
+      disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400;
+  }
+
+  .form-label {
+    @apply mb-1 block text-label font-medium text-neutral-700;
+  }
+
+  .form-help {
+    @apply mt-1 text-caption text-neutral-500;
+  }
+
+  .form-error {
+    @apply mt-1 rounded-md bg-error-soft px-3 py-2 text-body-sm text-error;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Surface lift — use on cards/CTA panels that should feel tactile. */
+  .surface-lift {
+    @apply transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-2;
+  }
+
+  /* Skeleton shimmer */
+  .skeleton {
+    background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded-md;
+  }
+
+  /* Auth ambient motion primitives */
+  .auth-ambient-orb {
+    @apply pointer-events-none absolute rounded-full blur-3xl;
+  }
+
+  .auth-ambient-grid {
+    background-image:
+      linear-gradient(rgba(148, 163, 184, 0.14) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+    background-position: center;
+    background-size: 56px 56px;
+    mask-image: radial-gradient(circle at center, black 34%, transparent 82%);
+  }
+
+  .auth-motion-drift-ambient {
+    animation: auth-drift-ambient 16s ease-in-out infinite;
+  }
+
+  .auth-motion-drift-ambient-slow {
+    animation: auth-drift-ambient-slow 22s ease-in-out infinite;
+  }
+
+  .auth-motion-light-sweep-ambient {
+    animation: auth-light-sweep-ambient 14s ease-in-out infinite;
+  }
+
+  .auth-motion-page-enter {
+    animation: auth-page-enter 320ms ease-out both;
+  }
+}
+
+@keyframes auth-drift-ambient {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(20px, -28px, 0) scale(1.05);
+  }
+}
+
+@keyframes auth-drift-ambient-slow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(-18px, 24px, 0) scale(1.08);
+  }
+}
+
+@keyframes auth-light-sweep-ambient {
+  0% {
+    left: -24%;
+    opacity: 0;
+  }
+
+  18%,
+  82% {
+    opacity: 0.55;
+  }
+
+  100% {
+    left: 116%;
+    opacity: 0;
+  }
+}
+
+@keyframes auth-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Respect reduced motion: pause auth animated layers while keeping composition. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora,
+  .animate-drift,
+  .animate-drift-slow,
+  .animate-float-panel,
+  .animate-glow,
+  .animate-light-sweep,
+  .animate-progress-shift,
+  .animate-reveal,
+  .auth-motion-drift-ambient,
+  .auth-motion-drift-ambient-slow,
+  .auth-motion-light-sweep-ambient,
+  .auth-motion-page-enter {
+    animation: none !important;
+  }
+
+  .animate-soft-pulse,
+  .auth-ambient-orb {
+    animation: none !important;
+    opacity: 0.18 !important;
+  }
+}

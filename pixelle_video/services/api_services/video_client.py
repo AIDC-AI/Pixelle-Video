@@ -41,56 +41,27 @@ class VideoClient:
         ark_base_url: Optional[str] = None,
         ark_local_proxy: Optional[str] = None,
     ):
-        self._dashscope_api_key = dashscope_api_key or Config.DASHSCOPE_API_KEY
-        self._dashscope_base_url = dashscope_base_url or Config.DASHSCOPE_BASE_URL
-        self._dashscope_local_proxy = dashscope_local_proxy
+        # 万象客户端
+        self.Dashscope_client = DashscopeVideoClient(
+            api_key=dashscope_api_key or Config.DASHSCOPE_API_KEY,
+            base_url=dashscope_base_url or Config.DASHSCOPE_BASE_URL,
+            local_proxy=dashscope_local_proxy,
+        )
 
-        self._kling_access_key = kling_access_key or Config.KLING_ACCESS_KEY
-        self._kling_secret_key = kling_secret_key or Config.KLING_SECRET_KEY
-        self._kling_base_url = kling_base_url or Config.KLING_BASE_URL
-        self._kling_local_proxy = kling_local_proxy
+        # 可灵客户端
+        self.kling_client = KlingVideoClient(
+            access_key=kling_access_key or Config.KLING_ACCESS_KEY,
+            secret_key=kling_secret_key or Config.KLING_SECRET_KEY,
+            base_url=kling_base_url or Config.KLING_BASE_URL,
+            local_proxy=kling_local_proxy,
+        )
 
-        self._ark_api_key = ark_api_key or Config.ARK_API_KEY or os.getenv("ARK_API_KEY")
-        self._ark_base_url = ark_base_url or Config.ARK_BASE_URL or os.getenv("ARK_BASE_URL")
-        self._ark_local_proxy = ark_local_proxy
-
-        self._dashscope_client = None
-        self._kling_client = None
-        self._seedance_client = None
-
-    @property
-    def Dashscope_client(self):
-        """Create DashScope client only when a Wan/HappyHorse model is selected."""
-        if self._dashscope_client is None:
-            self._dashscope_client = DashscopeVideoClient(
-                api_key=self._dashscope_api_key,
-                base_url=self._dashscope_base_url,
-                local_proxy=self._dashscope_local_proxy,
-            )
-        return self._dashscope_client
-
-    @property
-    def kling_client(self):
-        """Create Kling client only when a Kling model is selected."""
-        if self._kling_client is None:
-            self._kling_client = KlingVideoClient(
-                access_key=self._kling_access_key,
-                secret_key=self._kling_secret_key,
-                base_url=self._kling_base_url,
-                local_proxy=self._kling_local_proxy,
-            )
-        return self._kling_client
-
-    @property
-    def seedance_client(self):
-        """Create Seedance client only when a Seedance/ARK model is selected."""
-        if self._seedance_client is None:
-            self._seedance_client = SeedanceVideoClient(
-                api_key=self._ark_api_key,
-                base_url=self._ark_base_url,
-                local_proxy=self._ark_local_proxy,
-            )
-        return self._seedance_client
+        # Seedance 客户端
+        self.seedance_client = SeedanceVideoClient(
+            api_key=ark_api_key or Config.ARK_API_KEY or os.getenv("ARK_API_KEY"),
+            base_url=ark_base_url or Config.ARK_BASE_URL or os.getenv("ARK_BASE_URL"),
+            local_proxy=ark_local_proxy,
+        )
 
     def generate_video(
         self,

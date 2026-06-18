@@ -20,6 +20,7 @@ Key Feature:
   to ensure perfect sync between audio and video (no padding, no trimming needed)
 """
 
+import asyncio
 from typing import Callable, Optional
 
 import httpx
@@ -481,15 +482,40 @@ class FrameProcessor:
 
         if os.path.exists(url):
             return url
-        
-        timeout = httpx.Timeout(connect=10.0, read=60, write=60, pool=60)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.get(url)
-            response.raise_for_status()
-            
-            with open(output_path, 'wb') as f:
-                f.write(response.content)
-        
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+            ),
+            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        }
+        timeout = httpx.Timeout(connect=10.0, read=120, write=60, pool=60)
+        max_retries = 3
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+                    response = await client.get(url, headers=headers)
+                    response.raise_for_status()
+
+                    with open(output_path, 'wb') as f:
+                        f.write(response.content)
+
+                return output_path
+            except (httpx.RemoteProtocolError, httpx.ConnectError, httpx.ReadTimeout,
+                    httpx.WriteError, httpx.NetworkError) as e:
+                if attempt == max_retries:
+                    raise RuntimeError(
+                        f"Failed to download media after {max_retries} attempts: {url}"
+                    ) from e
+                wait = 2 ** attempt
+                logger.warning(
+                    f"Download attempt {attempt}/{max_retries} failed for {url}: {e}. "
+                    f"Retrying in {wait}s..."
+                )
+                await asyncio.sleep(wait)
+
         return output_path
     
     async def _get_video_duration(self, video_path: str) -> float:

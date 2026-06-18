@@ -1,17 +1,5 @@
-version: '3.8'
-
-# Build Arguments Configuration
-# You can override these by setting environment variables before running docker-compose
-#
-# Example for China environment (auto uses Tsinghua mirror):
-#   USE_CN_MIRROR=true docker-compose up -d
-#
-# Example for international environment (default):
-#   docker-compose up -d
-
 services:
   # Init Service - Ensures config.yaml exists before other services start
-  # This fixes the Docker issue where mounting a non-existent file creates a directory
   init:
     image: alpine:latest
     volumes:
@@ -37,87 +25,44 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: api
       args:
         USE_CN_MIRROR: ${USE_CN_MIRROR:-false}
     container_name: pixelle-video-api
-    command: .venv/bin/python api/app.py --host 0.0.0.0 --port 8000
+    command: uv run python api/app.py --host 0.0.0.0 --port 8001
     depends_on:
       init:
         condition: service_completed_successfully
     ports:
-      - "8000:8000"
+      - "8001:8001"
     volumes:
-      # Mount config file (read-write to allow saving from Web UI)
-      # Note: init service auto-creates config.yaml from config.example.yaml if not exists
       - ./config.yaml:/app/config.yaml
-      # Mount data directories for persistence
-      # data/ contains: users/, bgm/, templates/, workflows/ (custom resources)
       - ./data:/app/data
       - ./output:/app/output
-      # Note: Default resources (bgm/, templates/, workflows/) are baked into the image
-      # Custom resources in data/* will override defaults
     environment:
       - TZ=Asia/Shanghai
+      - JWT_SECRET=${JWT_SECRET:-}
+      - AUTH_DB_PATH=${AUTH_DB_PATH:-data/auth.db}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_ENABLED=${GOOGLE_ENABLED:-false}
+      - MAIL_SMTP_HOST=${MAIL_SMTP_HOST:-}
+      - MAIL_SMTP_PORT=${MAIL_SMTP_PORT:-587}
+      - MAIL_USE_TLS=${MAIL_USE_TLS:-true}
+      - MAIL_SMTP_USER=${MAIL_SMTP_USER:-}
+      - MAIL_SMTP_PASSWORD=${MAIL_SMTP_PASSWORD:-}
+      - MAIL_FROM_EMAIL=${MAIL_FROM_EMAIL:-}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-Pixelle-Video}
+      - PASSWORD_RESET_URL_BASE=${PASSWORD_RESET_URL_BASE:-}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    networks:
-      - pixelle-network
-
-  # Web UI Service - Streamlit frontend
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        USE_CN_MIRROR: ${USE_CN_MIRROR:-false}
-    container_name: pixelle-video-web
-    command: .venv/bin/streamlit run web/app.py --server.port 8501 --server.address 0.0.0.0
-    depends_on:
-      init:
-        condition: service_completed_successfully
-    ports:
-      - "8501:8501"
-    volumes:
-      # Mount config file (read-write to allow saving from Web UI)
-      # Note: init service auto-creates config.yaml from config.example.yaml if not exists
-      - ./config.yaml:/app/config.yaml
-      # Mount data directories for persistence
-      # data/ contains: users/, bgm/, templates/, workflows/ (custom resources)
-      - ./data:/app/data
-      - ./output:/app/output
-      # Note: Default resources (bgm/, templates/, workflows/) are baked into the image
-      # Custom resources in data/* will override defaults
-    environment:
-      - TZ=Asia/Shanghai
-      - STREAMLIT_SERVER_PORT=8501
-      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
-      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
     networks:
       - pixelle-network
 
 networks:
   pixelle-network:
     driver: bridge
-

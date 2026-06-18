@@ -1,6 +1,6 @@
 [project]
 name = "pixelle-video"
-version = "0.2.0"
+version = "0.1.15"
 description = "AI-powered video creation platform - Part of Pixelle ecosystem"
 authors = [
     {name = "Pixelle.AI"}
@@ -18,7 +18,6 @@ dependencies = [
     "ffmpeg-python>=0.2.0",
     "httpx>=0.28.1",
     "pillow>=10.0.0,<12",
-    "streamlit>=1.40.0",
     "openai>=2.6.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
@@ -31,6 +30,16 @@ dependencies = [
     "requests>=2.32.0",
     "pyjwt>=2.10.0",
     "numpy>=1.26.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+    "aiosqlite>=0.20.0",
+    "passlib[bcrypt]>=1.7.4",
+    # passlib 1.7.4 reads bcrypt.__about__.__version__ at import time,
+    # which was removed in bcrypt 5.x and breaks password verification
+    # silently. Pin bcrypt 4.x until passlib ships a fix.
+    "bcrypt>=4.0,<5",
+    "email-validator>=2.0.0",
+    "httpx>=0.28.1",
+    "google-auth>=2.30.0",
 ]
 
 [project.optional-dependencies]

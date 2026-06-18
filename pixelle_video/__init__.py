@@ -46,6 +46,7 @@ Usage:
 from pixelle_video.service import PixelleVideoCore, pixelle_video
 from pixelle_video.config import config_manager
 
-__version__ = "0.2.0"
+__version__ = "0.1.0"
 
 __all__ = ["PixelleVideoCore", "pixelle_video", "config_manager"]
+

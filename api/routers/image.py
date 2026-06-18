@@ -14,19 +14,26 @@
 Image generation endpoints
 """
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
+from api.auth.dependencies import require_capability
+from api.auth.policy import IMAGE_GENERATE
 from api.dependencies import PixelleVideoDep
 from api.schemas.image import ImageGenerateRequest, ImageGenerateResponse
 
 router = APIRouter(prefix="/image", tags=["Basic Services"])
 
+ImageGuard = Annotated[None, Depends(require_capability(IMAGE_GENERATE))]
+
 
 @router.post("/generate", response_model=ImageGenerateResponse)
 async def image_generate(
     request: ImageGenerateRequest,
-    pixelle_video: PixelleVideoDep
+    pixelle_video: PixelleVideoDep,
+    _guard: ImageGuard,
 ):
     """
     Image generation endpoint

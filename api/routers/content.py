@@ -16,9 +16,13 @@ Content generation endpoints
 Endpoints for generating narrations, image prompts, and titles.
 """
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
+from api.auth.dependencies import require_capability
+from api.auth.policy import CONTENT_GENERATE
 from api.dependencies import PixelleVideoDep
 from api.schemas.content import (
     NarrationGenerateRequest,
@@ -36,11 +40,14 @@ from pixelle_video.utils.content_generators import (
 
 router = APIRouter(prefix="/content", tags=["Content Generation"])
 
+ContentGuard = Annotated[None, Depends(require_capability(CONTENT_GENERATE))]
+
 
 @router.post("/narration", response_model=NarrationGenerateResponse)
 async def generate_narration(
     request: NarrationGenerateRequest,
-    pixelle_video: PixelleVideoDep
+    pixelle_video: PixelleVideoDep,
+    _guard: ContentGuard,
 ):
     """
     Generate narrations from text
@@ -78,7 +85,8 @@ async def generate_narration(
 @router.post("/image-prompt", response_model=ImagePromptGenerateResponse)
 async def generate_image_prompt(
     request: ImagePromptGenerateRequest,
-    pixelle_video: PixelleVideoDep
+    pixelle_video: PixelleVideoDep,
+    _guard: ContentGuard,
 ):
     """
     Generate image prompts from narrations
@@ -114,7 +122,8 @@ async def generate_image_prompt(
 @router.post("/title", response_model=TitleGenerateResponse)
 async def generate_title_endpoint(
     request: TitleGenerateRequest,
-    pixelle_video: PixelleVideoDep
+    pixelle_video: PixelleVideoDep,
+    _guard: ContentGuard,
 ):
     """
     Generate video title from text

@@ -1,0 +1,11 @@
+# Pre-approve native postinstalls so first-time `pnpm install` does
+# not require an interactive `pnpm approve-builds`. The two packages
+# below are required by Next.js' image pipeline and by ESLint's resolver.
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+
+# Skip the interactive "remove modules dir?" prompt during pnpm build in
+# non-TTY environments (CI, Docker). Required for `pnpm build` to succeed
+# after `COPY web-next ./` invalidates the modules dir.
+confirmModulesPurge: false

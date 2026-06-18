@@ -17,15 +17,22 @@ Provides access to generated files (videos, images, audio) and resource files.
 """
 
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from loguru import logger
 
+from api.auth.dependencies import require_capability
+from api.auth.policy import VIDEO_GENERATE
+
 router = APIRouter(prefix="/files", tags=["Files"])
+
+FilesGuard = Annotated[None, Depends(require_capability(VIDEO_GENERATE))]
 
 
 @router.get("/{file_path:path}")
-async def get_file(file_path: str):
+async def get_file(file_path: str, _guard: FilesGuard):
     """
     Get file by path
     

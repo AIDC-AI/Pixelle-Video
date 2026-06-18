@@ -80,7 +80,7 @@ Problem: "Failed to start"
 Solution: Check if Python and dependencies are installed correctly
 
 Problem: "Port already in use"
-Solution: Streamlit automatically uses the next available port. You can run multiple instances simultaneously.
+Solution: Next.js automatically uses the next available port. You can run multiple instances simultaneously.
 
 Problem: "Module not found"
 Solution: Re-extract the package completely, don't move files

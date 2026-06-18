@@ -31,6 +31,21 @@ from api.schemas.video import (
     VideoGenerateResponse,
     VideoGenerateAsyncResponse,
 )
+from api.schemas.config import (
+    LLMConfig,
+    LLMConfigUpdate,
+    LLMTestRequest,
+    LLMTestResponse,
+    ComfyUIConfig,
+    ComfyUIConfigUpdate,
+    ComfyUITestRequest,
+    ComfyUITestResponse,
+    APIProviderConfig,
+    APIProvidersCommonConfig,
+    APIProvidersCommonUpdate,
+    APIProvidersConfig,
+    FullConfig,
+)
 
 __all__ = [
     # Base
@@ -56,5 +71,19 @@ __all__ = [
     "VideoGenerateRequest",
     "VideoGenerateResponse",
     "VideoGenerateAsyncResponse",
+    # Config
+    "LLMConfig",
+    "LLMConfigUpdate",
+    "LLMTestRequest",
+    "LLMTestResponse",
+    "ComfyUIConfig",
+    "ComfyUIConfigUpdate",
+    "ComfyUITestRequest",
+    "ComfyUITestResponse",
+    "APIProviderConfig",
+    "APIProvidersCommonConfig",
+    "APIProvidersCommonUpdate",
+    "APIProvidersConfig",
+    "FullConfig",
 ]
 

@@ -74,3 +74,13 @@ examples/
 repositories/
 
 *.out
+
+
+.agents
+.claude
+.codex
+docs
+AGENTS.md
+.mcp.json
+CLAUDE.md
+.pi

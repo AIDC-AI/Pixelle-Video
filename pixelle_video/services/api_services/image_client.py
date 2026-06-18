@@ -31,64 +31,32 @@ class ImageClient:
         Unified Image Generation Client
         Routes requests to DashScope, Seedream, or GPT based on model name.
         """
-        self._dashscope_api_key = dashscope_api_key or Config.DASHSCOPE_API_KEY
-        self._dashscope_base_url = dashscope_base_url or Config.DASHSCOPE_BASE_URL
-        self._dashscope_local_proxy = dashscope_local_proxy
+        # Initialize DashScope Client
+        self.dashscope_client = DashScopeClient(
+            api_key=dashscope_api_key or Config.DASHSCOPE_API_KEY,
+            base_url=dashscope_base_url or Config.DASHSCOPE_BASE_URL,
+            local_proxy=dashscope_local_proxy,
+        )
 
-        self._gpt_api_key = gpt_api_key or Config.OPENAI_API_KEY
-        self._gpt_base_url = gpt_base_url or Config.OPENAI_BASE_URL
-        self._gpt_local_proxy = local_proxy or Config.LOCAL_PROXY
+        # Initialize Seedream Client
+        self.seedream_client = SeedreamClient(
+            api_key=ark_api_key or Config.ARK_API_KEY,
+            base_url=ark_base_url or Config.ARK_BASE_URL,
+            local_proxy=ark_local_proxy,
+        )
 
-        self._ark_api_key = ark_api_key or Config.ARK_API_KEY
-        self._ark_base_url = ark_base_url or Config.ARK_BASE_URL
-        self._ark_local_proxy = ark_local_proxy
-
-        self._dashscope_client = None
-        self._seedream_client = None
-        self._gpt_client = None
+        # Initialize GPT Image Client
+        self.gpt_client = ImageGPT(
+            api_key=gpt_api_key or Config.OPENAI_API_KEY,
+            base_url=gpt_base_url or Config.OPENAI_BASE_URL,
+            local_proxy=local_proxy or Config.LOCAL_PROXY
+        )
 
         # Initialize Image Processor for downloads
         self.image_processor = ImageProcessor()
 
         # Default save directory
         self.base_save_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "code", "result", "image_client")
-
-    @property
-    def dashscope_client(self):
-        """Create DashScope client only when a DashScope model is selected."""
-        if self._dashscope_client is None:
-            self._dashscope_client = DashScopeClient(
-                api_key=self._dashscope_api_key,
-                base_url=self._dashscope_base_url,
-                local_proxy=self._dashscope_local_proxy,
-            )
-        return self._dashscope_client
-
-    @property
-    def seedream_client(self):
-        """Create Seedream client only when a Seedream/ARK model is selected."""
-        if not self._ark_api_key:
-            raise RuntimeError("ARK_API_KEY not set. Configure ARK only when using Seedream image models.")
-        if self._seedream_client is None:
-            self._seedream_client = SeedreamClient(
-                api_key=self._ark_api_key,
-                base_url=self._ark_base_url,
-                local_proxy=self._ark_local_proxy,
-            )
-        return self._seedream_client
-
-    @property
-    def gpt_client(self):
-        """Create OpenAI image client only when a GPT/OpenAI image model is selected."""
-        if not self._gpt_api_key:
-            raise RuntimeError("OPENAI_API_KEY not set. Configure OpenAI only when using GPT image models.")
-        if self._gpt_client is None:
-            self._gpt_client = ImageGPT(
-                api_key=self._gpt_api_key,
-                base_url=self._gpt_base_url,
-                local_proxy=self._gpt_local_proxy,
-            )
-        return self._gpt_client
 
     def generate_image(self,
                        prompt: str,

@@ -14,19 +14,26 @@
 LLM (Large Language Model) endpoints
 """
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
+from api.auth.dependencies import require_capability
+from api.auth.policy import LLM_CHAT
 from api.dependencies import PixelleVideoDep
 from api.schemas.llm import LLMChatRequest, LLMChatResponse
 
 router = APIRouter(prefix="/llm", tags=["Basic Services"])
 
+LlmGuard = Annotated[None, Depends(require_capability(LLM_CHAT))]
+
 
 @router.post("/chat", response_model=LLMChatResponse)
 async def llm_chat(
     request: LLMChatRequest,
-    pixelle_video: PixelleVideoDep
+    pixelle_video: PixelleVideoDep,
+    _guard: LlmGuard,
 ):
     """
     LLM chat endpoint

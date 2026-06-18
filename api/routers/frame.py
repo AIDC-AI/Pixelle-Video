@@ -14,9 +14,13 @@
 Frame/Template rendering endpoints
 """
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
+from api.auth.dependencies import require_capability
+from api.auth.policy import FRAME_RENDER
 from api.dependencies import PixelleVideoDep
 from api.schemas.frame import FrameRenderRequest, FrameRenderResponse, TemplateParamsResponse
 from pixelle_video.services.frame_html import HTMLFrameGenerator
@@ -24,11 +28,14 @@ from pixelle_video.utils.template_util import parse_template_size, resolve_templ
 
 router = APIRouter(prefix="/frame", tags=["Frame Rendering"])
 
+FrameGuard = Annotated[None, Depends(require_capability(FRAME_RENDER))]
+
 
 @router.post("/render", response_model=FrameRenderResponse)
 async def render_frame(
     request: FrameRenderRequest,
-    pixelle_video: PixelleVideoDep
+    pixelle_video: PixelleVideoDep,
+    _guard: FrameGuard,
 ):
     """
     Render a single frame using HTML template

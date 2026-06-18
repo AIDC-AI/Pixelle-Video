@@ -1,42 +1,27 @@
 @echo off
 chcp 65001 >nul 2>&1
 
-echo 🚀 Starting Pixelle-Video Web UI...
+echo 🚀 Starting Pixelle-Video (API + Next.js)...
 echo.
 
-uv run streamlit run web/app.py
-
-if errorlevel 1 (
-    echo.
-    echo ========================================
-    echo   [ERROR] Failed to Start
-    echo ========================================
-    echo.
-    echo It appears you downloaded the SOURCE CODE directly.
-    echo.
-    echo ========================================
-    echo   For Regular Users:
-    echo ========================================
-    echo Please download the ONE-CLICK PACKAGE from:
-    echo https://github.com/AIDC-AI/Pixelle-Video/releases
-    echo.
-    echo The one-click package includes:
-    echo   ✓ Pre-configured Python environment
-    echo   ✓ All required dependencies
-    echo   ✓ FFmpeg tools
-    echo   ✓ Ready to use, no setup needed
-    echo.
-    echo ========================================
-    echo   For Developers:
-    echo ========================================
-    echo If you intend to develop or modify the code:
-    echo   1. Install uv: https://docs.astral.sh/uv/
-    echo   2. Run: uv sync
-    echo   3. Then run this script again
-    echo.
-    echo ========================================
-    echo.
-    pause
+REM Install web-next deps on first run.
+if not exist "web-next\node_modules" (
+  echo 📦 Installing web-next dependencies ^(first run^)...
+  pushd web-next
+  call pnpm install --silent
+  popd
 )
 
+REM Start FastAPI in a new window.
+echo 🔧 Starting FastAPI on http://localhost:8001 ...
+start "Pixelle-Video API" cmd /k "uv run python api/app.py --host 0.0.0.0 --port 8001"
 
+REM Give the API a moment to bind.
+timeout /t 3 /nobreak >nul
+
+REM Start Next.js in the current window on 8501 so existing
+REM bookmarks keep working.
+echo 🌐 Starting Next.js on http://localhost:8501 ...
+pushd web-next
+pnpm dev
+popd

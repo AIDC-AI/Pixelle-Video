@@ -32,6 +32,7 @@ Just input a **topic**, and Pixelle-Video will automatically:
 
 ## 📋 Recent Updates
 
+- ✅ **2026-06-18**: Complete authentication system — email/password signup/login, JWT refresh tokens, forgot-password with email reset, Google OAuth sign-in, role-based access control (admin/user) with centralized authorization policy, capability-based API guards, and Alembic-managed auth DB migrations
 - ✅ **2026-06-01**: Added direct API media model configuration in WebUI, including image/video provider credentials, Base URLs, and per-provider proxy toggles
 - ✅ **2026-01-26**: Added the Motion Transfer pipeline — upload a reference video and an image to transfer motion.
 - ✅ **2026-01-14**: Added "Digital Human" and "Image-to-Video" pipelines, multi-language TTS voices support
@@ -59,6 +60,10 @@ Just input a **topic**, and Pixelle-Video will automatically:
 - ✅ **Flexible Dimensions** - Support portrait, landscape and other video dimensions
 - ✅ **Multiple AI Models** - Support GPT, Qwen, DeepSeek, Ollama and more
 - ✅ **Flexible Atomic Capability Combination** - Supports ComfyUI / RunningHub workflows and direct API models, allowing image, video, TTS, VLM and other capabilities to be swapped as needed
+- ✅ **User Authentication** - Email/password signup and login with JWT-based session management
+- ✅ **Role-Based Access Control** - Admin and user roles with centralized capability-based authorization policy
+- ✅ **Google OAuth Sign-In** - One-click sign-in with Google Identity Services
+- ✅ **Password Reset via Email** - Secure forgot-password flow with SMTP mail delivery and single-use reset tokens
 
 
 ## 📊 Video Generation Pipeline
@@ -192,63 +197,217 @@ Here are actual cases generated using Pixelle-Video, showcasing video effects wi
 > 💡 **Tip**: The package includes all dependencies, no need to manually install any environment. On first use, you only need to configure API keys.
 
 
-### Install from Source (For macOS / Linux Users or Users Who Need Customization)
+### Install from Source
 
 #### Prerequisites
 
-Before starting, you need to install Python package manager `uv` and video processing tool `ffmpeg`:
+| Tool | Version | Notes |
+|------|---------|-------|
+| **Python** | ≥ 3.11 | `python --version` |
+| **Node.js** | ≥ 22 | `node --version` |
+| **pnpm** | latest | `npm install -g pnpm` |
+| **uv** | latest | [Install uv](https://docs.astral.sh/uv/getting-started/installation/) |
+| **ffmpeg** | — | `ffmpeg -version` (required for video processing) |
+| **Docker** (optional) | latest | Required only if running the backend via Docker |
 
-##### Install uv
+Install `ffmpeg` via your package manager:
 
-Please visit the uv official documentation to see the installation method for your system:  
-👉 **[uv Installation Guide](https://docs.astral.sh/uv/getting-started/installation/)**
-
-After installation, run `uv --version` in the terminal to verify successful installation.
-
-##### Install ffmpeg
-
-**macOS**
 ```bash
+# macOS
 brew install ffmpeg
+
+# Ubuntu / Debian
+sudo apt update && sudo apt install ffmpeg
+
+# Windows
+# Download from https://ffmpeg.org/download.html and add bin/ to PATH
 ```
 
-**Ubuntu / Debian**
-```bash
-sudo apt update
-sudo apt install ffmpeg
-```
+---
 
-**Windows**
-- Download URL: https://ffmpeg.org/download.html
-- After downloading, extract and add the `bin` directory to the system environment variable PATH
+#### Option A: Run Backend on Docker + Frontend Locally (Recommended)
 
-After installation, run `ffmpeg -version` in the terminal to verify successful installation.
+This is the fastest way to get started. The backend (FastAPI) runs in Docker while the frontend (Next.js) runs on your machine with hot-reload for development.
 
-
-#### Step 1: Clone Project
+##### 1. Clone the project
 
 ```bash
 git clone https://github.com/AIDC-AI/Pixelle-Video.git
 cd Pixelle-Video
 ```
 
-#### Step 2: Launch Web Interface
+##### 2. Create config files
 
 ```bash
-# Run with uv (recommended, will automatically install dependencies)
-uv run streamlit run web/app.py
+# Copy the example config — edit llm.api_key and other settings as needed
+cp config.example.yaml config.yaml
+
+# Copy the project-level env file (auth secrets, mail, etc.)
+cp .env.example .env
+
+# Copy the frontend env file (tells the browser where the API lives)
+cp web-next/.env.example web-next/.env
 ```
 
-Browser will automatically open http://localhost:8501
+> The `.env` and `web-next/.env` files work out of the box for local dev — `JWT_SECRET=change-me-in-production...` is fine for development. Set `GOOGLE_CLIENT_ID` and `MAIL_*` only if you need those features.
 
-#### Step 3: Configure in Web Interface
+##### 3. Start the backend via Docker
 
-On first use, expand the "⚙️ System Configuration" panel and fill in:
-- **LLM Configuration**: Select AI model (such as Qwen, GPT, etc.) and enter API Key
-- **ComfyUI / RunningHub Configuration**: Configure local ComfyUI or RunningHub API Key if you want to use workflow-based image, video, or voice generation
-- **API Media Model Configuration**: Configure API Key, Base URL, and proxy options for direct image/video model providers such as DashScope, OpenAI, ARK, and Kling
+```bash
+docker compose up -d --build
+```
 
-After configuration, click "Save Configuration", and you can start generating videos!
+This builds and starts the **API** container at `http://localhost:8001`. Wait a few seconds for it to be healthy, then verify:
+
+```bash
+curl http://localhost:8001/health
+```
+
+##### 4. Run migrations (creates tables + seeds admin account)
+
+```bash
+docker exec pixelle-video-api uv run python scripts/run_alembic_migrations.py
+```
+
+This single command applies **all** Alembic migrations:
+- `0001_initial_auth_schema` — creates `auth_users`, `auth_refresh_tokens`, `auth_password_reset_tokens` tables
+- `0002_seed_default_admin` — inserts the default admin account **`admin@pixelle.ai` / `Admin1234`** with role `admin`
+
+The migration also runs automatically when the API container starts, so you can skip this step and let it happen on first boot.
+
+> 💡 Default login: **`admin@pixelle.ai`** / **`Admin1234`** — change the password after first sign-in.
+
+##### 5. Start the frontend locally (with hot-reload)
+
+Open a second terminal:
+
+```bash
+cd Pixelle-Video/web-next  # or cd web-next from project root
+pnpm install
+pnpm dev
+```
+
+The Next.js dev server starts at **http://localhost:8501** with automatic hot-reload. All `/api/*` requests are proxied to the Docker container at port 8001.
+
+---
+
+#### Option B: Run Everything Locally (No Docker)
+
+##### 1. Clone & configure
+
+```bash
+git clone https://github.com/AIDC-AI/Pixelle-Video.git
+cd Pixelle-Video
+cp config.example.yaml config.yaml
+cp .env.example .env
+cp web-next/.env.example web-next/.env
+```
+
+##### 2. Install Python dependencies
+
+```bash
+uv venv
+uv pip install -e .
+
+# Install Playwright for HTML template rendering
+uv run playwright install --with-deps chromium
+```
+
+##### 3. Run database migration (creates tables + seeds admin)
+
+```bash
+uv run python scripts/run_alembic_migrations.py
+```
+
+This single command:
+- Creates all auth tables (`auth_users`, `auth_refresh_tokens`, `auth_password_reset_tokens`)
+- Seeds the default admin account **`admin@pixelle.ai` / `Admin1234`** with role `admin`
+
+> 💡 Default login: **`admin@pixelle.ai`** / **`Admin1234`** — change the password after first sign-in.
+
+##### 4. Start the backend
+
+```bash
+uv run python api/app.py --host 0.0.0.0 --port 8001
+```
+
+The API auto-runs migrations and seeds the admin account (`admin@pixelle.ai` / `Admin1234`) on startup.
+
+> ⚠️ **Change the default admin password in production** by setting `JWT_SECRET` and `DEFAULT_ADMIN_PASSWORD` in your `.env`.
+
+##### 5. Start the frontend
+
+Open a second terminal:
+
+```bash
+cd web-next
+pnpm install
+pnpm dev
+```
+
+---
+
+#### First-Time Setup
+
+1. Open **http://localhost:8501** in your browser
+2. **Sign in** with the auto-seeded admin account:
+   - Email: `admin@pixelle.ai`
+   - Password: `Admin1234`
+3. (Optional) **Sign up** a new personal account at `/signup` — new users get the `user` role and cannot access Settings or Admin pages
+4. **As admin**, open the **Settings** page (`/settings`) and configure:
+   - **LLM Configuration**: API key, model, base URL
+   - **ComfyUI / RunningHub**: Workflow engine configuration
+   - **API Media Providers**: Direct image/video model credentials
+5. Start generating videos!
+
+---
+
+#### Password Reset (Dev Mode)
+
+The forgot-password flow works out of the box without an SMTP server in development:
+
+1. Go to **http://localhost:8501/forgot-password** and enter your email
+2. The API returns the reset token directly in the browser (dev mode only)
+3. An in-page link takes you to the reset form
+4. Set a new password and log in
+
+In production, set `MAIL_SMTP_*` environment variables to enable real email delivery.
+
+---
+
+#### Google Sign-In (Optional)
+
+To enable Google OAuth:
+
+1. Create an OAuth 2.0 Client ID in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Set the authorized JavaScript origin to `http://localhost:8501` (dev) or your production URL
+3. Add to your `.env`:
+
+```bash
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_ENABLED=true
+```
+
+---
+
+#### Architecture Overview
+
+```
+┌──────────────┐     HTTP      ┌──────────────────┐
+│  Next.js 15  │ ──────────▶   │  FastAPI (8001)  │
+│  (port 8501) │ ◀───────────  │                  │
+│              │               │  ┌────────────┐  │
+│  - Login     │               │  │ Auth       │  │
+│  - Signup    │               │  │ (JWT +     │  │
+│  - Google    │               │  │  Refresh)  │  │
+│  - Reset PW  │               │  └────────────┘  │
+│  - Generate  │               │                  │
+│  - Admin     │               │  ┌────────────┐  │
+└──────────────┘               │  │ SQLite     │  │
+                               │  │ (auth.db)  │  │
+                               │  └────────────┘  │
+                               └──────────────────┘
+```
 
 <div id="tutorial-end" />
 

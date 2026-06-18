@@ -14,20 +14,27 @@
 TTS (Text-to-Speech) endpoints
 """
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
+from api.auth.dependencies import require_capability
+from api.auth.policy import TTS_SYNTHESIZE
 from api.dependencies import PixelleVideoDep
 from api.schemas.tts import TTSSynthesizeRequest, TTSSynthesizeResponse
 from pixelle_video.utils.tts_util import get_audio_duration
 
 router = APIRouter(prefix="/tts", tags=["Basic Services"])
 
+TtsGuard = Annotated[None, Depends(require_capability(TTS_SYNTHESIZE))]
+
 
 @router.post("/synthesize", response_model=TTSSynthesizeResponse)
 async def tts_synthesize(
     request: TTSSynthesizeRequest,
-    pixelle_video: PixelleVideoDep
+    pixelle_video: PixelleVideoDep,
+    _guard: TtsGuard,
 ):
     """
     Text-to-Speech synthesis endpoint

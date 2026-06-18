@@ -17,9 +17,13 @@ Provides endpoints to discover available workflows, templates, and BGM.
 """
 
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
+from api.auth.dependencies import require_capability
+from api.auth.policy import VIDEO_GENERATE
 from api.dependencies import PixelleVideoDep
 from api.schemas.resources import (
     WorkflowInfo,
@@ -34,9 +38,12 @@ from pixelle_video.utils.template_util import get_all_templates_with_info
 
 router = APIRouter(prefix="/resources", tags=["Resources"])
 
+# Resources are needed by video generation pipelines — reuse that capability.
+ResourceGuard = Annotated[None, Depends(require_capability(VIDEO_GENERATE))]
+
 
 @router.get("/workflows/tts", response_model=WorkflowListResponse)
-async def list_tts_workflows(pixelle_video: PixelleVideoDep):
+async def list_tts_workflows(pixelle_video: PixelleVideoDep, _guard: ResourceGuard):
     """
     List available TTS workflows
     
@@ -77,7 +84,7 @@ async def list_tts_workflows(pixelle_video: PixelleVideoDep):
 
 
 @router.get("/workflows/media", response_model=WorkflowListResponse)
-async def list_media_workflows(pixelle_video: PixelleVideoDep):
+async def list_media_workflows(pixelle_video: PixelleVideoDep, _guard: ResourceGuard):
     """
     List available media workflows (both image and video)
     
@@ -122,7 +129,7 @@ async def list_media_workflows(pixelle_video: PixelleVideoDep):
 
 # Keep old endpoint for backward compatibility
 @router.get("/workflows/image", response_model=WorkflowListResponse)
-async def list_image_workflows(pixelle_video: PixelleVideoDep):
+async def list_image_workflows(pixelle_video: PixelleVideoDep, _guard: ResourceGuard):
     """
     List available image workflows (deprecated, use /workflows/media instead)
     
@@ -146,7 +153,7 @@ async def list_image_workflows(pixelle_video: PixelleVideoDep):
 
 
 @router.get("/templates", response_model=TemplateListResponse)
-async def list_templates():
+async def list_templates(_guard: ResourceGuard):
     """
     List available video templates
     
@@ -197,7 +204,7 @@ async def list_templates():
 
 
 @router.get("/bgm", response_model=BGMListResponse)
-async def list_bgm():
+async def list_bgm(_guard: ResourceGuard):
     """
     List available background music files
     

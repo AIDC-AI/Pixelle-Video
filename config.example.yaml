@@ -4,6 +4,32 @@
 
 project_name: Pixelle-Video
 
+# ==================== Auth Configuration ====================
+# Authentication is consumed by the Next.js web UI. Adjust defaults
+# to match the deployment environment.
+auth:
+  # JWT signing key. MUST be overridden in production via env
+  # JWT_SECRET. A long random string is recommended.
+  jwt_secret: "change-me-in-production-use-a-long-random-string"
+  jwt_algorithm: "HS256"
+  access_token_ttl_seconds: 3600        # 1 hour
+  refresh_token_ttl_seconds: 2592000    # 30 days
+  password_reset_ttl_seconds: 600       # 10 minutes
+  auth_db_path: "data/auth.db"
+
+  # Seed admin account created on first startup if missing.
+  # Change the password before deploying.
+  default_admin:
+    email: "admin@pixelle.ai"
+    password: "Admin1234"
+
+  # Google OAuth is optional. When google.client_id is non-empty
+  # the /api/auth/google endpoint will verify id_token issued by
+  # Google Identity Services. Otherwise the endpoint returns 503.
+  google:
+    client_id: ""
+    enabled: false
+
 # ==================== LLM Configuration ====================
 # Supports any OpenAI SDK compatible API
 llm:

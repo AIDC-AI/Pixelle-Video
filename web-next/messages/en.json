@@ -1,0 +1,208 @@
+{
+  "common": {
+    "appName": "Pixelle-Video",
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "continue": "Continue",
+      "back": "Back",
+      "submit": "Submit",
+      "delete": "Delete",
+      "confirm": "Confirm",
+      "close": "Close",
+      "tryAgain": "Try again",
+      "viewAll": "View all",
+      "reset": "Reset"
+    },
+    "states": {
+      "loading": "Loading…",
+      "empty": "Nothing here yet",
+      "error": "Something went wrong"
+    },
+    "yes": "Yes",
+    "no": "No"
+  },
+  "nav": {
+    "home": "Home",
+    "history": "History",
+    "settings": "Settings",
+    "admin": "Admin",
+    "generate": "Generate",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signOut": "Sign out",
+    "language": "Language"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Welcome back. Sign in to continue creating.",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "noAccount": "Don't have an account?",
+      "signUpLink": "Sign up",
+      "forgotLink": "Forgot password?",
+      "googleButton": "Continue with Google",
+      "googleUnavailable": "Google sign-in is not configured",
+      "orContinueWith": "or",
+      "errors": {
+        "invalid_credentials": "Email or password is incorrect.",
+        "network_error": "Network error. Please try again.",
+        "timeout": "The server took too long to respond.",
+        "user_inactive": "This account is inactive.",
+        "google_invalid": "Google sign-in failed. The token was invalid.",
+        "provider_error": "Google sign-in is temporarily unavailable. Please try again or sign in with email.",
+        "not_configured": "Google sign-in is not configured on the server."
+      },
+      "resetSuccess": "Password reset successful. Please sign in with your new password."
+    },
+    "signup": {
+      "title": "Create your account",
+      "subtitle": "Get started with Pixelle-Video in seconds.",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "signInLink": "Sign in",
+      "orContinueWith": "or",
+      "errors": {
+        "email_exists": "This email is already registered.",
+        "password_policy": "Password must be at least 8 characters and include a letter and a digit.",
+        "password_mismatch": "Passwords do not match.",
+        "google_invalid": "Google sign-in failed. The token was invalid.",
+        "provider_error": "Google sign-in is temporarily unavailable. Please try again or sign up with email.",
+        "not_configured": "Google sign-in is not configured on the server.",
+        "provider_unavailable": "Google sign-in unavailable"
+      }
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link.",
+      "email": "Email",
+      "submit": "Send reset link",
+      "backToLogin": "Back to sign in",
+      "successMessage": "If the account exists, a reset link has been sent.",
+      "errors": {
+        "email_invalid": "Please enter a valid email address.",
+        "mail_title": "Email could not be sent",
+        "mail_description": "Our mail service is temporarily unavailable. Please try again in a moment.",
+        "mail_retry": "Enter a different email or go back",
+        "mail_subtext": "The email server returned a temporary error. Your request was not processed — no email was sent."
+      }
+    },
+    "reset": {
+      "title": "Set a new password",
+      "title_missing": "Missing reset link",
+      "subtitle": "Choose a new password for your account.",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "submit": "Update password",
+      "requestNewLink": "Request a new reset link",
+      "errors": {
+        "password_mismatch": "Passwords do not match.",
+        "password_policy": "Password must be at least 8 characters and include a letter and a digit.",
+        "token_expired": "This reset link has expired.",
+        "token_invalid": "This reset link is invalid or has already been used.",
+        "user_inactive": "This account is no longer active.",
+        "no_token": "No reset token found.",
+        "no_token_guidance": "The reset link is missing. Please request a new one.",
+        "token_guidance": "Please request a new password reset link."
+      }
+    },
+    "loggedOut": "You've been signed out."
+  },
+  "accessDenied": {
+    "title": "Access denied",
+    "message": "You don't have access to this area.",
+    "back": "Back to home"
+  },
+  "home": {
+    "title": "Create your next video",
+    "subtitle": "Pick a pipeline, give it a topic, and Pixelle handles the rest.",
+    "newVideo": "New video",
+    "recent": "Recent generations",
+    "kpis": {
+      "videos": "Videos created",
+      "minutes": "Minutes generated",
+      "templates": "Templates available"
+    }
+  },
+  "task": {
+    "error": {
+      "SERVICE_UNAVAILABLE": "Service is temporarily unavailable. Please try again later.",
+      "MEDIA_SERVICE_ERROR": "The media generation service encountered a problem. Please try again later.",
+      "NETWORK_ERROR": "Network connection interrupted. Please retry.",
+      "AI_SERVICE_ERROR": "The AI service failed to respond. Please try again later.",
+      "GENERATION_FAILED": "Video generation failed. Please try again."
+    }
+  },
+  "pipelines": {
+    "standard": {
+      "name": "Standard",
+      "description": "Topic → narration → voice → frames → video."
+    },
+    "asset_based": {
+      "name": "Custom assets",
+      "description": "Upload your own photos and videos, AI builds the story."
+    },
+    "digital_human": {
+      "name": "Digital human",
+      "description": "Generate a digital presenter that narrates your script."
+    },
+    "i2v": {
+      "name": "Image to video",
+      "description": "Animate a single image with a motion prompt."
+    },
+    "action_transfer": {
+      "name": "Action transfer",
+      "description": "Transfer a motion from a reference video to your image."
+    }
+  },
+  "history": {
+    "title": "Generation history",
+    "empty": "No generations yet.",
+    "columns": {
+      "created": "Created",
+      "name": "Name",
+      "status": "Status",
+      "duration": "Duration",
+      "actions": "Actions"
+    },
+    "actions": {
+      "open": "Open",
+      "delete": "Delete"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "sections": {
+      "llm": "LLM",
+      "comfyui": "ComfyUI",
+      "api_providers": "API providers"
+    },
+    "fields": {
+      "apiKey": "API key",
+      "baseUrl": "Base URL",
+      "model": "Model"
+    }
+  },
+  "admin": {
+    "title": "Admin",
+    "users": "Users",
+    "system": "System",
+    "columns": {
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "created": "Created"
+    }
+  },
+  "states": {
+    "loading": "Loading…",
+    "empty": "Nothing to show",
+    "errorTitle": "Something went wrong",
+    "errorDescription": "Please try again in a moment."
+  }
+}

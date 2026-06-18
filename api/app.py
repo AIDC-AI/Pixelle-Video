@@ -41,6 +41,9 @@ from loguru import logger
 from api.config import api_config
 from api.tasks import task_manager
 from api.dependencies import shutdown_pixelle_video
+from api.auth import dispose_engine as dispose_auth_engine, session_scope
+from api.auth.service import seed_default_admin
+from api.errors import register_error_handler
 
 # Import routers
 from api.routers import (
@@ -54,6 +57,8 @@ from api.routers import (
     files_router,
     resources_router,
     frame_router,
+    auth_router,
+    config_router,
 )
 
 
@@ -61,20 +66,45 @@ from api.routers import (
 async def lifespan(app: FastAPI):
     """
     Application lifespan manager
-    
+
     Handles startup and shutdown events.
+
+    On startup, runs ``alembic upgrade head`` to apply any pending
+    auth-schema migrations. On a fresh DB this creates all tables;
+    on a DB with existing tables from the old ``create_all`` it skips
+    and stamps the head revision — no data is lost.
     """
+    from alembic import command
+    from alembic.config import Config
+
     # Startup
-    logger.info("🚀 Starting Pixelle-Video API...")
+    logger.info("Starting Pixelle-Video API...")
+
+    try:
+        alembic_cfg = Config(str(_project_root / "alembic.ini"))
+        alembic_cfg.set_main_option("script_location", str(_project_root / "alembic"))
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Auth DB migrations applied")
+    except Exception:
+        # Tables may already exist from old create_all — stamp instead.
+        try:
+            command.stamp(alembic_cfg, "head")
+            logger.info("Auth DB: legacy schema stamped (no data loss)")
+        except Exception as exc:
+            logger.warning(f"Auth DB migration/stamp skipped: {exc}")
+
+    async with session_scope() as session:
+        await seed_default_admin(session)
     await task_manager.start()
-    logger.info("✅ Pixelle-Video API started successfully\n")
-    
+    logger.info("Pixelle-Video API started successfully\n")
+
     yield
-    
+
     # Shutdown
     logger.info("🛑 Shutting down Pixelle-Video API...")
     await task_manager.stop()
     await shutdown_pixelle_video()
+    await dispose_auth_engine()
     logger.info("✅ Pixelle-Video API shutdown complete")
 
 
@@ -119,6 +149,9 @@ if api_config.cors_enabled:
     )
     logger.info(f"CORS enabled for origins: {api_config.cors_origins}")
 
+# Register centralised error handler (AC7, AC8)
+register_error_handler(app)
+
 # Include routers
 # Health check (no prefix)
 app.include_router(health_router)
@@ -133,6 +166,8 @@ app.include_router(tasks_router, prefix=api_config.api_prefix)
 app.include_router(files_router, prefix=api_config.api_prefix)
 app.include_router(resources_router, prefix=api_config.api_prefix)
 app.include_router(frame_router, prefix=api_config.api_prefix)
+app.include_router(auth_router, prefix=api_config.api_prefix)
+app.include_router(config_router, prefix=api_config.api_prefix)
 
 
 @app.get("/")
@@ -153,6 +188,7 @@ async def root():
             "files": f"{api_config.api_prefix}/files",
             "resources": f"{api_config.api_prefix}/resources",
             "frame": f"{api_config.api_prefix}/frame",
+            "auth": f"{api_config.api_prefix}/auth",
         }
     }
 
@@ -163,7 +199,7 @@ if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Start Pixelle-Video API Server")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
+    parser.add_argument("--port", type=int, default=8001, help="Port to bind to")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
     
     args = parser.parse_args()

@@ -35,11 +35,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 Open Source Software Licensed under the Apache-2.0 License:
 --------------------------------------------------------------------
-1. streamlit 1.40.0 https://pypi.org/project/streamlit
-Copyright 2018 Adrien Treuille
-Copyright 2018 Streamlit Inc. All rights reserved.
-Copyright 2008 Google Inc.  All rights reserved.
-2. openai 2.6.0 
+1. openai 2.6.0
 3. python-multipart 0.0.20 https://pypi.org/project/python-multipart
 Copyright (c) 2010 by Armin Ronacher.
 Copyright 2012; Andrew Dunham
