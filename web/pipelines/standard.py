@@ -23,8 +23,8 @@ from web.i18n import tr
 from web.pipelines.base import PipelineUI, register_pipeline_ui
 
 # Import components
-from web.components.content_input import render_content_input, render_bgm_section, render_version_info
-from web.components.style_config import render_style_config
+from web.components.content_input import render_content_input, render_bgm_section
+from web.components.style_config import render_style_config, render_tts_section
 from web.components.output_preview import render_output_preview
 
 
@@ -35,39 +35,41 @@ class StandardPipelineUI(PipelineUI):
     """
     name = "quick_create"
     icon = "⚡"
-    
+
     @property
     def display_name(self):
         return tr("pipeline.quick_create.name")
-    
+
     @property
     def description(self):
         return tr("pipeline.quick_create.description")
-    
+
     def render(self, pixelle_video: Any):
         # Three-column layout
         left_col, middle_col, right_col = st.columns([1, 1, 1])
-        
+
         # ====================================================================
-        # Left Column: Content Input & BGM
+        # Left Column: Content Input / BGM / TTS (voice synthesis)
         # ====================================================================
         with left_col:
             # Content input (mode, text, title, n_scenes)
             content_params = render_content_input()
-            
+
             # BGM selection (bgm_path, bgm_volume)
             bgm_params = render_bgm_section()
-            
-            # Version info & GitHub link
-            render_version_info()
-        
+
+            # TTS / voice synthesis (moved here from the middle column so it
+            # sits with the other audio-related controls).
+            tts_params = render_tts_section(pixelle_video)
+
         # ====================================================================
-        # Middle Column: Style Configuration
+        # Middle Column: Style Configuration (template + media workflow)
         # ====================================================================
         with middle_col:
-            # Style configuration (TTS, template, workflow, etc.)
-            style_params = render_style_config(pixelle_video)
-        
+            # Style configuration (template, workflow, etc.) — TTS values
+            # produced in the left column are threaded back in.
+            style_params = render_style_config(pixelle_video, tts_params=tts_params)
+
         # ====================================================================
         # Right Column: Output Preview
         # ====================================================================
@@ -79,7 +81,7 @@ class StandardPipelineUI(PipelineUI):
                 **bgm_params,
                 **style_params
             }
-            
+
             # Render output preview (generate button, progress, video preview)
             render_output_preview(pixelle_video, video_params)
 

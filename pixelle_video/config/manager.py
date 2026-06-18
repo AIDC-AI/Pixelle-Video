@@ -75,7 +75,11 @@ class ConfigManager:
     
     def save(self):
         """Save current configuration to file"""
-        save_config_dict(self.config.to_dict(), str(self.config_path))
+        config_data = self.config.to_dict()
+        security_config = config_data.get("security")
+        if isinstance(security_config, dict):
+            security_config.pop("sensitive_words", None)
+        save_config_dict(config_data, str(self.config_path))
     
     def update(self, updates: dict):
         """
@@ -154,7 +158,75 @@ class ConfigManager:
     def set_api_provider_config(self, provider: str, updates: dict):
         """Set configuration for a direct API provider"""
         self.update({"api_providers": {provider: updates}})
-    
+
+    def _sensitive_words_path(self) -> Path:
+        """Get sensitive words markdown file path"""
+        config_path = self.config_path
+        if not config_path.is_absolute():
+            config_path = Path.cwd() / config_path
+        return config_path.parent / "sensitive_words.md"
+
+    @staticmethod
+    def _normalize_sensitive_words(words: list[str]) -> list[str]:
+        """Normalize sensitive words, preserving input order"""
+        normalized = []
+        seen = set()
+        for raw_word in words:
+            word = str(raw_word).strip()
+            if not word or word.startswith("#") or word in seen:
+                continue
+            normalized.append(word)
+            seen.add(word)
+        return normalized
+
+    def _read_sensitive_words_file(self) -> list[str]:
+        """Read sensitive words from markdown file"""
+        words_path = self._sensitive_words_path()
+        if not words_path.exists():
+            return []
+        lines = words_path.read_text(encoding="utf-8").splitlines()
+        return self._normalize_sensitive_words(lines)
+
+    def _write_sensitive_words_file(self, words: list[str]):
+        """Write sensitive words to markdown file"""
+        words_path = self._sensitive_words_path()
+        words_path.parent.mkdir(parents=True, exist_ok=True)
+        normalized_words = self._normalize_sensitive_words(words)
+        content_lines = ["# Sensitive Words", "# One word per line", ""] + normalized_words
+        words_path.write_text("\n".join(content_lines).rstrip() + "\n", encoding="utf-8")
+        self.config.security.sensitive_words = normalized_words
+
+    def get_sensitive_words(self) -> list[str]:
+        """Get sensitive words list from sensitive_words.md"""
+        legacy_words = self._normalize_sensitive_words(self.config.security.sensitive_words or [])
+        words_path = self._sensitive_words_path()
+        if words_path.exists():
+            words = self._read_sensitive_words_file()
+            if words:
+                self.config.security.sensitive_words = words
+                return list(words)
+            if legacy_words:
+                self._write_sensitive_words_file(legacy_words)
+                self.config.security.sensitive_words = []
+                self.save()
+                return list(legacy_words)
+            self.config.security.sensitive_words = []
+            return []
+
+        if legacy_words:
+            self._write_sensitive_words_file(legacy_words)
+            self.config.security.sensitive_words = []
+            self.save()
+            return list(legacy_words)
+
+        return []
+
+    def set_sensitive_words(self, words: list[str]):
+        """Set sensitive words list in sensitive_words.md"""
+        self._write_sensitive_words_file(words)
+        self.config.security.sensitive_words = []
+        self.save()
+
     def set_comfyui_config(
         self, 
         comfyui_url: Optional[str] = None,

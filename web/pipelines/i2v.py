@@ -17,12 +17,12 @@ from web.pipelines.api_workflows import (
     workflow_source_help,
     workflow_source_label,
 )
-from web.components.content_input import render_version_info
 from web.utils.async_helpers import run_async
 from web.utils.history_persistence import save_web_generation_history
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
 from pixelle_video.config import config_manager
 from pixelle_video.utils.os_util import create_task_output_dir
+
 
 class ImageToVideoPipelineUI(PipelineUI):
     """
@@ -31,25 +31,24 @@ class ImageToVideoPipelineUI(PipelineUI):
     """
     name = "image_to_video"
     icon = "🎥"
-    
+
     @property
     def display_name(self):
         return tr("pipeline.i2v.name")
-    
+
     @property
     def description(self):
         return tr("pipeline.i2v.description")
 
     def render(self, pixelle_video: Any):
         # Two-column layout
-        left_col,right_col = st.columns([1, 1])
+        left_col, right_col = st.columns([1, 1])
 
         # ====================================================================
         # Left Column: Asset Upload
         # ====================================================================
         with left_col:
             asset_params = self.render_audio_visual_input(pixelle_video)
-            render_version_info()
 
         # ====================================================================
         # Right Column: Output Preview
@@ -102,15 +101,15 @@ class ImageToVideoPipelineUI(PipelineUI):
                 session_id = str(uuid.uuid4()).replace('-', '')[:12]
                 temp_dir = Path(f"temp/assets_{session_id}")
                 temp_dir.mkdir(parents=True, exist_ok=True)
-                
+
                 for uploaded_file in uploaded_files:
                     file_path = temp_dir / uploaded_file.name
                     with open(file_path, "wb") as f:
                         f.write(uploaded_file.getbuffer())
                     audio_asset_paths.append(str(file_path.absolute()))
-                
+
                 st.success(tr("i2v.assets.character_sucess"))
-                
+
                 # Preview uploaded assets
                 with st.expander(tr("i2v.assets.preview"), expanded=True):
                     # Show in a grid (3 columns)
@@ -123,14 +122,14 @@ class ImageToVideoPipelineUI(PipelineUI):
                                 st.image(file, caption=file.name, use_container_width=True)
             else:
                 st.info(tr("i2v.assets.character_empty_hint"))
-            
+
             prompt_text = st.text_area(
-                        tr("i2v.input_text"),
-                        placeholder=tr("i2v.input.topic_placeholder"),
-                        height=200,
-                        help=tr("input.text_help_audio"),
-                        key="audio_box"
-                        )
+                tr("i2v.input_text"),
+                placeholder=tr("i2v.input.topic_placeholder"),
+                height=200,
+                help=tr("input.text_help_audio"),
+                key="audio_box"
+            )
 
             source_options = []
             if list_local_media_workflows(pixelle_video, "video", "runninghub", key_prefix="i2v_"):
@@ -138,10 +137,10 @@ class ImageToVideoPipelineUI(PipelineUI):
             if list_local_media_workflows(pixelle_video, "video", "selfhost", key_prefix="i2v_"):
                 source_options.append("selfhost")
             if list_api_media_workflows(
-                pixelle_video,
-                "video",
-                required_adapter_abilities=["first_frame_i2v"],
-                verified_only=True,
+                    pixelle_video,
+                    "video",
+                    required_adapter_abilities=["first_frame_i2v"],
+                    verified_only=True,
             ):
                 source_options.append("api")
 
@@ -165,7 +164,7 @@ class ImageToVideoPipelineUI(PipelineUI):
                 key=source_key,
                 help=workflow_source_help("图生视频" if get_language() == "zh_CN" else "image-to-video"),
             )
-            
+
             i2v_workflows = list_i2v_workflows()
             if workflow_source != "api" and not i2v_workflows:
                 st.warning(
@@ -173,8 +172,8 @@ class ImageToVideoPipelineUI(PipelineUI):
                     if get_language() == "zh_CN"
                     else "No image-to-video workflow is available for this source (requires i2v_*.json)."
                 )
-            workflow_options = [wf["display_name"] for wf in i2v_workflows] 
-            workflow_keys = [wf["key"] for wf in i2v_workflows]               
+            workflow_options = [wf["display_name"] for wf in i2v_workflows]
+            workflow_keys = [wf["key"] for wf in i2v_workflows]
             default_workflow_index = 0
 
             workflow_display = st.selectbox(
@@ -193,7 +192,7 @@ class ImageToVideoPipelineUI(PipelineUI):
             else:
                 workflow_key = None
                 workflow_info = None
-            
+
             # Check and warn for selfhost workflow (auto popup if not confirmed)
             if workflow_key and not is_api_workflow(workflow_key):
                 check_and_warn_selfhost_workflow(workflow_key)
@@ -203,13 +202,13 @@ class ImageToVideoPipelineUI(PipelineUI):
                 key_prefix="i2v",
                 default_duration=5,
             ) if is_api_workflow(workflow_key) else {}
-            
+
             return {
                 "audio_assets": audio_asset_paths,
                 "prompt_text": prompt_text,
                 "workflow_key": workflow_key,
                 "api_video_params": api_video_params,
-                }
+            }
 
     def _render_output_preview(self, pixelle_video: Any, video_params: dict):
         """Render output preview section"""
@@ -219,7 +218,7 @@ class ImageToVideoPipelineUI(PipelineUI):
             # Check configuration
             if not config_manager.validate():
                 st.warning(tr("settings.not_configured"))
-            
+
             audio_assets = video_params.get("audio_assets", [])
             prompt_text = video_params.get("prompt_text", "")
             workflow_key = video_params.get("workflow_key")
@@ -254,7 +253,7 @@ class ImageToVideoPipelineUI(PipelineUI):
                 if not config_manager.validate():
                     st.error(tr("settings.not_configured"))
                     st.stop()
-                
+
                 progress_bar = st.progress(0)
                 status_text = st.empty()
 
@@ -264,7 +263,7 @@ class ImageToVideoPipelineUI(PipelineUI):
                     async def generate_audio_visual_video():
                         task_dir, task_id = create_task_output_dir()
                         logger.info(f"[Initialization] Task Directory: {task_dir}")
-                        
+
                         import json
                         from pathlib import Path
 
@@ -338,7 +337,8 @@ class ImageToVideoPipelineUI(PipelineUI):
                                         break
 
                         if not generated_video_url:
-                            raise Exception("The workflow did not return a video. Please check the workflow configuration.")
+                            raise Exception(
+                                "The workflow did not return a video. Please check the workflow configuration.")
 
                         timeout = httpx.Timeout(300.0)
                         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -362,7 +362,7 @@ class ImageToVideoPipelineUI(PipelineUI):
                             },
                         )
                         return final_video_path
-                    
+
                     # Execute async generation
                     final_video_path = run_async(generate_audio_visual_video())
 
@@ -409,5 +409,6 @@ class ImageToVideoPipelineUI(PipelineUI):
                     progress_bar.empty()
                     st.error(tr("status.error", error=str(e)))
                     st.stop()
+
 
 register_pipeline_ui(ImageToVideoPipelineUI)

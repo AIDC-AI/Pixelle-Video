@@ -59,6 +59,12 @@ class HTMLFrameGenerator:
     _playwright = None
     _browser_loop = None
 
+    # 2x supersampling for crisper text/UI edges. Playwright renders at
+    # (width*DSF)×(height*DSF), then we downsample back to (width, height)
+    # with Lanczos so downstream (ffmpeg, ComfyUI overlay) keeps the original
+    # template-size contract.
+    _SUPERSAMPLE = 2
+
     def __init__(self, template_path: str):
         """
         Initialize HTML frame generator
@@ -380,6 +386,30 @@ class HTMLFrameGenerator:
             cls._playwright = None
             logger.debug("Playwright browser closed")
 
+    def _downsample_to_template_size(self, image_path: str) -> None:
+        """
+        Downsample a supersampled screenshot back to template (width, height).
+
+        Playwright is invoked with device_scale_factor=_SUPERSAMPLE for sharper
+        text/UI rendering, which produces a PNG sized
+        (width*DSF, height*DSF). Downstream services (ffmpeg encoders,
+        ComfyUI overlays) expect the template's declared size, so we Lanczos-
+        downsample in place. No-op if the image is already at template size.
+        """
+        from PIL import Image
+
+        try:
+            with Image.open(image_path) as img:
+                if img.size == (self.width, self.height):
+                    return
+                resized = img.resize((self.width, self.height), Image.Resampling.LANCZOS)
+                # Preserve transparency: omit_background=True yields RGBA PNGs.
+                resized.save(image_path, format='PNG', optimize=False)
+        except Exception as e:
+            # Don't fail the whole pipeline on a downscale glitch — the larger
+            # PNG is still a valid frame, downstream just gets the bigger size.
+            logger.warning(f"Failed to downsample frame {image_path}: {e}")
+
     async def generate_frame(
         self,
         title: str,
@@ -390,16 +420,16 @@ class HTMLFrameGenerator:
     ) -> str:
         """
         Generate frame from HTML template
-        
+
         Video size is automatically determined from template path during initialization.
-        
+
         Args:
             title: Video title
             text: Narration text for this frame
             image: Path to AI-generated image (supports relative path, absolute path, or HTTP URL)
             ext: Additional data (content_title, content_author, etc.)
             output_path: Custom output path (auto-generated if None)
-        
+
         Returns:
             Path to generated frame image
         """
@@ -440,7 +470,7 @@ class HTMLFrameGenerator:
                 browser = await self._ensure_browser()
                 page = await browser.new_page(
                     viewport={'width': self.width, 'height': self.height},
-                    device_scale_factor=1,
+                    device_scale_factor=self._SUPERSAMPLE,
                 )
             except Exception as e:
                 logger.warning(f"Playwright browser connection failed, restarting once: {e}")
@@ -448,7 +478,7 @@ class HTMLFrameGenerator:
                 browser = await self._ensure_browser()
                 page = await browser.new_page(
                     viewport={'width': self.width, 'height': self.height},
-                    device_scale_factor=1,
+                    device_scale_factor=self._SUPERSAMPLE,
                 )
 
             try:
@@ -457,9 +487,14 @@ class HTMLFrameGenerator:
                 fd, tmp_html_path = tempfile.mkstemp(suffix='.html', prefix='pv_frame_')
                 with os.fdopen(fd, 'w', encoding='utf-8') as f:
                     f.write(html)
-                
+
                 await page.goto(Path(tmp_html_path).as_uri(), wait_until='networkidle')
+                # Screenshot at supersampled resolution, then downscale with
+                # Lanczos so the saved PNG matches the template's declared
+                # (width, height) and downstream code stays unchanged.
                 await page.screenshot(path=output_path, type='png', omit_background=True)
+                if self._SUPERSAMPLE != 1:
+                    self._downsample_to_template_size(output_path)
             finally:
                 if page:
                     await page.close()

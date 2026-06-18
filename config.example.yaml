@@ -62,7 +62,7 @@ comfyui:
     default_workflow: runninghub/image_flux.json
     
     # Image prompt prefix (optional)
-    prompt_prefix: "Minimalist black-and-white matchstick figure style illustration, clean lines, simple sketch style"
+    prompt_prefix: "Camera Shot, Camera Movement, Core Subject & Action, cinematic photography, realistic, shallow depth of field, dramatic lighting, 4k."
   
   # Video-specific configuration
   video:
@@ -72,7 +72,7 @@ comfyui:
     default_workflow: runninghub/video_wan2.1_fusionx.json
     
     # Video prompt prefix (optional)
-    prompt_prefix: "Minimalist black-and-white matchstick figure style illustration, clean lines, simple sketch style"
+    prompt_prefix: "Camera Shot, Camera Movement, Core Subject & Action, cinematic photography, realistic, shallow depth of field, dramatic lighting, 4k."
 
 # ==================== Template Configuration ====================
 # Configure default template for video generation
@@ -83,9 +83,13 @@ template:
   #   - static_*.html: Static style templates (no AI-generated media)
   #   - image_*.html: Templates requiring AI-generated images
   #   - video_*.html: Templates requiring AI-generated videos
-  # Options: 
+  # Options:
   #   - 1080x1920 (vertical/portrait): image_default.html, image_modern.html, image_elegant.html, static_simple.html, etc.
   #   - 1080x1080 (square): image_minimal_framed.html, etc.
   #   - 1920x1080 (horizontal/landscape): image_film.html, image_full.html, etc.
   # See templates/ directory for all available templates
   default_template: "1080x1920/image_default.html"
+
+# ==================== Security / Sensitive Words ====================
+# Sensitive words are stored outside config.yaml in sensitive_words.md.
+# Edit them from Web UI: 系统管理 > 敏感词配置

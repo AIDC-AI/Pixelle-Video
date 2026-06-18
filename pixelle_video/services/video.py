@@ -112,7 +112,9 @@ class VideoService:
         method: Literal["demuxer", "filter"] = "demuxer",
         bgm_path: Optional[str] = None,
         bgm_volume: float = 0.2,
-        bgm_mode: Literal["once", "loop"] = "loop"
+        bgm_mode: Literal["once", "loop"] = "loop",
+        transition: Optional[str] = None,
+        transition_duration: float = 0.5,
     ) -> str:
         """
         Concatenate multiple videos into one
@@ -125,25 +127,52 @@ class VideoService:
                 - "filter": Slower but handles different formats
             bgm_path: Background music file path (optional)
                 - None: No BGM
+            transition: Optional xfade transition name applied between every pair of
+                clips (e.g. "fade", "fadeblack", "dissolve", "slideleft",
+                "circleopen"). Falsy / "none" means hard cut (no transition).
+                Requires all clips to share the same width/height/fps/pix_fmt;
+                this project's frames are rendered from a single template so the
+                constraint always holds.
+            transition_duration: Length of each transition in seconds. Each clip
+                must be at least this long, otherwise xfade will fail.
         """
         self._ensure_ffmpeg()
 
         if not videos:
             raise ValueError("Videos list cannot be empty")
-        
+
         if len(videos) == 1:
             logger.info(f"Only one video provided, copying to {output}")
             shutil.copy(videos[0], output)
             return output
-        
-        logger.info(f"Concatenating {len(videos)} videos using {method} method")
-        
-        # Step 1: Concatenate videos
+
+        # Decide concat strategy: xfade (with transition) vs raw concat.
+        use_xfade = bool(transition) and transition != "none" and transition_duration > 0
+        if use_xfade:
+            logger.info(
+                f"Concatenating {len(videos)} videos with xfade transition="
+                f"'{transition}' duration={transition_duration}s"
+            )
+        else:
+            logger.info(f"Concatenating {len(videos)} videos using {method} method")
+
+        # Helper: pick the appropriate raw-concat method (no transition path).
+        def _raw_concat(target: str) -> str:
+            if use_xfade:
+                return self._concat_with_xfade(
+                    videos, target, transition=transition,
+                    duration=transition_duration,
+                )
+            if method == "demuxer":
+                return self._concat_demuxer(videos, target)
+            return self._concat_filter(videos, target)
+
+        # Step 1: Concatenate videos (optionally with transition)
         if bgm_path:
-            # If BGM needed, concatenate to temp file first
+            # If BGM needed, concatenate to temp file first then mix BGM.
             temp_output = output.replace('.mp4', '_no_bgm.mp4')
-            concat_result = self._concat_demuxer(videos, temp_output) if method == "demuxer" else self._concat_filter(videos, temp_output)
-            
+            concat_result = _raw_concat(temp_output)
+
             # Step 2: Add BGM
             logger.info(f"Adding BGM: {bgm_path} (volume={bgm_volume}, mode={bgm_mode})")
             final_result = self._add_bgm_to_video(
@@ -153,18 +182,15 @@ class VideoService:
                 volume=bgm_volume,
                 mode=bgm_mode
             )
-            
+
             # Clean up temp file
             if os.path.exists(temp_output):
                 os.unlink(temp_output)
-            
+
             return final_result
-        else:
-            # No BGM, direct concatenation
-            if method == "demuxer":
-                return self._concat_demuxer(videos, output)
-            else:
-                return self._concat_filter(videos, output)
+
+        # No BGM, single-pass concat.
+        return _raw_concat(output)
     
     def _concat_demuxer(self, videos: List[str], output: str) -> str:
         """
@@ -251,6 +277,122 @@ class VideoService:
         except Exception as e:
             logger.error(f"Concatenation error: {e}")
             raise RuntimeError(f"Failed to concatenate videos: {e}")
+
+    def _concat_with_xfade(
+        self,
+        videos: List[str],
+        output: str,
+        transition: str = "fade",
+        duration: float = 0.5,
+    ) -> str:
+        """
+        Concatenate videos with a smooth transition between every pair of clips
+        using ffmpeg's `xfade` (video) and `acrossfade` (audio) filters.
+
+        FFmpeg equivalent (3 clips):
+            ffmpeg -i a.mp4 -i b.mp4 -i c.mp4 -filter_complex "
+                [0:v][1:v]xfade=transition=fade:duration=0.5:offset={dA-0.5}[v01];
+                [v01][2:v]xfade=transition=fade:duration=0.5:offset={dA+dB-1.0}[v];
+                [0:a][1:a]acrossfade=d=0.5:c1=tri:c2=tri[a01];
+                [a01][2:a]acrossfade=d=0.5:c1=tri:c2=tri[a]"
+              -map "[v]" -map "[a]" out.mp4
+
+        Constraints:
+            - All clips must share the same width/height/fps/pix_fmt. Frames
+              rendered from one template satisfy this.
+            - Each clip duration must be > `duration`. We auto-clamp `duration`
+              to fit the shortest clip and warn if we had to.
+            - Output is re-encoded (xfade requires it).
+
+        Args:
+            videos: Ordered list of clip paths (must have >= 2).
+            output: Output mp4 path.
+            transition: xfade preset name (e.g. "fade", "fadeblack", "dissolve",
+                "slideleft", "wiperight", "circleopen"). Invalid names will
+                surface as ffmpeg errors.
+            duration: Transition length in seconds.
+
+        Returns:
+            Output path.
+        """
+        if len(videos) < 2:
+            # Should be unreachable through concat_videos, but stay safe.
+            return self._concat_demuxer(videos, output)
+
+        # Probe durations once; we need them to compute xfade `offset` values.
+        durations = [self._get_video_duration(v) for v in videos]
+        min_duration = min(durations)
+
+        # xfade requires every clip be longer than the transition; auto-clamp
+        # to leave at least 0.05s of head-room so adjacent transitions don't
+        # collide on a single clip.
+        safe_duration = max(0.05, min(duration, min_duration * 0.4))
+        if safe_duration < duration:
+            logger.warning(
+                f"Requested transition duration {duration}s too long for shortest "
+                f"clip ({min_duration:.2f}s); clamped to {safe_duration:.2f}s"
+            )
+        duration = safe_duration
+
+        # Build filter chains. `xfade.offset` is the start time of the overlap
+        # in the cumulative timeline of the already-merged stream:
+        #   offset_i = (sum of previous clip durations on the merged stream) - duration
+        # because clip i overlaps the tail of the merged stream by `duration` seconds.
+        v_filters: List[str] = []
+        a_filters: List[str] = []
+        cumulative = durations[0]
+        last_v = "0:v"
+        last_a = "0:a"
+        for i in range(1, len(videos)):
+            offset = cumulative - duration
+            out_v = f"v{i:02d}"
+            out_a = f"a{i:02d}"
+            v_filters.append(
+                f"[{last_v}][{i}:v]xfade=transition={transition}"
+                f":duration={duration:.3f}:offset={offset:.3f}[{out_v}]"
+            )
+            # Triangular curve gives the most natural-sounding crossfade for
+            # speech; matches what most NLEs do by default.
+            a_filters.append(
+                f"[{last_a}][{i}:a]acrossfade=d={duration:.3f}:c1=tri:c2=tri[{out_a}]"
+            )
+            # Each xfade collapses `duration` seconds of overlap, so the merged
+            # timeline grows by (next_clip_duration - duration).
+            cumulative = cumulative + durations[i] - duration
+            last_v = out_v
+            last_a = out_a
+
+        filter_complex = ";".join(v_filters + a_filters)
+
+        cmd = ["ffmpeg"]
+        for v in videos:
+            cmd.extend(["-i", v])
+        cmd.extend([
+            "-filter_complex", filter_complex,
+            "-map", f"[{last_v}]",
+            "-map", f"[{last_a}]",
+            "-c:v", "libx264",
+            "-preset", "medium",
+            "-crf", "23",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-y", output,
+        ])
+
+        try:
+            import subprocess
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            logger.success(
+                f"Videos concatenated with '{transition}' transition: {output}"
+            )
+            return output
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr if e.stderr else str(e)
+            logger.error(f"FFmpeg xfade error: {error_msg}")
+            raise RuntimeError(
+                f"Failed to concat with transition '{transition}': {error_msg}"
+            )
     
     def _get_video_duration(self, video: str) -> float:
         """Get video duration in seconds"""
@@ -648,6 +790,11 @@ class VideoService:
             
             # Combine image and audio
             # Use -t to explicitly set video duration = audio duration
+            # Encoding: rely on CRF for quality (no bitrate ceiling). The old
+            # b:v=2M cap throttled gradients/motion frames into visible
+            # blocking; CRF 18 + medium preset produces visually transparent
+            # output at template resolution while still letting libx264 spend
+            # whatever bits a static frame happens to need.
             (
                 ffmpeg
                 .output(
@@ -660,8 +807,7 @@ class VideoService:
                     pix_fmt='yuv420p',
                     audio_bitrate='192k',
                     preset='medium',
-                    crf=23,
-                    **{'b:v': '2M'}  # Video bitrate
+                    crf=18,
                 )
                 .overwrite_output()
                 .run(capture_stdout=True, capture_stderr=True)

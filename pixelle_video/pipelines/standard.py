@@ -420,7 +420,9 @@ class StandardPipeline(LinearVideoPipeline):
             output=ctx.final_video_path,
             bgm_path=ctx.params.get("bgm_path"),
             bgm_volume=ctx.params.get("bgm_volume", 0.2),
-            bgm_mode=ctx.params.get("bgm_mode", "loop")
+            bgm_mode=ctx.params.get("bgm_mode", "loop"),
+            transition=ctx.params.get("transition"),
+            transition_duration=ctx.params.get("transition_duration", 0.5),
         )
         
         storyboard.final_video_path = final_video_path

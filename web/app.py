@@ -13,8 +13,11 @@
 """
 Pixelle-Video Web UI - Main Entry Point
 
-This is the entry point for the Streamlit multi-page application.
-Uses st.navigation to define pages and set the default page to Home.
+Apple-inspired multi-page navigation:
+  Sidebar groups
+    🎨 视频创作  (5 pipeline pages)
+    📚 视频管理
+    ⚙ 系统管理
 """
 
 import sys
@@ -26,35 +29,75 @@ _project_root = _script_dir.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-import streamlit as st
+import streamlit as st  # noqa: E402
 
 # Setup page config (must be first Streamlit command)
 st.set_page_config(
-    page_title="Pixelle-Video - AI Video Generator",
+    page_title="ZPL · Video Studio",
     page_icon="🎬",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 
 def main():
-    """Main entry point with navigation"""
-    # Define pages using st.Page
-    home_page = st.Page(
-        "pages/1_🎬_Home.py",
-        title="Home",
-        icon="🎬",
-        default=True
+    """Main entry point with grouped navigation."""
+    # Pages — file paths are relative to this app.py location
+    quick_create = st.Page(
+        "pages/01_quick_create.py",
+        title="快速创造",
+        icon="⚡",
+        default=True,
     )
-    
-    history_page = st.Page(
-        "pages/2_📚_History.py",
-        title="History",
-        icon="📚"
+    digital_human = st.Page(
+        "pages/02_digital_human.py",
+        title="数字人口播",
+        icon="👤",
     )
-    
-    # Set up navigation and run
-    pg = st.navigation([home_page, history_page])
+    image_to_video = st.Page(
+        "pages/03_image_to_video.py",
+        title="图生视频",
+        icon="🎥",
+    )
+    action_transfer = st.Page(
+        "pages/04_action_transfer.py",
+        title="动作迁移",
+        icon="🤸",
+    )
+    asset_based = st.Page(
+        "pages/05_asset_based.py",
+        title="素材成片",
+        icon="🖼",
+    )
+    history = st.Page(
+        "pages/06_history.py",
+        title="历史记录",
+        icon="📚",
+    )
+    settings = st.Page(
+        "pages/07_settings.py",
+        title="系统配置",
+        icon="⚙",
+    )
+    sensitive_words = st.Page(
+        "pages/08_sensitive_words.py",
+        title="敏感词配置",
+        icon="🛡️",
+    )
+    sensitive_words_detector = st.Page(
+        "pages/09_sensitive_words_detector.py",
+        title="敏感词检测",
+        icon="🧪",
+    )
+
+    pg = st.navigation(
+        {
+            "视频创作": [quick_create, digital_human, image_to_video, action_transfer, asset_based],
+            "脚本创作": [sensitive_words_detector],
+            "视频管理": [history],
+            "系统管理": [settings, sensitive_words],
+        }
+    )
     pg.run()
 
 

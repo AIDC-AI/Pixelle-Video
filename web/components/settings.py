@@ -23,11 +23,8 @@ from pixelle_video.config import config_manager
 
 def render_advanced_settings():
     """Render system configuration (required) with 2-column layout"""
-    # Check if system is configured
-    is_configured = config_manager.validate()
-    
-    # Expand if not configured, collapse if configured
-    with st.expander(tr("settings.title"), expanded=not is_configured):
+    # Always-expanded layout — no collapse / expander wrapper.
+    with st.container():
         # 2-column layout: LLM | ComfyUI, followed by direct media API providers.
         llm_col, comfyui_col = st.columns(2)
         

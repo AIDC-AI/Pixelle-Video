@@ -10,7 +10,7 @@
             padding: 0;
             height: 100%;
         }
-        
+
         body {
             margin: 0;
             padding: 0;
@@ -23,14 +23,14 @@
             justify-content: center;
             align-items: center;
         }
-        
+
         /* 主容器 - 居中并包含所有内容 */
         .main-container {
             position: relative;
             width: 1080px;
             height: 1920px;
         }
-        
+
         /* Background image layer (customizable using <img> tag) */
         .background-image {
             position: absolute;
@@ -40,7 +40,7 @@
             height: 100%;
             z-index: 0;
         }
-        
+
         /* Video overlay - 相对于main-container居中 */
         .video-overlay {
             position: absolute;
@@ -52,7 +52,7 @@
             /* background: #f00; */
             z-index: 1;
         }
-        
+
         /* Title section - positioned above video */
         .video-title-wrapper {
             position: absolute;
@@ -61,7 +61,7 @@
             transform: translateX(-50%);
             z-index: 2;
         }
-        
+
         .video-title {
             width: 900px;
             text-align: center;
@@ -78,7 +78,7 @@
             overflow-wrap: break-word;
             white-space: nowrap;
         }
-        
+
         /* 字幕区域 - 对齐视频底部 */
         .content {
             position: absolute;
@@ -88,21 +88,21 @@
             width: 900px;
             z-index: 4;
         }
-        
+
         .text {
             font-size: 40px;
             color: #ffffff;
             text-align: center;
             line-height: 1.6;
             font-weight: 500;
-            text-shadow: 
+            text-shadow:
                 2px 2px 4px rgba(0, 0, 0, 0.9),
                 0 0 8px rgba(0, 0, 0, 0.8),
                 0 0 16px rgba(0, 0, 0, 0.6);
             padding: 10px 0px;
             /* background-color: aqua; */
         }
-        
+
         /* Footer - positioned below video */
         .footer {
             position: absolute;
@@ -129,12 +129,20 @@
             font-weight: 600;
             color: #ffffff;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        
+            font-family: 'Liu Jian Mao Cao', 'ZCOOL KuaiLe', 'Ma Shan Zheng', cursive;
+        
+            letter-spacing: 3px;
         }
         
         .author-desc {
             font-size: 24px;
             color: rgba(255, 255, 255, 0.9);
             font-weight: 400;
+        
+            font-family: 'Liu Jian Mao Cao', 'ZCOOL KuaiLe', 'Ma Shan Zheng', cursive;
+        
+            letter-spacing: 2px;
         }
         
         .logo-section {
@@ -177,11 +185,8 @@
         <!-- Footer - positioned below video -->
         <div class="footer">
             <div class="author-section">
-                <div class="author">{{author=@Pixelle.AI}}</div>
-                <div class="author-desc">{{describe=Open Source Omnimodal AI Creative Agent}}</div>
-            </div>
-            <div class="logo-section">
-                <div class="logo">{{brand=Pixelle-Video}}</div>
+                <div class="author">{{author=@通俗易懂}}</div>
+                <div class="author-desc">{{describe=知识不枯燥，轻松全知道}}</div>
             </div>
         </div>
     </div>

@@ -357,21 +357,27 @@ class FrameProcessor:
         ext = {
             "index": frame.index + 1,
         }
-        
+
         # Add custom template parameters
+        # `show_subtitle` is a UI-level toggle that lives inside template_params
+        # but is consumed here (not passed into the HTML context) — pop it out
+        # before merging so it never reaches the template as a raw value.
+        show_subtitle = True
         if config.template_params:
-            ext.update(config.template_params)
-        
+            extra_params = dict(config.template_params)
+            show_subtitle = bool(extra_params.pop("show_subtitle", True))
+            ext.update(extra_params)
+
         # Generate frame using HTML (size is auto-parsed from template path)
         generator = HTMLFrameGenerator(template_path)
-        
+
         # Use video_path for video media, image_path for images
         media_path = frame.video_path if frame.media_type == "video" else frame.image_path
         logger.debug(f"Generating frame with media: '{media_path}' (type: {frame.media_type})")
-        
+
         composed_path = await generator.generate_frame(
             title=storyboard.title,
-            text=frame.narration,
+            text=frame.narration if show_subtitle else "",
             image=media_path,  # HTMLFrameGenerator handles both image and video paths
             ext=ext,
             output_path=output_path
