@@ -112,6 +112,14 @@ class ComfyUIConfig(BaseModel):
     video: VideoSubConfig = Field(default_factory=VideoSubConfig, description="Video-specific configuration")
 
 
+class SecurityConfig(BaseModel):
+    """Security configuration"""
+    sensitive_words: list[str] = Field(
+        default_factory=list,
+        description="Sensitive words list"
+    )
+
+
 class TemplateConfig(BaseModel):
     """Template configuration"""
     default_template: str = Field(
@@ -127,7 +135,8 @@ class PixelleVideoConfig(BaseModel):
     api_providers: APIProvidersConfig = Field(default_factory=APIProvidersConfig)
     comfyui: ComfyUIConfig = Field(default_factory=ComfyUIConfig)
     template: TemplateConfig = Field(default_factory=TemplateConfig)
-    
+    security: SecurityConfig = Field(default_factory=SecurityConfig)
+
     def is_llm_configured(self) -> bool:
         """Check if LLM is properly configured"""
         return bool(

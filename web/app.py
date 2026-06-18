@@ -15,10 +15,9 @@ Pixelle-Video Web UI - Main Entry Point
 
 Apple-inspired multi-page navigation:
   Sidebar groups
-    ⚡ 快速创造  (Standard pipeline — hero entry)
-    🎨 创作中心  (5 pipeline pages)
-    📚 历史
-    ⚙ 系统配置
+    🎨 视频创作  (5 pipeline pages)
+    📚 视频管理
+    ⚙ 系统管理
 """
 
 import sys
@@ -80,11 +79,17 @@ def main():
         title="系统配置",
         icon="⚙",
     )
+    sensitive_words = st.Page(
+        "pages/08_sensitive_words.py",
+        title="敏感词配置",
+        icon="🛡️",
+    )
 
     pg = st.navigation(
         {
             "视频创作": [quick_create, digital_human, image_to_video, action_transfer, asset_based],
-            "视频管理": [history, settings],
+            "视频管理": [history],
+            "系统管理": [settings, sensitive_words],
         }
     )
     pg.run()
