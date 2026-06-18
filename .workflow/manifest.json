@@ -1,0 +1,31 @@
+{
+  "features": {
+    "sensitive-words-detection": {
+      "name": "脚本创作敏感词检测",
+      "status": "done",
+      "branch": "feature/2026-06-18-sensitive-words-detector",
+      "created_at": "2026-06-18",
+      "steps_completed": ["step1", "step2", "step3", "step4", "step5", "step6", "step7"],
+      "test_mode": "tdd",
+      "notes": ["原本的敏感词配置功能不能受到影响"]
+    }
+  },
+  "bugs": {
+    "sensitive-words-detector-uninitialized-llm": {
+      "name": "敏感词检测点击 AI 检测时报 NoneType object is not callable",
+      "status": "done",
+      "branch": "fix/2026-06-18-sensitive-words-detector-llm-init",
+      "root_cause": "新增检测组件直接调用未初始化全局 pixelle_video.llm，导致 llm 为 None 时被当作函数调用。",
+      "created_at": "2026-06-18",
+      "steps_completed": ["step1", "step2", "step3", "step4", "step5"]
+    },
+    "sensitive-words-detector-nested-asyncio-run": {
+      "name": "敏感词检测点击 AI 检测时报 asyncio.run cannot be called from a running event loop",
+      "status": "done",
+      "branch": "fix/2026-06-18-sensitive-words-detector-llm-init",
+      "root_cause": "get_pixelle_video() 被放在 run_async 驱动的异步函数内部，首次初始化时嵌套调用 asyncio.run()。",
+      "created_at": "2026-06-18",
+      "steps_completed": ["step1", "step2", "step3", "step4", "step5"]
+    }
+  }
+}

@@ -29,7 +29,7 @@ _project_root = _script_dir.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-import streamlit as st
+import streamlit as st  # noqa: E402
 
 # Setup page config (must be first Streamlit command)
 st.set_page_config(
@@ -84,10 +84,16 @@ def main():
         title="敏感词配置",
         icon="🛡️",
     )
+    sensitive_words_detector = st.Page(
+        "pages/09_sensitive_words_detector.py",
+        title="敏感词检测",
+        icon="🧪",
+    )
 
     pg = st.navigation(
         {
             "视频创作": [quick_create, digital_human, image_to_video, action_transfer, asset_based],
+            "脚本创作": [sensitive_words_detector],
             "视频管理": [history],
             "系统管理": [settings, sensitive_words],
         }
