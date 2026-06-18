@@ -52,6 +52,23 @@ from pixelle_video.utils.os_util import (
 ProgressCallback = Optional[Callable[[ProgressEvent], None]]
 
 
+def _coerce_narrations(scene: dict) -> List[str]:
+    """Read narrations from a scene, normalized to a non-empty list."""
+    raw = scene.get("narrations")
+    if raw is None:
+        raw = scene.get("narration", "")
+
+    if isinstance(raw, str):
+        items = [raw]
+    elif isinstance(raw, list):
+        items = [str(x) for x in raw]
+    else:
+        items = []
+
+    items = [s.strip() for s in items if s and s.strip()]
+    return items if items else [""]
+
+
 # ==================== Structured Output Models ====================
 
 class SceneScript(BaseModel):
@@ -402,9 +419,7 @@ class AssetBasedPipeline(LinearVideoPipeline):
         
         # Log script preview
         for scene in context.script:
-            narrations = scene.get("narrations", [])
-            if isinstance(narrations, str):
-                narrations = [narrations]
+            narrations = _coerce_narrations(scene)
             narration_preview = " | ".join([n[:30] + "..." if len(n) > 30 else n for n in narrations[:2]])
             asset_name = Path(scene.get("asset_path", "unknown")).name
             logger.info(f"Scene {scene['scene_number']} [{asset_name}]: {narration_preview}")
@@ -468,9 +483,7 @@ class AssetBasedPipeline(LinearVideoPipeline):
         # Extract all narrations in order for compatibility
         all_narrations = []
         for scene in context.matched_scenes:
-            narrations = scene.get("narrations", [scene.get("narration", "")])
-            if isinstance(narrations, str):
-                narrations = [narrations]
+            narrations = _coerce_narrations(scene)
             all_narrations.extend(narrations)
         
         context.narrations = all_narrations
@@ -515,9 +528,7 @@ class AssetBasedPipeline(LinearVideoPipeline):
         # Create StoryboardFrames - one per scene
         for i, scene in enumerate(context.matched_scenes):
             # Get first narration for the frame (we'll combine audios later)
-            narrations = scene.get("narrations", [scene.get("narration", "")])
-            if isinstance(narrations, str):
-                narrations = [narrations]
+            narrations = _coerce_narrations(scene)
             
             # Use first narration as the main text (for subtitle)
             # We'll combine all narrations in the audio
@@ -590,15 +601,15 @@ class AssetBasedPipeline(LinearVideoPipeline):
             
             # Get scene data with narrations
             scene = frame._scene_data
-            narrations = scene.get("narrations", [scene.get("narration", "")])
-            if isinstance(narrations, str):
-                narrations = [narrations]
+            narrations = _coerce_narrations(scene)
             
             logger.info(f"Scene {i} has {len(narrations)} narration(s)")
             
             # Step 1: Generate audio for each narration and combine
             narration_audios = []
             for j, narration_text in enumerate(narrations, 1):
+                if not narration_text.strip():
+                    continue
                 audio_path = Path(context.task_dir) / "frames" / f"{i:02d}_narration_{j}.mp3"
                 audio_path.parent.mkdir(parents=True, exist_ok=True)
                 
@@ -613,8 +624,26 @@ class AssetBasedPipeline(LinearVideoPipeline):
                 logger.debug(f"  Narration {j}/{len(narrations)}: {narration_text[:30]}...")
             
             # Concatenate all narration audios for this scene
-            if len(narration_audios) > 1:
-                from pixelle_video.utils.os_util import get_task_frame_path
+            if not narration_audios:
+                import subprocess
+
+                silent_audio_path = Path(context.task_dir) / "frames" / f"{i:02d}_silent.mp3"
+                silent_audio_path.parent.mkdir(parents=True, exist_ok=True)
+                subprocess.run(
+                    [
+                        "ffmpeg",
+                        "-f", "lavfi",
+                        "-i", "anullsrc=r=44100:cl=mono",
+                        "-t", "3",
+                        "-q:a", "9",
+                        "-y", str(silent_audio_path)
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
+                frame.audio_path = str(silent_audio_path)
+                logger.warning(f"Scene {i} has no narration; using 3s silent audio")
+            elif len(narration_audios) > 1:
                 
                 # Emit progress for combining audio
                 frame_progress = base_progress + ((i - 1) + 0.25) / total_frames * progress_range
