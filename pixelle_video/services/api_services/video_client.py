@@ -3,18 +3,22 @@
 根据 model 名称自动路由到对应后端：
   - wan*      → DashscopeVideoClient (DashScope VideoSynthesis)
   - kling*    → KlingVideoClient (可灵 AI)
+  - agnes*    → AgnesVideoClient
 """
 
-import os
 import logging
+import os
 from typing import Optional
+
 from .config import Config
 
 try:
+    from .video_agnes import AgnesVideoClient
     from .video_dashscope import DashscopeVideoClient
     from .video_kling import KlingVideoClient
     from .video_seedance import SeedanceVideoClient
 except ImportError:
+    from video_agnes import AgnesVideoClient
     from video_dashscope import DashscopeVideoClient
     from video_kling import KlingVideoClient
     from video_seedance import SeedanceVideoClient
@@ -40,6 +44,9 @@ class VideoClient:
         ark_api_key: Optional[str] = None,
         ark_base_url: Optional[str] = None,
         ark_local_proxy: Optional[str] = None,
+        agnes_api_key: Optional[str] = None,
+        agnes_base_url: Optional[str] = None,
+        agnes_local_proxy: Optional[str] = None,
     ):
         self._dashscope_api_key = dashscope_api_key or Config.DASHSCOPE_API_KEY
         self._dashscope_base_url = dashscope_base_url or Config.DASHSCOPE_BASE_URL
@@ -54,9 +61,14 @@ class VideoClient:
         self._ark_base_url = ark_base_url or Config.ARK_BASE_URL or os.getenv("ARK_BASE_URL")
         self._ark_local_proxy = ark_local_proxy
 
+        self._agnes_api_key = agnes_api_key or Config.AGNES_API_KEY or os.getenv("AGNES_API_KEY")
+        self._agnes_base_url = agnes_base_url or Config.AGNES_BASE_URL or os.getenv("AGNES_BASE_URL")
+        self._agnes_local_proxy = agnes_local_proxy
+
         self._dashscope_client = None
         self._kling_client = None
         self._seedance_client = None
+        self._agnes_client = None
 
     @property
     def Dashscope_client(self):
@@ -92,6 +104,17 @@ class VideoClient:
             )
         return self._seedance_client
 
+    @property
+    def agnes_client(self):
+        """Create Agnes client only when an Agnes model is selected."""
+        if self._agnes_client is None:
+            self._agnes_client = AgnesVideoClient(
+                api_key=self._agnes_api_key,
+                base_url=self._agnes_base_url,
+                local_proxy=self._agnes_local_proxy,
+            )
+        return self._agnes_client
+
     def generate_video(
         self,
         prompt: str,
@@ -118,6 +141,8 @@ class VideoClient:
         cfg_scale: float = 0.5,
         generate_audio: Optional[bool] = None,
         audio: Optional[bool] = None,
+        frame_rate: Optional[int] = None,
+        num_inference_steps: Optional[int] = None,
     ) -> str:
         """
         生成视频
@@ -144,7 +169,7 @@ class VideoClient:
             print("---- VIDEO GENERATION REQUEST ----")
             print(f"Prompt: {prompt}")
             if image_path and str(image_path).startswith("data:"):
-                print(f"Image: [Base64图片]")
+                print("Image: [Base64图片]")
             else:
                 print(f"Image: {image_path}")
             print(f"Model: {model}")
@@ -201,6 +226,20 @@ class VideoClient:
                 seed,
                 watermark,
                 generate_audio,
+            )
+        elif "agnes" in model_lower:
+            return self._generate_agnes(
+                prompt,
+                image_path,
+                save_path,
+                model,
+                duration,
+                video_ratio,
+                resolution,
+                seed,
+                negative_prompt,
+                frame_rate,
+                num_inference_steps,
             )
         elif "wan" in model_lower or "happyhorse" in model_lower:
             return self._generate_wan(
@@ -330,4 +369,34 @@ class VideoClient:
             seed=seed,
             watermark=watermark,
             generate_audio=generate_audio,
+        )
+
+    def _generate_agnes(
+        self,
+        prompt: str,
+        image_path: Optional[str],
+        save_path: str,
+        model: str,
+        duration: int = 5,
+        video_ratio: str = "16:9",
+        resolution: Optional[str] = None,
+        seed: Optional[int] = None,
+        negative_prompt: Optional[str] = None,
+        frame_rate: Optional[int] = None,
+        num_inference_steps: Optional[int] = None,
+    ) -> str:
+        """通过 Agnes Video V2.0 生成视频"""
+        logger.info(f"VideoClient: 路由至 Agnes model={model}")
+        return self.agnes_client.generate_video(
+            prompt=prompt,
+            image_path=image_path,
+            save_path=save_path,
+            model=model,
+            duration=duration,
+            video_ratio=video_ratio,
+            resolution=resolution,
+            seed=seed,
+            negative_prompt=negative_prompt,
+            frame_rate=frame_rate or 24,
+            num_inference_steps=num_inference_steps,
         )

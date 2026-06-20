@@ -16,7 +16,7 @@ dependencies = [
     "edge-tts==7.2.7",
     "certifi>=2025.10.5",
     "ffmpeg-python>=0.2.0",
-    "httpx>=0.28.1",
+    "httpx[socks]>=0.28.1",
     "pillow>=10.0.0,<12",
     "streamlit>=1.40.0",
     "openai>=2.6.0",

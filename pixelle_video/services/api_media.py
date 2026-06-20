@@ -5,8 +5,8 @@
 """Direct API provider media generation adapter."""
 
 import asyncio
-from copy import deepcopy
 import os
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Optional
 
@@ -34,6 +34,10 @@ class APIProviderMediaService:
             "doubao-seedream-4-5-251128",
             "doubao-seedream-4-0-250828",
         ],
+        "agnes": [
+            "agnes-image-2.1-flash",
+            "agnes-image-2.0-flash",
+        ],
     }
 
     VIDEO_MODELS = {
@@ -58,6 +62,9 @@ class APIProviderMediaService:
             "doubao-seedance-2-0-fast-260128",
             "seedance-1-0-pro",
             "seedance-1-0-lite",
+        ],
+        "agnes": [
+            "agnes-video-v2.0",
         ],
     }
 
@@ -373,6 +380,28 @@ class APIProviderMediaService:
                 "Exact official model ID was not found. Volcengine docs refer to doubao-seedance model IDs, so this alias must be confirmed before relying on it.",
             ],
         },
+        ("agnes", "agnes-video-v2.0"): {
+            "ability_type": "text_to_video",
+            "ability_types": ["text_to_video", "image_to_video", "native_audio"],
+            "adapter_ability_types": ["text_to_video", "first_frame_i2v", "native_audio"],
+            "input_modalities": ["text", "image"],
+            "adapter_input_modalities": ["text", "image"],
+            "duration": {"min": 1, "max": 15, "integer": True, "verified": False},
+            "resolutions": ["720P", "1080P"],
+            "ratios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
+            "fps": 24,
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://agnes-ai.com/doc/agnes-video-v20",
+                "https://cloud.tencent.com/developer/article/2683093",
+            ],
+            "contract_issues": [
+                "Adapter follows the documented POST /v1/videos flow and prefers the recommended GET /agnesapi?video_id=... result retrieval when video_id is returned.",
+                "Agnes image-to-video requires a public image URL; local uploaded files cannot be sent directly.",
+                "Adapter maps Pixelle ratio/resolution to width/height and normalizes num_frames to the required 8n + 1 rule.",
+            ],
+        },
     }
 
     def __init__(self, config: dict, core=None):
@@ -477,7 +506,6 @@ class APIProviderMediaService:
         image_paths: Optional[list[str]] = None,
         **params,
     ) -> MediaResult:
-        from pixelle_video.services.api_services.image_client import ImageClient
 
         client = self._create_image_client()
         save_dir = self._save_dir(output_path, "api_images")
@@ -520,7 +548,6 @@ class APIProviderMediaService:
         height: Optional[int],
         **params,
     ) -> MediaResult:
-        from pixelle_video.services.api_services.video_client import VideoClient
 
         first_clip_path = params.get("first_clip_path") or params.get("first_video_path")
         reference_image_path = params.get("reference_image_path")
@@ -680,6 +707,9 @@ class APIProviderMediaService:
             ark_api_key=cfg["ark"].get("api_key") or None,
             ark_base_url=cfg["ark"].get("base_url") or None,
             ark_local_proxy=local_proxy if cfg["ark"].get("use_proxy") else None,
+            agnes_api_key=cfg["agnes"].get("api_key") or None,
+            agnes_base_url=cfg["agnes"].get("base_url") or None,
+            agnes_local_proxy=local_proxy if cfg["agnes"].get("use_proxy") else None,
         )
 
     def _create_video_client(self):
@@ -698,6 +728,9 @@ class APIProviderMediaService:
             ark_api_key=cfg["ark"].get("api_key") or None,
             ark_base_url=cfg["ark"].get("base_url") or None,
             ark_local_proxy=local_proxy if cfg["ark"].get("use_proxy") else None,
+            agnes_api_key=cfg["agnes"].get("api_key") or None,
+            agnes_base_url=cfg["agnes"].get("base_url") or None,
+            agnes_local_proxy=local_proxy if cfg["agnes"].get("use_proxy") else None,
         )
 
     def _save_dir(self, output_path: Optional[str], fallback_name: str) -> str:
@@ -752,6 +785,9 @@ class APIProviderMediaService:
 
         if provider == "seedance":
             return min(max(duration, 5), 10)
+
+        if provider == "agnes":
+            return min(max(duration, 1), 15)
 
         return max(duration, 1)
 
@@ -809,6 +845,13 @@ class APIProviderMediaService:
             options.update(
                 {
                     "generate_audio": params.get("generate_audio"),
+                }
+            )
+        elif provider == "agnes":
+            options.update(
+                {
+                    "frame_rate": params.get("frame_rate"),
+                    "num_inference_steps": params.get("num_inference_steps"),
                 }
             )
 

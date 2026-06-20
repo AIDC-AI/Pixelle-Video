@@ -16,8 +16,7 @@ LLM Presets - Predefined configurations for popular LLM providers
 All providers support OpenAI SDK protocol.
 """
 
-from typing import Dict, Any, List
-
+from typing import Any, Dict, List
 
 LLM_PRESETS: List[Dict[str, Any]] = [
     {
@@ -31,6 +30,18 @@ LLM_PRESETS: List[Dict[str, Any]] = [
         "base_url": "https://api.openai.com/v1",
         "model": "gpt-4o",
         "api_key_url": "https://platform.openai.com/api-keys",
+    },
+    {
+        "name": "Agnes 2.0 Flash",
+        "base_url": "https://apihub.agnes-ai.com/v1",
+        "model": "agnes-2.0-flash",
+        "api_key_url": "https://platform.agnes-ai.com/",
+    },
+    {
+        "name": "Agnes 1.5 Flash",
+        "base_url": "https://apihub.agnes-ai.com/v1",
+        "model": "agnes-1.5-flash",
+        "api_key_url": "https://platform.agnes-ai.com/",
     },
     {
         "name": "Claude",
@@ -84,4 +95,3 @@ def find_preset_by_base_url_and_model(base_url: str, model: str) -> str | None:
         if preset["base_url"] == base_url and preset["model"] == model:
             return preset["name"]
     return None
-

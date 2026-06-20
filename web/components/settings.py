@@ -16,9 +16,9 @@ System settings component for web UI
 
 import streamlit as st
 
-from web.i18n import tr, get_language
-from web.utils.streamlit_helpers import safe_rerun
 from pixelle_video.config import config_manager
+from web.i18n import get_language, tr
+from web.utils.streamlit_helpers import safe_rerun
 
 
 def render_advanced_settings():
@@ -39,7 +39,11 @@ def render_advanced_settings():
                 st.markdown(f"**{tr('settings.llm.title')}**")
                 
                 # Quick preset selection
-                from pixelle_video.llm_presets import get_preset_names, get_preset, find_preset_by_base_url_and_model
+                from pixelle_video.llm_presets import (
+                    find_preset_by_base_url_and_model,
+                    get_preset,
+                    get_preset_names,
+                )
                 
                 # Custom at the end
                 preset_names = get_preset_names() + ["Custom"]
@@ -299,11 +303,13 @@ def render_advanced_settings():
         openai_cfg = api_cfg.get("openai", {})
         dashscope_cfg = api_cfg.get("dashscope", {})
         ark_cfg = api_cfg.get("ark", {})
+        agnes_cfg = api_cfg.get("agnes", {})
         kling_cfg = api_cfg.get("kling", {})
         default_api_base_urls = {
             "openai": "https://api.openai.com/v1",
             "dashscope": "https://dashscope.aliyuncs.com/api/v1",
             "ark": "https://ark.cn-beijing.volces.com/api/v3",
+            "agnes": "https://apihub.agnes-ai.com/v1",
             "kling": "https://api-beijing.klingai.com",
         }
 
@@ -402,6 +408,25 @@ def render_advanced_settings():
                     key="api_media_ark_base_url",
                 )
 
+                st.markdown("**Agnes AI / Video V2.0**")
+                api_agnes_use_proxy = st.checkbox(
+                    "Agnes 启用代理" if zh else "Use proxy for Agnes",
+                    value=bool(agnes_cfg.get("use_proxy", False)),
+                    key="api_media_agnes_use_proxy",
+                )
+                api_agnes_key = st.text_input(
+                    "Agnes API Key",
+                    value=agnes_cfg.get("api_key", ""),
+                    type="password",
+                    key="api_media_agnes_key",
+                )
+                api_agnes_base_url = st.text_input(
+                    "Agnes Base URL",
+                    value=agnes_cfg.get("base_url") or default_api_base_urls["agnes"],
+                    placeholder="https://apihub.agnes-ai.com/v1",
+                    key="api_media_agnes_base_url",
+                )
+
                 st.markdown("**Kling AI / 可灵**")
                 api_kling_use_proxy = st.checkbox(
                     "Kling 启用代理" if zh else "Use proxy for Kling",
@@ -472,6 +497,11 @@ def render_advanced_settings():
                         "api_key": api_ark_key or "",
                         "base_url": api_ark_base_url or "",
                         "use_proxy": bool(api_ark_use_proxy),
+                    })
+                    config_manager.set_api_provider_config("agnes", {
+                        "api_key": api_agnes_key or "",
+                        "base_url": api_agnes_base_url or "",
+                        "use_proxy": bool(api_agnes_use_proxy),
                     })
                     config_manager.set_api_provider_config("kling", {
                         "base_url": api_kling_base_url or "",

@@ -35,6 +35,10 @@ api_providers:
     api_key: ""
     base_url: "https://ark.cn-beijing.volces.com/api/v3"
     use_proxy: false
+  agnes:
+    api_key: ""
+    base_url: "https://apihub.agnes-ai.com/v1"
+    use_proxy: false
   kling:
     base_url: "https://api-beijing.klingai.com"
     access_key: ""

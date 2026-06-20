@@ -307,6 +307,8 @@ class FrameProcessor:
             output_path=first_frame_path,
             index=frame.index + 1,
         )
+        if image_result.url.startswith(("http://", "https://")):
+            api_video_params["image_path"] = image_result.url
         frame.image_path = await self._download_media(
             image_result.url,
             frame.index,
