@@ -1,20 +1,21 @@
-import os
-import time
-import uuid
 import logging
+import os
 from typing import List, Optional
+
 from .config import Config
 
 try:
+    from .image_agnes import AgnesImageClient
     from .image_dashscope import DashScopeClient
-    from .image_seedream import SeedreamClient
     from .image_gpt import ImageGPT
     from .image_processor import ImageProcessor
+    from .image_seedream import SeedreamClient
 except ImportError:
+    from .image_agnes import AgnesImageClient
     from .image_dashscope import DashScopeClient
-    from .image_seedream import SeedreamClient
     from .image_gpt import ImageGPT
     from .image_processor import ImageProcessor
+    from .image_seedream import SeedreamClient
 
 class ImageClient:
     def __init__(self,
@@ -26,7 +27,10 @@ class ImageClient:
                  local_proxy: Optional[str] = None,
                  ark_api_key: Optional[str] = None,
                  ark_base_url: Optional[str] = None,
-                 ark_local_proxy: Optional[str] = None):
+                 ark_local_proxy: Optional[str] = None,
+                 agnes_api_key: Optional[str] = None,
+                 agnes_base_url: Optional[str] = None,
+                 agnes_local_proxy: Optional[str] = None):
         """
         Unified Image Generation Client
         Routes requests to DashScope, Seedream, or GPT based on model name.
@@ -43,9 +47,14 @@ class ImageClient:
         self._ark_base_url = ark_base_url or Config.ARK_BASE_URL
         self._ark_local_proxy = ark_local_proxy
 
+        self._agnes_api_key = agnes_api_key or Config.AGNES_API_KEY
+        self._agnes_base_url = agnes_base_url or Config.AGNES_BASE_URL
+        self._agnes_local_proxy = agnes_local_proxy
+
         self._dashscope_client = None
         self._seedream_client = None
         self._gpt_client = None
+        self._agnes_client = None
 
         # Initialize Image Processor for downloads
         self.image_processor = ImageProcessor()
@@ -89,6 +98,19 @@ class ImageClient:
                 local_proxy=self._gpt_local_proxy,
             )
         return self._gpt_client
+
+    @property
+    def agnes_client(self):
+        """Create Agnes image client only when an Agnes image model is selected."""
+        if not self._agnes_api_key:
+            raise RuntimeError("AGNES_API_KEY not set. Configure Agnes only when using Agnes image models.")
+        if self._agnes_client is None:
+            self._agnes_client = AgnesImageClient(
+                api_key=self._agnes_api_key,
+                base_url=self._agnes_base_url,
+                local_proxy=self._agnes_local_proxy,
+            )
+        return self._agnes_client
 
     def generate_image(self,
                        prompt: str,
@@ -160,7 +182,7 @@ class ImageClient:
                 print(f"Refs: {len(image_paths)}")
                 for p in image_paths:
                     if str(p).startswith("data:"):
-                        print(f" - [Base64图片]")
+                        print(" - [Base64图片]")
                     else:
                         print(f" - {p}")
             print(f"Model: {model}")
@@ -174,6 +196,7 @@ class ImageClient:
         # Determine backend provider
         is_seedream = "seedream" in model.lower()
         is_sora = "sora" in model.lower() or "gpt" in model.lower()
+        is_agnes = "agnes-image" in model.lower()
         
         # Prepare save directory
         if not save_dir:
@@ -185,7 +208,31 @@ class ImageClient:
         
         generated_local_paths = []
 
-        if is_seedream:
+        if is_agnes:
+            try:
+                logging.info(f"ImageClient requesting Agnes: {model}")
+                agnes_size = size.replace("*", "x") if size else "1024x1024"
+                agnes_model = model
+                if image_paths and "2.1" in agnes_model:
+                    logging.info("Agnes image-to-image is optimized for 2.0 Flash; switching model.")
+                    agnes_model = "agnes-image-2.0-flash"
+
+                paths = self.agnes_client.generate_image(
+                    prompt=prompt,
+                    model=agnes_model,
+                    session_id=session_id or "default",
+                    size=agnes_size,
+                    image_paths=image_paths,
+                    save_dir=save_dir,
+                )
+                if paths:
+                    generated_local_paths.extend(paths)
+
+            except Exception as e:
+                logging.error(f"Agnes image generation failed: {e}")
+                raise RuntimeError(f"Agnes image generation failed: {e}") from e
+
+        elif is_seedream:
             # --- Seedream Logic ---
             try:
                 logging.info(f"ImageClient requesting Seedream: {model}")
