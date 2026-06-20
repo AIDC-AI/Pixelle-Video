@@ -57,6 +57,18 @@ LLM_PRESETS: List[Dict[str, Any]] = [
         "model": "moonshot-v1-8k",
         "api_key_url": "https://platform.moonshot.cn/console/api-keys",
     },
+    {
+        "name": "Astraflow",
+        "base_url": "https://api-us-ca.umodelverse.ai/v1",
+        "model": "gpt-4o",
+        "api_key_url": "https://astraflow.ucloud-global.com",
+    },
+    {
+        "name": "Astraflow CN",
+        "base_url": "https://api.modelverse.cn/v1",
+        "model": "gpt-4o",
+        "api_key_url": "https://astraflow.ucloud.cn",
+    },
 ]
 
 
