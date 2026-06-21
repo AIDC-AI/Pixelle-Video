@@ -192,6 +192,19 @@ EDGE_TTS_VOICES: List[Dict[str, Any]] = [
         "locale": "es-ES",
         "gender": "female"
     },
+    # Vietnamese voices
+    {
+        "id": "vi-VN-HoaiMyNeural",
+        "label_key": "tts.voice.vi_VN_HoaiMyNeural",
+        "locale": "vi-VN",
+        "gender": "female"
+    },
+    {
+        "id": "vi-VN-NamMinhNeural",
+        "label_key": "tts.voice.vi_VN_NamMinhNeural",
+        "locale": "vi-VN",
+        "gender": "male"
+    },
 ]
 
 

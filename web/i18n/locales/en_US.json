@@ -253,6 +253,8 @@
     "tts.voice.tr-TR-EmelNeural": "TR Female-Friendly（Emel）",
     "tts.voice.es-ES-AlvaroNeural": "ES Male-Friendly（Alvaro）",
     "tts.voice.es-ES-ElviraNeural": "ES Female-Friendly（Elvira）",
+    "tts.voice.vi_VN_HoaiMyNeural": "VI Female-Gentle (Hoai My)",
+    "tts.voice.vi_VN_NamMinhNeural": "VI Male-Professional (Nam Minh)",
     "tts.selector": "Workflow Selection",
     "tts.what": "Converts narration text to natural human-like speech (some workflows support reference audio for voice cloning)",
     "tts.how": "Place the exported tts_xxx.json workflow file(API format) into the workflows/selfhost/ folder (for local ComfyUI) or the workflows/runninghub/ folder (for cloud)",
