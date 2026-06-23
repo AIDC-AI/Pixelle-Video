@@ -57,6 +57,14 @@ LLM_PRESETS: List[Dict[str, Any]] = [
         "model": "moonshot-v1-8k",
         "api_key_url": "https://platform.moonshot.cn/console/api-keys",
     },
+    {
+        # Atlas Cloud — OpenAI-compatible gateway to many LLMs
+        # (DeepSeek, Qwen, GLM, Kimi, MiniMax, Claude, GPT, ...) through one API.
+        "name": "Atlas Cloud",
+        "base_url": "https://api.atlascloud.ai/v1",
+        "model": "deepseek-ai/deepseek-v4-pro",
+        "api_key_url": "https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=Pixelle-Video",
+    },
 ]
 
 

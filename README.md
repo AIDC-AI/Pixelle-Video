@@ -12,6 +12,15 @@
   <a href="https://github.com/AIDC-AI/Pixelle-Video/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AIDC-AI/Pixelle-Video.svg" alt="License"></a>
 </p>
 
+<p align="center">
+  <a href="https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=Pixelle-Video">
+    <img src="resources/atlas-cloud-logo.png" alt="Atlas Cloud" width="180">
+  </a>
+</p>
+
+> 🎁 **[Atlas Cloud](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=Pixelle-Video)** 是一个全模态 AI 推理平台，提供统一的 OpenAI 兼容 API。Pixelle-Video 的 LLM 文案生成原生支持任意 OpenAI 兼容服务，因此可以把它作为一个可选后端接入——一个 Key 即可调用 DeepSeek、Qwen、GLM、Kimi、MiniMax 等众多模型。平台同样提供 Seedance、Wan、Kling 等图像/视频生成能力。
+> [coding plan](https://www.atlascloud.ai/console/coding-plan) · [模型列表](https://www.atlascloud.ai/models)
+
 https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 
 <br/>
@@ -269,7 +278,7 @@ uv run streamlit run web/app.py
 用于生成视频文案的 AI。
 
 **快速选择预设**  
-- 通过下拉菜单选择预设模型（通义千问、GPT-4o、DeepSeek 等）
+- 通过下拉菜单选择预设模型（通义千问、GPT-4o、DeepSeek、Atlas Cloud 等）
 - 选择后会自动填充 base_url 和 model
 - 点击「🔑 获取 API Key」链接去注册并获取密钥
 

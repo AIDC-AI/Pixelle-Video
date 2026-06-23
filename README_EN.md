@@ -12,6 +12,15 @@
   <a href="https://github.com/AIDC-AI/Pixelle-Video/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AIDC-AI/Pixelle-Video.svg" alt="License"></a>
 </p>
 
+<p align="center">
+  <a href="https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=Pixelle-Video">
+    <img src="resources/atlas-cloud-logo.png" alt="Atlas Cloud" width="180">
+  </a>
+</p>
+
+> 🎁 **[Atlas Cloud](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=Pixelle-Video)** is a full-modal AI inference platform with a single OpenAI-compatible API. Since Pixelle-Video's LLM script generation works with any OpenAI-compatible service, you can plug Atlas Cloud in as an optional backend — one key reaches DeepSeek, Qwen, GLM, Kimi, MiniMax and more. It also serves image/video models such as Seedance, Wan and Kling.
+> [coding plan](https://www.atlascloud.ai/console/coding-plan) · [models](https://www.atlascloud.ai/models)
+
 https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 
 Just input a **topic**, and Pixelle-Video will automatically:
@@ -265,7 +274,7 @@ Configuration is required on first use. Click to expand the "⚙️ System Confi
 Used for generating video scripts.
 
 **Quick Select Preset**  
-- Select preset model from dropdown menu (Qwen, GPT-4o, DeepSeek, etc.)
+- Select preset model from dropdown menu (Qwen, GPT-4o, DeepSeek, Atlas Cloud, etc.)
 - After selection, base_url and model will be automatically filled
 - Click "🔑 Get API Key" link to register and obtain key
 
