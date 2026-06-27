@@ -28,6 +28,7 @@ dependencies = [
     "moviepy==1.0.3",
     "playwright>=1.58.0",
     "dashscope>=1.23.0",
+    "twelvelabs>=1.2.8",
     "requests>=2.32.0",
     "pyjwt>=2.10.0",
     "numpy>=1.26.0",

@@ -35,6 +35,12 @@ api_providers:
     api_key: ""
     base_url: "https://ark.cn-beijing.volces.com/api/v3"
     use_proxy: false
+  # TwelveLabs: Pegasus video-understanding for asset analysis (video-only).
+  # Get a free API key at https://twelvelabs.io (generous free tier).
+  twelvelabs:
+    api_key: ""
+    base_url: "https://api.twelvelabs.io/v1.3"
+    use_proxy: false
   kling:
     base_url: "https://api-beijing.klingai.com"
     access_key: ""

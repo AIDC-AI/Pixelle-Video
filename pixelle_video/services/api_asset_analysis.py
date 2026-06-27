@@ -32,11 +32,22 @@ class APIAssetAnalysisService:
             "qwen3.6-flash",
             "qwen3.5-omni-plus",
         ],
+        # TwelveLabs Pegasus is a video-native understanding model: it reasons
+        # over the whole clip (motion, scene changes, action) rather than a few
+        # sampled frames, so it only handles video assets — not images.
+        "twelvelabs": [
+            "pegasus1.5",
+            "pegasus1.2",
+        ],
     }
 
     VLM_PROVIDER_LABELS = {
         "dashscope": "DashScope",
+        "twelvelabs": "TwelveLabs",
     }
+
+    # Providers whose models can only analyze video assets (not images).
+    VIDEO_ONLY_PROVIDERS = {"twelvelabs"}
 
     IMAGE_PROMPT = """请分析这张素材图片，用中文给出适合短视频脚本创作的简洁描述。
 
@@ -71,6 +82,8 @@ class APIAssetAnalysisService:
                 continue
 
             provider_label = self.VLM_PROVIDER_LABELS.get(provider, provider.title())
+            video_only = provider in self.VIDEO_ONLY_PROVIDERS
+            supported_assets = ["video"] if video_only else ["image", "video"]
             for model in provider_models:
                 key = f"api/vlm/{provider}/{model}"
                 models.append({
@@ -83,6 +96,7 @@ class APIAssetAnalysisService:
                     "media_type": "asset_analysis",
                     "ability_type": "vlm_asset_analysis",
                     "ability_types": ["vlm_asset_analysis"],
+                    "supported_assets": supported_assets,
                 })
 
         return models
@@ -97,6 +111,12 @@ class APIAssetAnalysisService:
         image_file = Path(image_path)
         if not image_file.exists():
             raise FileNotFoundError(f"Image file not found: {image_path}")
+
+        if self._provider_of(model) in self.VIDEO_ONLY_PROVIDERS:
+            raise ValueError(
+                f"Model '{model}' is video-only and cannot analyze images. "
+                "Select a vision model that supports images for image assets."
+            )
 
         return await self._query_vlm(
             prompt=prompt or self.IMAGE_PROMPT,
@@ -154,10 +174,12 @@ class APIAssetAnalysisService:
 
         providers = self.config.get("api_providers", {}) or {}
         dashscope = providers.get("dashscope", {}) or {}
+        twelvelabs = providers.get("twelvelabs", {}) or {}
 
         client = VLM(
             dashscope_api_key=dashscope.get("api_key"),
             dashscope_base_url=dashscope.get("base_url"),
+            twelvelabs_api_key=twelvelabs.get("api_key"),
         )
         result = await asyncio.to_thread(
             client.query,
@@ -171,6 +193,14 @@ class APIAssetAnalysisService:
         if not description:
             raise RuntimeError("API VLM analysis returned empty description")
         return description
+
+    def _provider_of(self, model: Optional[str]) -> Optional[str]:
+        """Resolve which provider a bare model name belongs to."""
+        name = (model or "").strip()
+        for provider, provider_models in self.VLM_MODELS.items():
+            if name in provider_models:
+                return provider
+        return None
 
     def _get_asset_type(self, path: Path) -> str:
         image_exts = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
