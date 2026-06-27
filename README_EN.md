@@ -247,6 +247,7 @@ On first use, expand the "⚙️ System Configuration" panel and fill in:
 - **LLM Configuration**: Select AI model (such as Qwen, GPT, etc.) and enter API Key
 - **ComfyUI / RunningHub Configuration**: Configure local ComfyUI or RunningHub API Key if you want to use workflow-based image, video, or voice generation
 - **API Media Model Configuration**: Configure API Key, Base URL, and proxy options for direct image/video model providers such as DashScope, OpenAI, ARK, and Kling
+- **TwelveLabs (optional)**: Add a `twelvelabs` API key to analyze uploaded video footage with [Pegasus](https://docs.twelvelabs.io) — a video-native model that reasons over the whole clip (motion, scene changes, action) instead of a few sampled frames. It appears as a video-only option in the asset-analysis service. Get a free API key at [twelvelabs.io](https://twelvelabs.io) (generous free tier).
 
 After configuration, click "Save Configuration", and you can start generating videos!
 

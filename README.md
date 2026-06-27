@@ -251,6 +251,7 @@ uv run streamlit run web/app.py
 - **LLM 配置**: 选择 AI 模型（如通义千问、GPT 等）并填入 API Key
 - **ComfyUI / RunningHub 配置**: 如需使用工作流生成图片、视频或语音，配置本地 ComfyUI 地址或 RunningHub API Key
 - **API 媒体模型配置**: 如需直连图像/视频模型，配置 DashScope、OpenAI、ARK、Kling 等供应商的 API Key、Base URL 和代理选项
+- **TwelveLabs（可选）**: 配置 `twelvelabs` API Key 后，可使用 [Pegasus](https://docs.twelvelabs.io) 视频理解模型分析上传的视频素材。Pegasus 是视频原生模型，会理解整段视频（运动、场景切换、动作），而非仅采样若干帧；在素材分析服务中作为「仅视频」选项出现。可在 [twelvelabs.io](https://twelvelabs.io) 免费获取 API Key（提供慷慨的免费额度）。
 
 配置好后点击「保存配置」，就可以开始生成视频了！
 

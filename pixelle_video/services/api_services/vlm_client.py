@@ -4,18 +4,28 @@ from .config import Config
 
 try:
     from .vlm_dashscope import QwenVLClient
+    from .vlm_twelvelabs import PegasusClient
 except ImportError:
     from vlm_dashscope import QwenVLClient
+    from vlm_twelvelabs import PegasusClient
+
+# Pegasus is video-only; models are routed to TwelveLabs by name prefix.
+_TWELVELABS_MODEL_PREFIX = "pegasus"
 
 class VLM:
     def __init__(self,
                  dashscope_api_key: Optional[str] = None,
-                 dashscope_base_url: Optional[str] = None):
+                 dashscope_base_url: Optional[str] = None,
+                 twelvelabs_api_key: Optional[str] = None):
         """
-        Unified VLM (Vision Language Model) Client
-        Routes asset-analysis VLM requests to DashScope (Qwen/Qwen-Omni).
+        Unified VLM (Vision Language Model) Client.
+
+        Routes asset-analysis VLM requests by model name:
+        - ``pegasus*`` -> TwelveLabs Pegasus (video-only understanding)
+        - everything else -> DashScope (Qwen/Qwen-Omni)
         """
         dashscope_key = dashscope_api_key or Config.DASHSCOPE_API_KEY
+        twelvelabs_key = twelvelabs_api_key or Config.TWELVELABS_API_KEY
 
         self.dashscope_client = (
             QwenVLClient(
@@ -23,6 +33,9 @@ class VLM:
                 base_url=dashscope_base_url or Config.DASHSCOPE_BASE_URL
             )
             if dashscope_key else None
+        )
+        self.twelvelabs_client = (
+            PegasusClient(api_key=twelvelabs_key) if twelvelabs_key else None
         )
 
     def query(self,
@@ -53,6 +66,22 @@ class VLM:
             if session_id:
                 print(f"Session ID: {session_id}")
             print("-" * 30)
+
+        # Route Pegasus (video understanding) to TwelveLabs.
+        if selected_model.lower().startswith(_TWELVELABS_MODEL_PREFIX):
+            if self.twelvelabs_client is None:
+                raise RuntimeError("TwelveLabs VLM API key is not configured.")
+            if image_paths and not video_paths:
+                raise ValueError(
+                    "TwelveLabs Pegasus is video-only and cannot analyze images."
+                )
+            if not video_paths:
+                raise ValueError("TwelveLabs Pegasus requires a video input.")
+            return self.twelvelabs_client.analyze_video(
+                text=prompt,
+                videos=video_paths,
+                model=selected_model,
+            )
 
         if self.dashscope_client is None:
             raise RuntimeError("DashScope VLM API key is not configured.")

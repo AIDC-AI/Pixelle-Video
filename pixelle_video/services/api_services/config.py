@@ -34,6 +34,7 @@ class _ConfigMeta(type):
             "GOOGLE_GEMINI_BASE_URL": ("gemini", "base_url", ""),
             "ARK_API_KEY": ("ark", "api_key", ""),
             "ARK_BASE_URL": ("ark", "base_url", ""),
+            "TWELVELABS_API_KEY": ("twelvelabs", "api_key", ""),
             "KLING_BASE_URL": ("kling", "base_url", ""),
             "KLING_ACCESS_KEY": ("kling", "access_key", ""),
             "KLING_SECRET_KEY": ("kling", "secret_key", ""),
