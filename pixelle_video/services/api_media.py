@@ -676,6 +676,7 @@ class APIProviderMediaService:
             dashscope_local_proxy=local_proxy if cfg["dashscope"].get("use_proxy") else None,
             gpt_api_key=cfg["openai"].get("api_key") or None,
             gpt_base_url=cfg["openai"].get("base_url") or None,
+            gpt_image_api_mode=cfg["openai"].get("image_api_mode") or None,
             local_proxy=local_proxy if cfg["openai"].get("use_proxy") else None,
             ark_api_key=cfg["ark"].get("api_key") or None,
             ark_base_url=cfg["ark"].get("base_url") or None,

@@ -23,6 +23,7 @@ class ImageClient:
                  dashscope_local_proxy: Optional[str] = None,
                  gpt_api_key: Optional[str] = None,
                  gpt_base_url: Optional[str] = None,
+                 gpt_image_api_mode: Optional[str] = None,
                  local_proxy: Optional[str] = None,
                  ark_api_key: Optional[str] = None,
                  ark_base_url: Optional[str] = None,
@@ -37,6 +38,7 @@ class ImageClient:
 
         self._gpt_api_key = gpt_api_key or Config.OPENAI_API_KEY
         self._gpt_base_url = gpt_base_url or Config.OPENAI_BASE_URL
+        self._gpt_image_api_mode = gpt_image_api_mode or Config.OPENAI_IMAGE_API_MODE
         self._gpt_local_proxy = local_proxy or Config.LOCAL_PROXY
 
         self._ark_api_key = ark_api_key or Config.ARK_API_KEY
@@ -86,6 +88,7 @@ class ImageClient:
             self._gpt_client = ImageGPT(
                 api_key=self._gpt_api_key,
                 base_url=self._gpt_base_url,
+                image_api_mode=self._gpt_image_api_mode,
                 local_proxy=self._gpt_local_proxy,
             )
         return self._gpt_client

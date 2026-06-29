@@ -2,7 +2,10 @@ import os
 import time
 import uuid
 import base64
+import re
 import httpx
+from typing import Optional
+
 from openai import OpenAI
 try:
     from .image_processor import ImageProcessor
@@ -20,6 +23,7 @@ class ImageGPT:
     def __init__(self,
                  api_key: str = None,
                  base_url: str = None,
+                 image_api_mode: str = "images",
                  local_proxy: str = None,
                  timeout: float = 300.0):
         """
@@ -30,6 +34,9 @@ class ImageGPT:
         """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.timeout = timeout
+        self.image_api_mode = (image_api_mode or "images").strip().lower()
+        if self.image_api_mode not in {"images", "responses"}:
+            self.image_api_mode = "images"
         
         kwargs = {"api_key": self.api_key, "timeout": self.timeout}
         
@@ -45,6 +52,104 @@ class ImageGPT:
         self.client = OpenAI(**kwargs)
         self.max_attempts = 10
         self.image_processor = ImageProcessor(local_proxy=local_proxy)
+
+    def _save_base64_image(self, b64_value: str, save_dir: Optional[str] = None):
+        """Decode an image base64 string and save it when save_dir is provided."""
+        raw = base64.b64decode(b64_value, validate=False)
+        if raw.startswith(b"\x89PNG"):
+            ext = "png"
+        elif raw.startswith(b"\xff\xd8"):
+            ext = "jpg"
+        elif raw.startswith(b"RIFF"):
+            ext = "webp"
+        else:
+            ext = "png"
+
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+            file_name = f"gpt_{int(time.time())}_{uuid.uuid4().hex[:6]}.{ext}"
+            file_path = os.path.join(save_dir, file_name)
+            with open(file_path, "wb") as f:
+                f.write(raw)
+            return file_path
+        return b64_value
+
+    def _extract_image_from_obj(self, obj, save_dir: Optional[str] = None):
+        """Find the first image URL or base64 payload in OpenAI-compatible responses."""
+        if isinstance(obj, dict):
+            # Common image-generation output field names used by Responses API and proxies.
+            for key in ("b64_json", "base64", "image_base64", "result"):
+                value = obj.get(key)
+                if isinstance(value, str) and value:
+                    try:
+                        return self._save_base64_image(value, save_dir)
+                    except Exception:
+                        pass
+
+            for key in ("url", "image_url"):
+                value = obj.get(key)
+                if isinstance(value, str) and value.startswith(("http://", "https://")):
+                    if save_dir:
+                        os.makedirs(save_dir, exist_ok=True)
+                        file_name = f"gpt_{int(time.time())}_{uuid.uuid4().hex[:6]}.png"
+                        file_path = os.path.join(save_dir, file_name)
+                        if self.image_processor.download_image(value, file_path):
+                            return file_path
+                    return value
+                if isinstance(value, dict):
+                    found = self._extract_image_from_obj(value, save_dir)
+                    if found:
+                        return found
+
+            for value in obj.values():
+                found = self._extract_image_from_obj(value, save_dir)
+                if found:
+                    return found
+
+        elif isinstance(obj, list):
+            for item in obj:
+                found = self._extract_image_from_obj(item, save_dir)
+                if found:
+                    return found
+
+        elif isinstance(obj, str):
+            if obj.startswith(("http://", "https://")) and (
+                re.search(r"\.(png|jpe?g|webp)(\?|$)", obj, re.I) or "image" in obj.lower()
+            ):
+                return obj
+            if len(obj) > 1000 and re.fullmatch(r"[A-Za-z0-9+/=\n\r]+", obj[:2000]):
+                try:
+                    return self._save_base64_image(obj, save_dir)
+                except Exception:
+                    return None
+        return None
+
+    def _generate_with_responses_api(self, prompt, size="1024x1024", quality="high", model="gpt-image-2",
+                                     save_dir=None, image_urls=None):
+        """Generate an image through /v1/responses image_generation tool."""
+        content = prompt
+        if size:
+            content = f"{content}\n\nImage size/aspect request: {size}. Quality: {quality}."
+
+        input_payload = content
+        if image_urls:
+            parts = [{"type": "input_text", "text": content}]
+            for image_url in image_urls[:6]:
+                parts.append({"type": "input_image", "image_url": self._encode_image_to_base64(image_url)})
+            input_payload = [{"role": "user", "content": parts}]
+
+        response = self.client.responses.create(  # type: ignore[arg-type]
+            model=model,
+            input=input_payload,
+            tools=[{"type": "image_generation"}],
+        )
+
+        # The OpenAI SDK returns pydantic objects; model_dump preserves nested tool output.
+        data = response.model_dump() if hasattr(response, "model_dump") else response
+        result = self._extract_image_from_obj(data, save_dir=save_dir)
+        if not result:
+            raise RuntimeError("未在 Responses API 响应中找到图片 url 或 base64")
+        return result
 
     def _encode_image_to_base64(self, image_path: str) -> str:
         """将本地图片转换为 Base64 编码"""
@@ -88,6 +193,16 @@ class ImageGPT:
 
         while attempts < self.max_attempts:
             try:
+                if self.image_api_mode == "responses":
+                    return self._generate_with_responses_api(
+                        prompt=prompt,
+                        size=size,
+                        quality=quality,
+                        model=model,
+                        save_dir=save_dir,
+                        image_urls=image_urls,
+                    )
+
                 response = self.client.images.generate(
                     model=model,
                     prompt=prompt,

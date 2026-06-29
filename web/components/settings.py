@@ -362,6 +362,22 @@ def render_advanced_settings():
                     placeholder="https://api.openai.com/v1",
                     key="api_media_openai_base_url",
                 )
+                api_openai_image_api_mode = st.selectbox(
+                    "OpenAI 生图接口" if zh else "OpenAI image API",
+                    options=["images", "responses"],
+                    index=1 if (openai_cfg.get("image_api_mode") == "responses") else 0,
+                    format_func=lambda mode: (
+                        "Responses API (/v1/responses，gpt-image-2/部分中转)"
+                        if mode == "responses"
+                        else "Images API (/v1/images/generations，传统生图接口)"
+                    ),
+                    help=(
+                        "如果 gpt-image-2 在中转站通过 /v1/responses 生图，选 Responses API；官方/传统图片接口选 Images API。"
+                        if zh
+                        else "Use Responses API when gpt-image-2 image generation is exposed via /v1/responses; use Images API for traditional /v1/images/generations."
+                    ),
+                    key="api_media_openai_image_api_mode",
+                )
 
                 st.markdown("**DashScope / Wan / HappyHorse**")
                 api_dashscope_use_proxy = st.checkbox(
@@ -462,6 +478,7 @@ def render_advanced_settings():
                         "api_key": api_openai_key or "",
                         "base_url": api_openai_base_url or "",
                         "use_proxy": bool(api_openai_use_proxy),
+                        "image_api_mode": api_openai_image_api_mode,
                     })
                     config_manager.set_api_provider_config("dashscope", {
                         "api_key": api_dashscope_key or "",
