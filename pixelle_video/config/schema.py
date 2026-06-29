@@ -37,6 +37,7 @@ class APIKeyProviderConfig(BaseModel):
     api_key: str = Field(default="", description="Provider API Key")
     base_url: str = Field(default="", description="Provider API Base URL")
     use_proxy: bool = Field(default=False, description="Route provider requests through common local proxy")
+    image_api_mode: str = Field(default="images", description="OpenAI image API mode: 'images' or 'responses'")
 
 
 class AccessSecretProviderConfig(BaseModel):
