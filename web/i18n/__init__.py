@@ -108,15 +108,6 @@ def tr(key: str, fallback: Optional[str] = None, **kwargs) -> str:
     return result
 
 
-def get_language_name(lang_code: Optional[str] = None) -> str:
-    """Get display name of a language"""
-    if lang_code is None:
-        lang_code = _current_language
-    
-    locale = _locales.get(lang_code, {})
-    return locale.get("language_name", lang_code)
-
-
 def get_available_languages() -> Dict[str, str]:
     """Get all available languages with their display names"""
     return {

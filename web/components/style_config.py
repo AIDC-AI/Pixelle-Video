@@ -31,13 +31,9 @@ from web.pipelines.api_workflows import (
     workflow_select_help,
     workflow_source_help,
     workflow_source_label,
+    is_api_workflow,
 )
 from pixelle_video.config import config_manager
-
-
-def is_api_workflow(workflow_key: str | None) -> bool:
-    """Return True for direct provider workflow keys such as api/dashscope/xxx."""
-    return bool(workflow_key and workflow_key.startswith("api/"))
 
 
 def render_style_config(pixelle_video):

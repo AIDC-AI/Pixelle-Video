@@ -19,7 +19,6 @@ Exports registry functions and automatically registers available pipelines.
 from web.pipelines.base import (
     PipelineUI,
     register_pipeline_ui,
-    get_pipeline_ui,
     get_all_pipeline_uis
 )
 
@@ -33,6 +32,5 @@ from web.pipelines import action_transfer
 __all__ = [
     "PipelineUI",
     "register_pipeline_ui",
-    "get_pipeline_ui",
     "get_all_pipeline_uis"
 ]

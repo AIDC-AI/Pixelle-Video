@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Callable
 from loguru import logger
 
-from api.tasks.models import Task, TaskStatus, TaskType, TaskProgress
+from api.tasks.models import Task, TaskStatus, TaskType
 from api.config import api_config
 
 
@@ -177,35 +177,7 @@ class TaskManager:
         tasks.sort(key=lambda t: t.created_at, reverse=True)
         
         return tasks[:limit]
-    
-    def update_progress(
-        self,
-        task_id: str,
-        current: int,
-        total: int,
-        message: str = ""
-    ):
-        """
-        Update task progress
-        
-        Args:
-            task_id: Task ID
-            current: Current progress
-            total: Total steps
-            message: Progress message
-        """
-        task = self._tasks.get(task_id)
-        if not task:
-            return
-        
-        percentage = (current / total * 100) if total > 0 else 0
-        task.progress = TaskProgress(
-            current=current,
-            total=total,
-            percentage=percentage,
-            message=message
-        )
-    
+
     def cancel_task(self, task_id: str) -> bool:
         """
         Cancel a running task

@@ -117,33 +117,3 @@ class ImageGemini:
                 if attempt < self.max_attempts - 1:
                     time.sleep(min(4 * (2 ** attempt), 30))  # ponytail: exp backoff, max 30s
         raise Exception(f"Gemini image generation failed after {self.max_attempts} attempts. Last error: {last_error}")
-
-
-if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from config import Config
-
-    save_dir = "code/result/image/test_avail"
-    api_key = Config.GEMINI_API_KEY
-    base_url = Config.GOOGLE_GEMINI_BASE_URL
-    if not api_key:
-        print("✗ GEMINI_API_KEY 未设置，跳过")
-        sys.exit(1)
-    print("=== Gemini 图片生成测试 ===")
-    print(f"  API Key: {api_key[:6]}***")
-    print(f"  Base URL: {base_url}")
-
-    client = ImageGemini(api_key=api_key, base_url=base_url, local_proxy=Config.LOCAL_PROXY)
-    client.max_attempts = 1
-    for model in ["gemini-3-pro-image", "gemini-3.1-flash-image"]:
-        print(f"\nTesting model: {model}")
-        t0 = time.time()
-        os.makedirs(save_dir, exist_ok=True)
-        try:
-            path = client.generate_image(
-                prompt="A cute orange cat lying on a sunny windowsill, watercolor style",
-                model=model, save_dir=save_dir, aspect_ratio="9:16")
-            print(f"✓ 生成成功 ({time.time() - t0:.1f}s): {path}")
-        except Exception as e:
-            print(f"✗ 失败 ({time.time() - t0:.1f}s): {e}")

@@ -462,32 +462,9 @@ class CustomPipeline(BasePipeline):
         except Exception as e:
             logger.error(f"Failed to persist task data: {e}")
             # Don't raise - persistence failure shouldn't break video generation
-    
+
     # ==================== Custom Helper Methods ====================
     # Add your own helper methods here
-    
-    async def _custom_content_analysis(self, text: str) -> dict:
-        """
-        Example: Custom content analysis logic
-        
-        You can add your own helper methods to process content,
-        extract metadata, or perform custom transformations.
-        """
-        # Your custom logic here
-        return {
-            "processed": text,
-            "metadata": {}
-        }
-    
-    async def _custom_prompt_generation(self, context: str) -> str:
-        """
-        Example: Custom prompt generation logic
-        
-        Create specialized prompts based on your use case.
-        """
-        prompt = f"Generate content based on: {context}"
-        response = await self.llm(prompt, temperature=0.7, max_tokens=500)
-        return response.strip()
 
 
 # ==================== Usage Examples ====================
