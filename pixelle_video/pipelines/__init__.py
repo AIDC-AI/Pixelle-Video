@@ -22,6 +22,7 @@ from pixelle_video.pipelines.linear import LinearVideoPipeline, PipelineContext
 from pixelle_video.pipelines.standard import StandardPipeline
 from pixelle_video.pipelines.custom import CustomPipeline
 from pixelle_video.pipelines.asset_based import AssetBasedPipeline
+from pixelle_video.pipelines.story_illustration import StoryIllustrationPipeline
 
 __all__ = [
     "BasePipeline",
@@ -30,5 +31,6 @@ __all__ = [
     "StandardPipeline",
     "CustomPipeline",
     "AssetBasedPipeline",
+    "StoryIllustrationPipeline",
 ]
 

@@ -327,7 +327,7 @@ class StoryIllustrationPipelineUI(PipelineUI):
         }
         # 确保模板默认走 image 类型（插图）
         if not video_params.get("frame_template"):
-            video_params["frame_template"] = "1080x1920/default.html"
+            video_params["frame_template"] = "1080x1920/image_story.html"
         if not video_params.get("media_workflow"):
             video_params["media_workflow"] = _ss("story_provider")
 

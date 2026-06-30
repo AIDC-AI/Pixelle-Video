@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="template:media-width" content="1024">
+    <meta name="template:media-height" content="1024">
+    <style>
+        html { margin: 0; padding: 0; }
+        body {
+            margin: 0; padding: 0;
+            width: 1080px;
+            background: #fdf6e3;
+            font-family: 'PingFang SC', 'Source Han Sans', 'Microsoft YaHei', serif;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 绘本质感：米黄纸 + 轻噪点边框 */
+        .page-container {
+            width: 1080px; height: 1920px;
+            padding: 70px 60px 80px 60px;
+            box-sizing: border-box;
+            display: flex; flex-direction: column;
+            gap: 40px;
+            position: relative;
+        }
+
+        /* 双页书脊装饰（中线） */
+        .spine {
+            position: absolute;
+            top: 60px; bottom: 60px;
+            left: 50%;
+            width: 2px;
+            background: rgba(180, 150, 100, 0.18);
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        /* 标题 */
+        .title-bar {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        .title-bar .title {
+            font-size: 54px;
+            font-weight: 700;
+            color: #6b4423;
+            letter-spacing: 3px;
+            line-height: 1.3;
+        }
+        .title-bar .title-underline {
+            width: 100px; height: 3px;
+            background: rgba(180, 150, 100, 0.5);
+            margin: 18px auto 0;
+            border-radius: 2px;
+        }
+
+        /* 插图区（大图，绘本核心） */
+        .image-frame {
+            flex: 1;
+            position: relative;
+            z-index: 1;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(107, 68, 35, 0.18);
+            border: 8px solid #fff;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-frame img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* 旁白（少字，居中，绘本字感） */
+        .narration {
+            position: relative;
+            z-index: 1;
+            min-height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 40px;
+        }
+        .narration .text {
+            font-size: 44px;
+            color: #5a3a1a;
+            text-align: center;
+            line-height: 1.7;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        .narration::before, .narration::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 50px; height: 2px;
+            background: rgba(180, 150, 100, 0.4);
+            transform: translateY(-50%);
+        }
+        .narration::before { left: 0; }
+        .narration::after { right: 0; }
+
+        /* 页脚：页码 + 署名 */
+        .footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 1;
+            padding-top: 10px;
+            border-top: 2px dashed rgba(180, 150, 100, 0.3);
+        }
+        .page-num {
+            font-size: 28px;
+            color: #b4966e;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+        .brand {
+            font-size: 24px;
+            color: #b4966e;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div class="spine"></div>
+
+        <div class="title-bar">
+            <div class="title">{{title}}</div>
+            <div class="title-underline"></div>
+        </div>
+
+        <div class="image-frame">
+            <img src="{{image}}" alt="Story Illustration">
+        </div>
+
+        <div class="narration">
+            <div class="text">{{text}}</div>
+        </div>
+
+        <div class="footer">
+            <div class="page-num">{{index}} / {{page_count=8}}</div>
+            <div class="brand">{{brand=Pixelle-Video}}</div>
+        </div>
+    </div>
+</body>
+</html>
