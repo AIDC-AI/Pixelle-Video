@@ -4,12 +4,12 @@
 
 <p align="center">
   <a href="https://www.bilibili.com/video/BV1WzyGBnEVp/?vd_source=e7e7d4ca8db9a18c80f17a24a6582fca" target="_blank"><img src="https://img.shields.io/badge/🎥 视频教程-EA4C89" alt="视频教程"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/releases" target="_blank"><img src="https://img.shields.io/badge/📦 Windows包-50C878" alt="Windows整合包"></a>
+  <a href="https://github.com/woaiACE/Pixelle-Video/releases" target="_blank"><img src="https://img.shields.io/badge/📦 Windows包-50C878" alt="Windows整合包"></a>
   <a href="https://aidc-ai.github.io/Pixelle-Video/zh" target="_blank"><img src="https://img.shields.io/badge/📘 使用文档-4A90E2" alt="使用文档"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/stargazers"><img src="https://img.shields.io/github/stars/AIDC-AI/Pixelle-Video.svg" alt="Stargazers"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/issues"><img src="https://img.shields.io/github/issues/AIDC-AI/Pixelle-Video.svg" alt="Issues"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/network/members"><img src="https://img.shields.io/github/forks/AIDC-AI/Pixelle-Video.svg" alt="Forks"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AIDC-AI/Pixelle-Video.svg" alt="License"></a>
+  <a href="https://github.com/woaiACE/Pixelle-Video/stargazers"><img src="https://img.shields.io/github/stars/woaiACE/Pixelle-Video.svg" alt="Stargazers"></a>
+  <a href="https://github.com/woaiACE/Pixelle-Video/issues"><img src="https://img.shields.io/github/issues/woaiACE/Pixelle-Video.svg" alt="Issues"></a>
+  <a href="https://github.com/woaiACE/Pixelle-Video/network/members"><img src="https://img.shields.io/github/forks/woaiACE/Pixelle-Video.svg" alt="Forks"></a>
+  <a href="https://github.com/woaiACE/Pixelle-Video/blob/main/LICENSE"><img src="https://img.shields.io/github/license/woaiACE/Pixelle-Video.svg" alt="License"></a>
 </p>
 
 https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
@@ -33,6 +33,18 @@ https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 
 ## 📋 最近更新
 
+- ✅ **2026-06-30**: Fork 专属优化（[woaiACE/Pixelle-Video](https://github.com/woaiACE/Pixelle-Video)）
+  - **Gemini 原生图像生成**：支持用 Gemini 模型生成图像，覆盖 1:1 / 3:4 / 4:3 / 9:16 / 16:9 常用比例，按所选模型自动切换
+  - **Qwen TTS 语音合成**：接入千问 TTS，可使用自定义音色 ID 合成配音
+  - **语音设计工作台**：新增 Web 页面，用自然语言描述即可创建专属音色
+  - **1080×1920 全屏图像模板**：新增竖屏全屏插图模板
+  - **脚本预览旁白 + 风格注入**：支持使用预览生成的旁白直接生成视频，并把风格描述自动加入图像提示词
+  - **便携启动器**：重写 `start_web.bat`，自动检测并按需安装 uv 与 FFmpeg，下载后下次秒启，面向非技术用户一键启动
+  - **版本更新检测**：启动时联网查询最新版本，有新版在界面提示并提供下载链接
+  - **一键更新**：界面新增「🔄 检查并更新」按钮，点击自动拉取最新代码并同步依赖，全程实时显示进度，更新后提示重启；有本地改动时自动中止以免覆盖
+  - **中断任务续传**：视频生成中途崩溃或中断后，可从已完成的帧继续，不必重生成已落盘的配音和画面；历史记录页列出未完成任务并显示完成进度，点击「▶️ 续传」即可继续生成，续传时沿用原配置以保证前后帧风格一致；
+  - **仓库链接改指**：界面与文档中的仓库地址全部指向本 fork（保留上游版权声明）
+  - **架构文档**：新增架构深度解析文档
 - ✅ **2026-06-01**: 新增直连 API 媒体模型配置，支持在 WebUI 中配置图像/视频模型供应商、Base URL 与代理开关
 - ✅ **2026-01-26**: 新增「动作迁移」模块，上传参考视频和图片进行动作迁移
 - ✅ **2026-01-14**: 新增「数字人口播」和「图生视频」流水线，新增多语言 TTS 音色支持
@@ -185,7 +197,7 @@ Pixelle-Video 采用模块化设计，整个视频生成流程清晰简洁：
 
 **无需安装 Python、uv 或 ffmpeg，一键开箱即用！**
 
-👉 **[下载 Windows 一键整合包](https://github.com/AIDC-AI/Pixelle-Video/releases/latest)**
+👉 **[下载 Windows 一键整合包](https://github.com/woaiACE/Pixelle-Video/releases/latest)**
 
 1. 下载最新的 Windows 一键整合包并解压
 2. 双击运行 `start.bat` 启动 Web 界面
@@ -232,7 +244,7 @@ sudo apt install ffmpeg
 #### 第一步：下载项目
 
 ```bash
-git clone https://github.com/AIDC-AI/Pixelle-Video.git
+git clone https://github.com/woaiACE/Pixelle-Video.git
 cd Pixelle-Video
 ```
 
@@ -450,8 +462,8 @@ Pixelle-Video 的设计受到以下优秀开源项目的启发：
 
 ## 📢 反馈与支持
 
-- 🐛 **遇到问题**: 提交 [Issue](https://github.com/AIDC-AI/Pixelle-Video/issues)
-- 💡 **功能建议**: 提交 [Feature Request](https://github.com/AIDC-AI/Pixelle-Video/issues)
+- 🐛 **遇到问题**: 提交 [Issue](https://github.com/woaiACE/Pixelle-Video/issues)
+- 💡 **功能建议**: 提交 [Feature Request](https://github.com/woaiACE/Pixelle-Video/issues)
 - ⭐ **给个 Star**: 如果这个项目对你有帮助，欢迎给个 Star 支持一下！
 
 
@@ -473,4 +485,4 @@ Pixelle-Video 的设计受到以下优秀开源项目的启发：
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.com/#AIDC-AI/Pixelle-Video&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=woaiACE/Pixelle-Video&type=Date)](https://star-history.com/#woaiACE/Pixelle-Video&Date)

@@ -94,7 +94,7 @@ uv sync
 
 仍有问题？
 
-1. 查看项目 [GitHub Issues](https://github.com/AIDC-AI/Pixelle-Video/issues)
+1. 查看项目 [GitHub Issues](https://github.com/woaiACE/Pixelle-Video/issues)
 2. 提交新的 Issue 描述你的问题
 3. 包含错误日志和配置信息以便快速定位
 

@@ -83,5 +83,5 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ## 其他问题
 
-有其他问题？请查看 [故障排查](troubleshooting.md) 或提交 [Issue](https://github.com/AIDC-AI/Pixelle-Video/issues)。
+有其他问题？请查看 [故障排查](troubleshooting.md) 或提交 [Issue](https://github.com/woaiACE/Pixelle-Video/issues)。
 

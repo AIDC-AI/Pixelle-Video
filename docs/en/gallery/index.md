@@ -14,7 +14,7 @@ Showcase of videos created with Pixelle-Video. Click on cards to view complete w
       <source src="https://your-oss-bucket.oss-cn-hangzhou.aliyuncs.com/pixelle-video/reading-habit/video.mp4" type="video/mp4">
     </video>
     
-    [:octicons-mark-github-16: View Workflows & Config](https://github.com/AIDC-AI/Pixelle-Video/tree/main/docs/gallery/reading-habit)
+    [:octicons-mark-github-16: View Workflows & Config](https://github.com/woaiACE/Pixelle-Video/tree/main/docs/gallery/reading-habit)
 
 -   **Work Efficiency**
 
@@ -24,7 +24,7 @@ Showcase of videos created with Pixelle-Video. Click on cards to view complete w
       <source src="https://your-oss-bucket.oss-cn-hangzhou.aliyuncs.com/pixelle-video/work-efficiency/video.mp4" type="video/mp4">
     </video>
     
-    [:octicons-mark-github-16: View Workflows & Config](https://github.com/AIDC-AI/Pixelle-Video/tree/main/docs/gallery/work-efficiency)
+    [:octicons-mark-github-16: View Workflows & Config](https://github.com/woaiACE/Pixelle-Video/tree/main/docs/gallery/work-efficiency)
 
 -   **Healthy Diet**
 
@@ -34,7 +34,7 @@ Showcase of videos created with Pixelle-Video. Click on cards to view complete w
       <source src="https://your-oss-bucket.oss-cn-hangzhou.aliyuncs.com/pixelle-video/healthy-diet/video.mp4" type="video/mp4">
     </video>
     
-    [:octicons-mark-github-16: View Workflows & Config](https://github.com/AIDC-AI/Pixelle-Video/tree/main/docs/gallery/healthy-diet)
+    [:octicons-mark-github-16: View Workflows & Config](https://github.com/woaiACE/Pixelle-Video/tree/main/docs/gallery/healthy-diet)
 
 </div>
 

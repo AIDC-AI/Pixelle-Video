@@ -22,11 +22,13 @@ Key Feature:
 
 from typing import Callable, Optional
 
+import os
 import httpx
 from loguru import logger
 
 from pixelle_video.models.progress import ProgressEvent
 from pixelle_video.models.storyboard import Storyboard, StoryboardFrame, StoryboardConfig
+from pixelle_video.utils.os_util import get_task_frame_path
 
 
 class FrameProcessor:
@@ -154,10 +156,17 @@ class FrameProcessor:
         config: StoryboardConfig
     ):
         """Step 1: Generate audio using TTS"""
+        # Resume: reuse existing audio, still need its duration for downstream steps
+        existing_audio = get_task_frame_path(config.task_id, frame.index, "audio")
+        if frame.audio_path or (config.task_id and os.path.exists(existing_audio)):
+            frame.audio_path = frame.audio_path or existing_audio
+            frame.duration = await self._get_audio_duration(frame.audio_path)
+            logger.debug(f"  1/4: Reusing existing audio: {frame.audio_path}")
+            return
+
         logger.info(f"  🔊 [Frame {frame.index+1}] TTS starting...")
         
         # Generate output path using task_id
-        from pixelle_video.utils.os_util import get_task_frame_path
         output_path = get_task_frame_path(config.task_id, frame.index, "audio")
         
         # Build TTS params based on inference mode
@@ -204,6 +213,28 @@ class FrameProcessor:
         config: StoryboardConfig
     ):
         """Step 2: Generate media (image or video) using ComfyKit"""
+        # Resume: reuse existing image/video. Determine expected type to pick the right path.
+        workflow_name = config.media_workflow or ""
+        from pixelle_video.utils.template_util import get_template_type
+        template_type = get_template_type(config.frame_template or "")
+        is_video_workflow = "video_" in workflow_name.lower() or template_type == "video"
+        if is_video_workflow:
+            existing = get_task_frame_path(config.task_id, frame.index, "video")
+            if frame.video_path or (config.task_id and os.path.exists(existing)):
+                frame.video_path = frame.video_path or existing
+                frame.media_type = "video"
+                if not frame.duration:
+                    frame.duration = await self._get_video_duration(frame.video_path)
+                logger.debug(f"  2/4: Reusing existing video: {frame.video_path}")
+                return
+        else:
+            existing = get_task_frame_path(config.task_id, frame.index, "image")
+            if frame.image_path or (config.task_id and os.path.exists(existing)):
+                frame.image_path = frame.image_path or existing
+                frame.media_type = "image"
+                logger.debug(f"  2/4: Reusing existing image: {frame.image_path}")
+                return
+
         logger.info(f"  🎨 [Frame {frame.index+1}] Media generation starting...")
         
         # Determine media type based on workflow/template.
@@ -218,7 +249,6 @@ class FrameProcessor:
         logger.debug(f"  → Media type: {media_type} (workflow: {workflow_name})")
         
         # Build media generation parameters
-        from pixelle_video.utils.os_util import get_task_frame_path
         output_path = get_task_frame_path(config.task_id, frame.index, media_type)
         api_video_params = dict(config.api_video_params or {}) if media_type == "video" else {}
         if media_type == "video" and workflow_name.startswith("api/"):
@@ -288,7 +318,6 @@ class FrameProcessor:
         api_video_params: dict,
     ) -> None:
         """Prepare provider-specific inputs for API video models."""
-        from pixelle_video.utils.os_util import get_task_frame_path
 
         if api_video_params.pop("use_narration_audio_as_driving_audio", False):
             api_video_params["audio_path"] = frame.audio_path
@@ -325,10 +354,16 @@ class FrameProcessor:
         config: StoryboardConfig
     ):
         """Step 3: Compose frame with subtitle using HTML template"""
+        # Resume: reuse existing composed image
+        existing = get_task_frame_path(config.task_id, frame.index, "composed")
+        if frame.composed_image_path or (config.task_id and os.path.exists(existing)):
+            frame.composed_image_path = frame.composed_image_path or existing
+            logger.debug(f"  3/4: Reusing existing composed frame: {frame.composed_image_path}")
+            return
+
         logger.debug(f"  3/4: Composing frame {frame.index}...")
         
         # Generate output path using task_id
-        from pixelle_video.utils.os_util import get_task_frame_path
         output_path = get_task_frame_path(config.task_id, frame.index, "composed")
         
         # For video type: render HTML as transparent overlay image
@@ -389,10 +424,16 @@ class FrameProcessor:
         config: StoryboardConfig
     ):
         """Step 4: Create video segment from media + audio"""
+        # Resume: reuse existing segment
+        existing = get_task_frame_path(config.task_id, frame.index, "segment")
+        if frame.video_segment_path or (config.task_id and os.path.exists(existing)):
+            frame.video_segment_path = frame.video_segment_path or existing
+            logger.debug(f"  4/4: Reusing existing segment: {frame.video_segment_path}")
+            return
+
         logger.debug(f"  4/4: Creating video segment for frame {frame.index}...")
         
         # Generate output path using task_id
-        from pixelle_video.utils.os_util import get_task_frame_path
         output_path = get_task_frame_path(config.task_id, frame.index, "segment")
         
         from pixelle_video.services.video import VideoService
@@ -425,7 +466,6 @@ class FrameProcessor:
             )
             
             # Clean up temp file
-            import os
             if os.path.exists(temp_video_with_overlay):
                 os.unlink(temp_video_with_overlay)
         
@@ -459,7 +499,6 @@ class FrameProcessor:
         except Exception as e:
             logger.warning(f"Failed to get audio duration: {e}, using estimate")
             # Fallback: estimate based on file size (very rough)
-            import os
             file_size = os.path.getsize(audio_path)
             # Assume ~16kbps for MP3, so 2KB per second
             estimated_duration = file_size / 2000
@@ -473,8 +512,6 @@ class FrameProcessor:
         media_type: str
     ) -> str:
         """Download media (image or video) from URL to local file"""
-        import os
-        from pixelle_video.utils.os_util import get_task_frame_path
         output_path = get_task_frame_path(task_id, frame_index, media_type)
 
         if url.startswith("file://"):

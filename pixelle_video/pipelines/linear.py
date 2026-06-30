@@ -96,28 +96,35 @@ class LinearVideoPipeline(BasePipeline):
             params=kwargs,
             progress_callback=progress_callback
         )
-        
+
+        # Resume support: if resume_task_id is given, setup_environment restores
+        # ctx from the saved storyboard.json and we skip straight to asset production.
+        resume_task_id = kwargs.get("resume_task_id")
+
         try:
             # === Phase 1: Preparation ===
             await self.setup_environment(ctx)
-            
-            # === Phase 2: Content Creation ===
-            await self.generate_content(ctx)
-            await self.determine_title(ctx)
-            
-            # === Phase 3: Visual Planning ===
-            await self.plan_visuals(ctx)
-            await self.initialize_storyboard(ctx)
-            
+
+            if resume_task_id:
+                logger.info(f"▶️ Resuming task {resume_task_id}: skipping content/visual steps")
+            else:
+                # === Phase 2: Content Creation ===
+                await self.generate_content(ctx)
+                await self.determine_title(ctx)
+
+                # === Phase 3: Visual Planning ===
+                await self.plan_visuals(ctx)
+                await self.initialize_storyboard(ctx)
+
             # === Phase 4: Asset Production ===
             await self.produce_assets(ctx)
-            
+
             # === Phase 5: Post Production ===
             await self.post_production(ctx)
-            
+
             # === Phase 6: Finalization ===
             return await self.finalize(ctx)
-            
+
         except Exception as e:
             await self.handle_exception(ctx, e)
             raise

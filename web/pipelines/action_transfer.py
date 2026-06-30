@@ -50,7 +50,7 @@ class ActionTransferPipelineUI(PipelineUI):
         # ====================================================================
         with left_col:
             video_params = self.render_action_transfer_video_input(pixelle_video)
-            render_version_info()
+            render_version_info(key_prefix="af_")
         
         # ====================================================================
         # Middle Column: Image Upload & Prompt

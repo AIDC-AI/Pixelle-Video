@@ -14,7 +14,7 @@
       <source src="https://your-oss-bucket.oss-cn-hangzhou.aliyuncs.com/pixelle-video/reading-habit/video.mp4" type="video/mp4">
     </video>
     
-    [:octicons-mark-github-16: 查看工作流和配置](https://github.com/AIDC-AI/Pixelle-Video/tree/main/docs/gallery/reading-habit)
+    [:octicons-mark-github-16: 查看工作流和配置](https://github.com/woaiACE/Pixelle-Video/tree/main/docs/gallery/reading-habit)
 
 -   **工作效率提升**
 
@@ -24,7 +24,7 @@
       <source src="https://your-oss-bucket.oss-cn-hangzhou.aliyuncs.com/pixelle-video/work-efficiency/video.mp4" type="video/mp4">
     </video>
     
-    [:octicons-mark-github-16: 查看工作流和配置](https://github.com/AIDC-AI/Pixelle-Video/tree/main/docs/gallery/work-efficiency)
+    [:octicons-mark-github-16: 查看工作流和配置](https://github.com/woaiACE/Pixelle-Video/tree/main/docs/gallery/work-efficiency)
 
 -   **健康饮食**
 
@@ -34,7 +34,7 @@
       <source src="https://your-oss-bucket.oss-cn-hangzhou.aliyuncs.com/pixelle-video/healthy-diet/video.mp4" type="video/mp4">
     </video>
     
-    [:octicons-mark-github-16: 查看工作流和配置](https://github.com/AIDC-AI/Pixelle-Video/tree/main/docs/gallery/healthy-diet)
+    [:octicons-mark-github-16: 查看工作流和配置](https://github.com/woaiACE/Pixelle-Video/tree/main/docs/gallery/healthy-diet)
 
 </div>
 

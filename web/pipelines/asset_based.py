@@ -66,7 +66,7 @@ class AssetBasedPipelineUI(PipelineUI):
         with left_col:
             asset_params = self._render_asset_input()
             bgm_params = render_bgm_section(key_prefix="asset_")
-            render_version_info()
+            render_version_info(key_prefix="asset_")
         
         # ====================================================================
         # Middle Column: Video Configuration

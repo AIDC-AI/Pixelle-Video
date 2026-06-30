@@ -406,5 +406,5 @@ Ensure the template's `body` size matches the target video dimensions:
 
 ## More Information
 
-For template development questions, feel free to ask in [GitHub Issues](https://github.com/AIDC-AI/Pixelle-Video/issues).
+For template development questions, feel free to ask in [GitHub Issues](https://github.com/woaiACE/Pixelle-Video/issues).
 

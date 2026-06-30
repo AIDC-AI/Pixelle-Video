@@ -25,7 +25,7 @@ This page will guide you through installing Pixelle-Video.
 
 ### Download and Install
 
-1. Visit [GitHub Releases](https://github.com/AIDC-AI/Pixelle-Video/releases/latest) to download the latest version
+1. Visit [GitHub Releases](https://github.com/woaiACE/Pixelle-Video/releases/latest) to download the latest version
 2. Download the latest Windows All-in-One Package and extract it to any directory
 3. Double-click `start.bat` to launch the Web interface
 4. Your browser will automatically open `http://localhost:8501`
@@ -43,7 +43,7 @@ This page will guide you through installing Pixelle-Video.
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/AIDC-AI/Pixelle-Video.git
+git clone https://github.com/woaiACE/Pixelle-Video.git
 cd Pixelle-Video
 ```
 

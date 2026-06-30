@@ -57,7 +57,7 @@
 
 ### 有哪些社区资源？
 
-- **GitHub 仓库**：https://github.com/AIDC-AI/Pixelle-Video
+- **GitHub 仓库**：https://github.com/woaiACE/Pixelle-Video
 - **问题反馈**：通过 GitHub Issues 提交 bug 或功能请求
 - **社区支持**：加入讨论群组获取帮助和分享经验
 - **贡献代码**：项目在 MIT 许可证下欢迎贡献

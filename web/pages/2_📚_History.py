@@ -83,6 +83,132 @@ def truncate_text(text: str, max_length: int = 60) -> str:
     return text[:max_length] + "..."
 
 
+def get_resumable_info(task_id: str, pixelle_video):
+    """Check if a task is resumable; return (storyboard, done, total).
+
+    Resumable = storyboard.json exists (crashed after first checkpoint) AND no
+    final.mp4 yet. Returns (None, 0, 0) when not resumable. Uses file existence,
+    not the unreliable status field. The loaded storyboard is returned so callers
+    don't re-read it from disk.
+    """
+    from pixelle_video.utils.os_util import get_task_final_video_path
+    persistence = pixelle_video.persistence
+    sb_path = persistence.get_storyboard_path(task_id)
+    if not sb_path.exists() or Path(get_task_final_video_path(task_id)).exists():
+        return None, 0, 0
+    storyboard = run_async(persistence.load_storyboard(task_id))
+    if not storyboard or not storyboard.frames:
+        return None, 0, 0
+    done = sum(1 for f in storyboard.frames if f.video_segment_path)
+    return storyboard, done, len(storyboard.frames)
+
+
+def render_resume_section(pixelle_video, tasks):
+    """Render the 'unfinished tasks' section above the main grid.
+
+    Scans the current page's tasks for resumable ones and offers inline resume.
+    """
+    resumable = []
+    for task in tasks:
+        storyboard, done, total = get_resumable_info(task["task_id"], pixelle_video)
+        if storyboard is not None:
+            resumable.append((task, storyboard, done, total))
+
+    if not resumable:
+        return
+
+    with st.expander(f"⚠️ {tr('history.resume.title')} ({len(resumable)})", expanded=False):
+        st.caption(tr("history.resume.hint"))
+        for task, storyboard, done, total in resumable:
+            task_id = task["task_id"]
+            title = task.get("title", "Untitled")
+            created_at = task.get("created_at", "")
+
+            st.markdown(f"**{truncate_text(title, 50)}**")
+            st.caption(
+                f"🕒 {format_datetime(created_at)} | "
+                f"{tr('history.resume.frame_progress', done=done, total=total)}"
+            )
+
+            # Show original config so the user knows what resume will use.
+            # The backend (Task 4) enforces checkpoint config regardless.
+            cfg = storyboard.config
+            if cfg:
+                st.caption(
+                    f"📝 {tr('history.resume.original_config')}: "
+                    f"{cfg.frame_template} | {cfg.media_workflow or 'default'} | "
+                    f"{cfg.tts_inference_mode}"
+                )
+
+            _render_resume_execution(pixelle_video, task_id, title)
+
+
+def _render_resume_execution(pixelle_video, task_id: str, title: str):
+    """Render resume button + inline progress execution for one task."""
+    flag = f"resuming_{task_id}"
+
+    # Not yet resuming: show the button
+    if not st.session_state.get(flag, False):
+        if st.button(
+            f"▶️ {tr('history.resume.button')}",
+            key=f"resume_btn_{task_id}",
+            type="primary",
+            use_container_width=True,
+        ):
+            st.session_state[flag] = True
+            st.rerun()
+        return
+
+    # Resuming: inline progress bar + execution.
+    # No drift banner here — the original_config caption above already tells the
+    # user what resume will use, and the backend (Task 4) enforces it regardless.
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    from pixelle_video.models.progress import ProgressEvent
+
+    def update_progress(event: ProgressEvent):
+        if event.event_type == "frame_step":
+            action_key = f"progress.step_{event.action}"
+            message = tr(
+                "progress.frame_step",
+                current=event.frame_current,
+                total=event.frame_total,
+                step=event.step,
+                action=tr(action_key),
+            )
+        elif event.event_type == "processing_frame":
+            message = tr("progress.frame", current=event.frame_current, total=event.frame_total)
+        else:
+            message = tr(f"progress.{event.event_type}")
+        status_text.text(message)
+        progress_bar.progress(min(int(event.progress * 100), 99))
+
+    try:
+        result = run_async(pixelle_video.generate_video(
+            text="",
+            resume_task_id=task_id,
+            progress_callback=update_progress,
+        ))
+        progress_bar.progress(100)
+        status_text.text(tr("status.success"))
+        st.success(tr("history.resume.success"))
+        if os.path.exists(result.video_path):
+            st.video(result.video_path)
+        st.session_state[flag] = False
+        # Force list refresh so the task moves out of the resumable section
+        st.session_state.pop("history_page", None)
+        st.rerun()
+    except Exception as e:
+        status_text.text("")
+        progress_bar.empty()
+        st.error(tr("status.error", error=str(e)))
+        logger.exception(e)
+        # Keep flag set so user sees the error; offer retry
+        if st.button(tr("history.resume.retry"), key=f"retry_{task_id}"):
+            st.rerun()
+
+
 def render_sidebar_controls(pixelle_video):
     """Render sidebar with statistics and filters"""
     with st.sidebar:
@@ -416,10 +542,13 @@ def main():
     tasks = result["tasks"]
     total = result["total"]
     total_pages = result["total_pages"]
-    
+
     # Page title with count
     st.markdown(f"##### 📚 {tr('history.page_title')} ({total})")
-    
+
+    # Unfinished / resumable tasks section (above the main grid)
+    render_resume_section(pixelle_video, tasks)
+
     # Show task cards in grid layout (4 columns)
     if not tasks:
         st.info(tr("history.no_tasks"))

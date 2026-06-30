@@ -4,12 +4,12 @@
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=uUkx-lRxLjc" target="_blank"><img src="https://img.shields.io/badge/🎥 Video%20Tutorial-EA4C89" alt="Video Tutorial"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/releases" target="_blank"><img src="https://img.shields.io/badge/📦 Windows-50C878" alt="Windows Package"></a>
+  <a href="https://github.com/woaiACE/Pixelle-Video/releases" target="_blank"><img src="https://img.shields.io/badge/📦 Windows-50C878" alt="Windows Package"></a>
   <a href="https://aidc-ai.github.io/Pixelle-Video" target="_blank"><img src="https://img.shields.io/badge/📘 Documentation-4A90E2" alt="Documentation"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/stargazers"><img src="https://img.shields.io/github/stars/AIDC-AI/Pixelle-Video.svg" alt="Stargazers"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/issues"><img src="https://img.shields.io/github/issues/AIDC-AI/Pixelle-Video.svg" alt="Issues"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/network/members"><img src="https://img.shields.io/github/forks/AIDC-AI/Pixelle-Video.svg" alt="Forks"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AIDC-AI/Pixelle-Video.svg" alt="License"></a>
+  <a href="https://github.com/woaiACE/Pixelle-Video/stargazers"><img src="https://img.shields.io/github/stars/woaiACE/Pixelle-Video.svg" alt="Stargazers"></a>
+  <a href="https://github.com/woaiACE/Pixelle-Video/issues"><img src="https://img.shields.io/github/issues/woaiACE/Pixelle-Video.svg" alt="Issues"></a>
+  <a href="https://github.com/woaiACE/Pixelle-Video/network/members"><img src="https://img.shields.io/github/forks/woaiACE/Pixelle-Video.svg" alt="Forks"></a>
+  <a href="https://github.com/woaiACE/Pixelle-Video/blob/main/LICENSE"><img src="https://img.shields.io/github/license/woaiACE/Pixelle-Video.svg" alt="License"></a>
 </p>
 
 https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
@@ -181,7 +181,7 @@ Here are actual cases generated using Pixelle-Video, showcasing video effects wi
 
 **No need to install Python, uv, or ffmpeg - ready to use out of the box!**
 
-👉 **[Download Windows All-in-One Package](https://github.com/AIDC-AI/Pixelle-Video/releases/latest)**
+👉 **[Download Windows All-in-One Package](https://github.com/woaiACE/Pixelle-Video/releases/latest)**
 
 1. Download the latest Windows All-in-One Package and extract it
 2. Double-click `start.bat` to launch the Web interface
@@ -228,7 +228,7 @@ After installation, run `ffmpeg -version` in the terminal to verify successful i
 #### Step 1: Clone Project
 
 ```bash
-git clone https://github.com/AIDC-AI/Pixelle-Video.git
+git clone https://github.com/woaiACE/Pixelle-Video.git
 cd Pixelle-Video
 ```
 
@@ -446,8 +446,8 @@ Scan the QR codes below to join our communities for latest updates and technical
 
 ## 📢 Feedback and Support
 
-- 🐛 **Encountered Issues**: Submit [Issue](https://github.com/AIDC-AI/Pixelle-Video/issues)
-- 💡 **Feature Suggestions**: Submit [Feature Request](https://github.com/AIDC-AI/Pixelle-Video/issues)
+- 🐛 **Encountered Issues**: Submit [Issue](https://github.com/woaiACE/Pixelle-Video/issues)
+- 💡 **Feature Suggestions**: Submit [Feature Request](https://github.com/woaiACE/Pixelle-Video/issues)
 - ⭐ **Give a Star**: If this project helps you, feel free to give a Star for support!
 
 
@@ -466,4 +466,4 @@ This project is released under the Apache License 2.0. For details, please see t
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.com/#AIDC-AI/Pixelle-Video&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=woaiACE/Pixelle-Video&type=Date)](https://star-history.com/#woaiACE/Pixelle-Video&Date)

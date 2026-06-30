@@ -23,7 +23,7 @@ from loguru import logger
 
 from web.i18n import tr, get_language
 from web.utils.async_helpers import run_async
-from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
+from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow, persistent_widget
 from web.pipelines.api_workflows import (
     list_api_media_workflows,
     list_local_media_workflows,
@@ -58,13 +58,15 @@ def render_style_config(pixelle_video):
         tts_config = comfyui_config["tts"]
         
         # Inference mode selection
-        tts_mode = st.radio(
-            tr("tts.inference_mode"),
-            ["local", "comfyui", "qwen_tts"],
+        _tts_default = "local" if tts_config.get("inference_mode", "local") == "local" else "comfyui"
+        tts_mode = persistent_widget(
+            st.radio,
+            "tts_inference_mode",
+            _tts_default,
+            label=tr("tts.inference_mode"),
+            options=["local", "comfyui", "qwen_tts"],
             horizontal=True,
             format_func=lambda x: tr(f"tts.mode.{x}"),
-            index=0 if tts_config.get("inference_mode", "local") == "local" else 1,
-            key="tts_inference_mode"
         )
 
         # Show hint based on mode
@@ -107,11 +109,12 @@ def render_style_config(pixelle_video):
             
             with voice_col:
                 # Voice selector
-                selected_voice_display = st.selectbox(
-                    tr("tts.voice_selector"),
-                    voice_options,
-                    index=default_voice_index,
-                    key="tts_local_voice"
+                selected_voice_display = persistent_widget(
+                    st.selectbox,
+                    "tts_local_voice",
+                    voice_options[default_voice_index] if voice_options else None,
+                    label=tr("tts.voice_selector"),
+                    options=voice_options,
                 )
                 
                 # Get actual voice ID
@@ -120,14 +123,15 @@ def render_style_config(pixelle_video):
             
             with speed_col:
                 # Speed slider
-                tts_speed = st.slider(
-                    tr("tts.speed"),
+                tts_speed = persistent_widget(
+                    st.slider,
+                    "tts_local_speed",
+                    saved_speed,
+                    label=tr("tts.speed"),
                     min_value=0.5,
                     max_value=2.0,
-                    value=saved_speed,
                     step=0.1,
                     format="%.1fx",
-                    key="tts_local_speed"
                 )
                 st.caption(tr("tts.speed_label", speed=f"{tts_speed:.1f}"))
             
@@ -160,10 +164,12 @@ def render_style_config(pixelle_video):
                 st.warning("暂无已设计的音色，请先在「Voice Designer」页面创建音色")
                 selected_voice = None
             else:
-                selected_voice = st.selectbox(
-                    "选择设计好的音色",
-                    voice_options,
-                    key="tts_qwen_voice"
+                selected_voice = persistent_widget(
+                    st.selectbox,
+                    "tts_qwen_voice",
+                    voice_options[0],
+                    label="选择设计好的音色",
+                    options=voice_options,
                 )
                 selected_voice = voice_ids[voice_options.index(selected_voice)]
                 st.caption(f"Voice ID: `{selected_voice}`")
@@ -189,12 +195,13 @@ def render_style_config(pixelle_video):
             if saved_tts_workflow and saved_tts_workflow in tts_workflow_keys:
                 default_tts_index = tts_workflow_keys.index(saved_tts_workflow)
             
-            tts_workflow_display = st.selectbox(
-                "TTS Workflow",
-                tts_workflow_options if tts_workflow_options else ["No TTS workflows found"],
-                index=default_tts_index,
+            tts_workflow_display = persistent_widget(
+                st.selectbox,
+                "tts_workflow_select",
+                (tts_workflow_options if tts_workflow_options else ["No TTS workflows found"])[default_tts_index],
+                label="TTS Workflow",
+                options=tts_workflow_options if tts_workflow_options else ["No TTS workflows found"],
                 label_visibility="collapsed",
-                key="tts_workflow_select"
             )
             
             # Get the actual workflow key
@@ -352,14 +359,15 @@ def render_style_config(pixelle_video):
         }
         
         # Radio buttons in horizontal layout
-        selected_template_type = st.radio(
-            tr('template.type_selector'),
+        selected_template_type = persistent_widget(
+            st.radio,
+            "template_type_selector",
+            "image",
+            label=tr('template.type_selector'),
             options=list(template_type_options.keys()),
             format_func=lambda x: template_type_options[x],
-            index=1,  # Default to 'image'
-            key="template_type_selector",
             label_visibility="collapsed",
-            horizontal=True
+            horizontal=True,
         )
         
         # Display hint based on selected type (below radio buttons)
@@ -594,63 +602,29 @@ def render_style_config(pixelle_video):
                     param_type = config['type']
                     default = config['default']
                     label = config['label']
-                    
-                    if param_type == 'text':
-                        custom_values_for_video[param_name] = st.text_input(
-                            label,
-                            value=default,
-                            key=f"video_custom_{param_name}"
-                        )
-                    elif param_type == 'number':
-                        custom_values_for_video[param_name] = st.number_input(
-                            label,
-                            value=default,
-                            key=f"video_custom_{param_name}"
-                        )
-                    elif param_type == 'color':
-                        custom_values_for_video[param_name] = st.color_picker(
-                            label,
-                            value=default,
-                            key=f"video_custom_{param_name}"
-                        )
-                    elif param_type == 'bool':
-                        custom_values_for_video[param_name] = st.checkbox(
-                            label,
-                            value=default,
-                            key=f"video_custom_{param_name}"
-                        )
-            
+                    _wk = f"video_custom_{param_name}"
+                    _wf = {
+                        'text': st.text_input, 'number': st.number_input,
+                        'color': st.color_picker, 'bool': st.checkbox,
+                    }[param_type]
+                    custom_values_for_video[param_name] = persistent_widget(
+                        _wf, _wk, default, label=label
+                    )
+
             # Right column parameters
             with video_custom_col2:
                 for param_name, config in param_items[mid_point:]:
                     param_type = config['type']
                     default = config['default']
                     label = config['label']
-                    
-                    if param_type == 'text':
-                        custom_values_for_video[param_name] = st.text_input(
-                            label,
-                            value=default,
-                            key=f"video_custom_{param_name}"
-                        )
-                    elif param_type == 'number':
-                        custom_values_for_video[param_name] = st.number_input(
-                            label,
-                            value=default,
-                            key=f"video_custom_{param_name}"
-                        )
-                    elif param_type == 'color':
-                        custom_values_for_video[param_name] = st.color_picker(
-                            label,
-                            value=default,
-                            key=f"video_custom_{param_name}"
-                        )
-                    elif param_type == 'bool':
-                        custom_values_for_video[param_name] = st.checkbox(
-                            label,
-                            value=default,
-                            key=f"video_custom_{param_name}"
-                        )
+                    _wk = f"video_custom_{param_name}"
+                    _wf = {
+                        'text': st.text_input, 'number': st.number_input,
+                        'color': st.color_picker, 'bool': st.checkbox,
+                    }[param_type]
+                    custom_values_for_video[param_name] = persistent_widget(
+                        _wf, _wk, default, label=label
+                    )
         
         # Template preview expander
         with st.expander(tr("template.preview_title"), expanded=False):
@@ -768,13 +742,14 @@ def render_style_config(pixelle_video):
                     default_source_index = index
                     break
             source_key = "standard_video_workflow_source" if template_media_type == "video" else "standard_image_workflow_source"
-            workflow_source = st.radio(
-                "生成来源" if get_language() == "zh_CN" else "Generation source",
-                source_options,
-                index=default_source_index,
+            workflow_source = persistent_widget(
+                st.radio,
+                source_key,
+                source_options[default_source_index],
+                label="生成来源" if get_language() == "zh_CN" else "Generation source",
+                options=source_options,
                 format_func=workflow_source_label,
                 horizontal=True,
-                key=source_key,
                 help=workflow_source_help("快速创作媒体生成" if get_language() == "zh_CN" else "Quick Create media generation"),
             )
 
@@ -811,12 +786,14 @@ def render_style_config(pixelle_video):
             if saved_workflow and saved_workflow in workflow_keys:
                 default_workflow_index = workflow_keys.index(saved_workflow)
         
-            workflow_display = st.selectbox(
-                "Workflow" if workflow_source != "api" else ("API 模型" if get_language() == "zh_CN" else "API model"),
-                workflow_options if workflow_options else ["No workflows found"],
-                index=default_workflow_index,
+            _wf_opts = workflow_options if workflow_options else ["No workflows found"]
+            workflow_display = persistent_widget(
+                st.selectbox,
+                f"{source_key}_select",
+                _wf_opts[default_workflow_index],
+                label="Workflow" if workflow_source != "api" else ("API 模型" if get_language() == "zh_CN" else "API model"),
+                options=_wf_opts,
                 label_visibility="visible",
-                key=f"{source_key}_select",
                 help=workflow_select_help(),
             )
         
@@ -903,13 +880,15 @@ def render_style_config(pixelle_video):
                                 st.rerun()
 
             # Prompt prefix input (temporary, not saved to config)
-            prompt_prefix = st.text_area(
-                tr('style.prompt_prefix'),
-                key=prefix_key,
+            prompt_prefix = persistent_widget(
+                st.text_area,
+                prefix_key,
+                current_prefix,
+                label=tr('style.prompt_prefix'),
                 placeholder=tr("style.prompt_prefix_placeholder"),
                 height=80,
                 label_visibility="visible",
-                help=tr("style.prompt_prefix_help")
+                help=tr("style.prompt_prefix_help"),
             )
         
             # Media preview expander

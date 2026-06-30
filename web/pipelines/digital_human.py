@@ -50,7 +50,7 @@ class DigitalHumanPipelineUI(PipelineUI):
             asset_params = self.render_digital_human_input()
             style_params = render_style_config(pixelle_video)
             # bgm_params = render_bgm_section(key_prefix="asset_")
-            render_version_info()
+            render_version_info(key_prefix="dh_")
         
         # ====================================================================
         # Middle Column: Video Configuration

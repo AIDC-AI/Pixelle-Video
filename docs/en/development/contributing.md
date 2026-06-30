@@ -40,7 +40,7 @@ pytest
 
 ## Submit Issues
 
-Having problems or feature suggestions? Please submit at [GitHub Issues](https://github.com/AIDC-AI/Pixelle-Video/issues).
+Having problems or feature suggestions? Please submit at [GitHub Issues](https://github.com/woaiACE/Pixelle-Video/issues).
 
 ---
 

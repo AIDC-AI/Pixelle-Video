@@ -4,9 +4,9 @@
 
 **AI 视频创作工具 - 3 分钟生成一个短视频**
 
-[![Stars](https://img.shields.io/github/stars/AIDC-AI/Pixelle-Video.svg?style=flat-square)](https://github.com/AIDC-AI/Pixelle-Video/stargazers)
-[![Issues](https://img.shields.io/github/issues/AIDC-AI/Pixelle-Video.svg?style=flat-square)](https://github.com/AIDC-AI/Pixelle-Video/issues)
-[![License](https://img.shields.io/github/license/AIDC-AI/Pixelle-Video.svg?style=flat-square)](https://github.com/AIDC-AI/Pixelle-Video/blob/main/LICENSE)
+[![Stars](https://img.shields.io/github/stars/woaiACE/Pixelle-Video.svg?style=flat-square)](https://github.com/woaiACE/Pixelle-Video/stargazers)
+[![Issues](https://img.shields.io/github/issues/woaiACE/Pixelle-Video.svg?style=flat-square)](https://github.com/woaiACE/Pixelle-Video/issues)
+[![License](https://img.shields.io/github/license/woaiACE/Pixelle-Video.svg?style=flat-square)](https://github.com/woaiACE/Pixelle-Video/blob/main/LICENSE)
 
 </div>
 
@@ -52,7 +52,7 @@
 想马上体验？只需三步：
 
 1. **[安装 Pixelle-Video](getting-started/installation.md)** - 下载并安装项目
-   - 🪟 **Windows 用户推荐**: 使用 [一键整合包](https://github.com/AIDC-AI/Pixelle-Video/releases/latest)，无需安装 Python 环境
+   - 🪟 **Windows 用户推荐**: 使用 [一键整合包](https://github.com/woaiACE/Pixelle-Video/releases/latest)，无需安装 Python 环境
    - 💻 **macOS/Linux 用户**: 从源码安装，详见 [安装指南](getting-started/installation.md)
 2. **[配置服务](getting-started/configuration.md)** - 配置 LLM 和图像生成服务
 3. **[生成第一个视频](getting-started/quick-start.md)** - 开始创作你的第一个视频
@@ -87,13 +87,13 @@ Pixelle-Video 的设计受到以下优秀开源项目的启发：
 
 ## 📢 反馈与支持
 
-- 🐛 **遇到问题**: 提交 [Issue](https://github.com/AIDC-AI/Pixelle-Video/issues)
-- 💡 **功能建议**: 提交 [Feature Request](https://github.com/AIDC-AI/Pixelle-Video/issues)
+- 🐛 **遇到问题**: 提交 [Issue](https://github.com/woaiACE/Pixelle-Video/issues)
+- 💡 **功能建议**: 提交 [Feature Request](https://github.com/woaiACE/Pixelle-Video/issues)
 - ⭐ **给个 Star**: 如果这个项目对你有帮助，欢迎给个 Star 支持一下！
 
 ---
 
 ## 📝 许可证
 
-本项目采用 Apache 2.0 许可证，详情请查看 [LICENSE](https://github.com/AIDC-AI/Pixelle-Video/blob/main/LICENSE) 文件。
+本项目采用 Apache 2.0 许可证，详情请查看 [LICENSE](https://github.com/woaiACE/Pixelle-Video/blob/main/LICENSE) 文件。
 

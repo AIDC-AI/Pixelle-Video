@@ -59,7 +59,7 @@ class StandardPipelineUI(PipelineUI):
             bgm_params = render_bgm_section()
             
             # Version info & GitHub link
-            render_version_info()
+            render_version_info(key_prefix="std_")
         
         # ====================================================================
         # Middle Column: Style Configuration

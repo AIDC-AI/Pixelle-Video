@@ -54,7 +54,7 @@ All generated videos are automatically saved in the `output/` folder within the 
 
 ### Community Resources
 
--   **GitHub Repository**: https://github.com/AIDC-AI/Pixelle-Video
+-   **GitHub Repository**: https://github.com/woaiACE/Pixelle-Video
 -   **Issue Reporting**: Submit bugs or feature requests via GitHub Issues.
 -   **Community Support**: Join discussion groups for help and experience sharing.
 -   **Contribution**: The project is under the MIT license and welcomes contributions.

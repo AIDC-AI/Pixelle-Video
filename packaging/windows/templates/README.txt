@@ -89,9 +89,9 @@ Solution: Re-extract the package completely, don't move files
   Support
 ========================================
 
-GitHub: https://github.com/AIDC-AI/Pixelle-Video
+GitHub: https://github.com/woaiACE/Pixelle-Video
 Documentation: https://aidc-ai.github.io/Pixelle-Video
-Issues: https://github.com/AIDC-AI/Pixelle-Video/issues
+Issues: https://github.com/woaiACE/Pixelle-Video/issues
 
 ========================================
   License

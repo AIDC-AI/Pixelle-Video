@@ -14,10 +14,132 @@
 Content input components for web UI (left column)
 """
 
-import streamlit as st
+import shutil
+import subprocess
+from pathlib import Path
 
+import httpx
+import streamlit as st
+from loguru import logger
+
+from pixelle_video import __version__
 from web.i18n import tr
 from web.utils.async_helpers import get_project_version
+from web.utils.streamlit_helpers import persistent_widget
+
+# ponytail: single source of truth for the repo URL used by the version
+# badge + update check. Bump this if the fork moves.
+REPO_SLUG = "woaiACE/Pixelle-Video"
+
+
+def _parse_version(v: str):
+    """'v0.10.3' -> (0, 10, 3); unparseable segments become 0."""
+    parts = []
+    for x in (v or "").strip().lstrip("vV").split("."):
+        try:
+            parts.append(int(x))
+        except ValueError:
+            parts.append(0)
+    return tuple(parts)
+
+
+def check_for_update():
+    """Query the fork's latest release tag, compare to local __version__.
+
+    Returns (latest_tag, is_newer) or None on failure. Cached in
+    session_state so the GitHub API is hit once per session, not per rerun.
+    """
+    cached = st.session_state.get("update_check")
+    if cached is not None:
+        return cached
+    try:
+        r = httpx.get(
+            f"https://api.github.com/repos/{REPO_SLUG}/releases/latest",
+            timeout=5,
+            headers={"Accept": "application/vnd.github+json"},
+        )
+        r.raise_for_status()
+        latest = r.json().get("tag_name", "")
+        cached = (latest, _parse_version(latest) > _parse_version(__version__)) if latest else None
+    except Exception as e:
+        logger.debug(f"Update check failed: {e}")
+        cached = None
+    st.session_state["update_check"] = cached
+    return cached
+
+
+def _git(args, cwd, timeout=120):
+    """Run a git command. Returns (returncode, combined_output)."""
+    try:
+        r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        return r.returncode, (r.stdout + r.stderr).strip()
+    except FileNotFoundError:
+        return -1, "git not found"
+    except subprocess.TimeoutExpired:
+        return -1, "git timed out"
+
+
+def _update_remote(root):
+    """Resolve the git remote pointing at this fork (by URL substring).
+    Returns remote name or None. Robust to origin/fork naming differences."""
+    rc, out = _git(["remote", "-v"], root)
+    if rc != 0:
+        return None
+    for line in out.splitlines():
+        if REPO_SLUG in line:
+            return line.split()[0]
+    return None
+
+
+def perform_update():
+    """Source-install update: git fetch + ff-only merge + uv sync.
+
+    Returns (ok: bool, message: str, log: list[str]).
+    Refuses to touch a dirty working tree (data-loss guard); never resets.
+    """
+    root = Path(__file__).resolve().parents[2]
+    log = []
+
+    rc, _ = _git(["rev-parse", "--is-inside-work-tree"], root)
+    if rc != 0:
+        return False, tr("update.not_git"), log
+
+    rc, out = _git(["status", "--porcelain"], root)
+    if rc == 0 and out:
+        return False, tr("update.dirty"), log
+
+    remote = _update_remote(root)
+    if not remote:
+        return False, tr("update.no_remote").replace("{repo}", REPO_SLUG), log
+
+    rc, branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], root)
+    if rc != 0 or branch in ("HEAD", ""):
+        return False, tr("update.detached"), log
+
+    log.append(f"$ git fetch {remote}")
+    rc, out = _git(["fetch", remote], root)
+    log.append(out)
+    if rc != 0:
+        return False, tr("update.fetch_failed"), log
+
+    log.append(f"$ git merge --ff-only {remote}/{branch}")
+    rc, out = _git(["merge", "--ff-only", f"{remote}/{branch}"], root)
+    log.append(out)
+    if rc != 0:
+        return False, tr("update.diverged"), log
+
+    already_new = "Already up to date" in out
+
+    if shutil.which("uv"):
+        log.append("$ uv sync")
+        r = subprocess.run(["uv", "sync"], cwd=root, capture_output=True, text=True, timeout=600)
+        log.append((r.stdout + r.stderr).strip())
+        if r.returncode != 0:
+            return False, tr("update.sync_failed"), log
+    else:
+        log.append("uv not in PATH, skipped uv sync")
+
+    return True, (tr("update.already_latest") if already_new else tr("update.success")), log
 
 
 def render_content_input():
@@ -28,10 +150,12 @@ def render_content_input():
         # ====================================================================
         # Step 1: Batch mode toggle (highest priority)
         # ====================================================================
-        batch_mode = st.checkbox(
-            tr("batch.mode_label"),
-            value=False,
-            help=tr("batch.mode_help")
+        batch_mode = persistent_widget(
+            st.checkbox,
+            "qc_batch_mode",
+            False,
+            label=tr("batch.mode_label"),
+            help=tr("batch.mode_help"),
         )
         
         if not batch_mode:
@@ -39,12 +163,15 @@ def render_content_input():
             # Single task mode (original logic, unchanged)
             # ================================================================
             # Processing mode selection
-            mode = st.radio(
-                "Processing Mode",
-                ["generate", "fixed"],
+            mode = persistent_widget(
+                st.radio,
+                "qc_mode",
+                "generate",
+                label="Processing Mode",
+                options=["generate", "fixed"],
                 horizontal=True,
                 format_func=lambda x: tr(f"mode.{x}"),
-                label_visibility="collapsed"
+                label_visibility="collapsed",
             )
             
             # Text input (unified for both modes)
@@ -52,11 +179,14 @@ def render_content_input():
             text_height = 120 if mode == "generate" else 200
             text_help = tr("input.text_help_generate") if mode == "generate" else tr("input.text_help_fixed")
             
-            text = st.text_area(
-                tr("input.text"),
+            text = persistent_widget(
+                st.text_area,
+                "qc_text",
+                "",
+                label=tr("input.text"),
                 placeholder=text_placeholder,
                 height=text_height,
-                help=text_help
+                help=text_help,
             )
             
             # Split mode selector (only show in fixed mode)
@@ -66,32 +196,39 @@ def render_content_input():
                     "line": tr("split.mode_line"),
                     "sentence": tr("split.mode_sentence"),
                 }
-                split_mode = st.selectbox(
-                    tr("split.mode_label"),
+                split_mode = persistent_widget(
+                    st.selectbox,
+                    "qc_split_mode",
+                    "paragraph",
+                    label=tr("split.mode_label"),
                     options=list(split_mode_options.keys()),
                     format_func=lambda x: split_mode_options[x],
-                    index=0,  # Default to paragraph mode
-                    help=tr("split.mode_help")
+                    help=tr("split.mode_help"),
                 )
             else:
                 split_mode = "paragraph"  # Default for generate mode (not used)
             
             # Title input (optional for both modes)
-            title = st.text_input(
-                tr("input.title"),
+            title = persistent_widget(
+                st.text_input,
+                "qc_title",
+                "",
+                label=tr("input.title"),
                 placeholder=tr("input.title_placeholder"),
-                help=tr("input.title_help")
+                help=tr("input.title_help"),
             )
             
             # Number of scenes (only show in generate mode)
             if mode == "generate":
-                n_scenes = st.slider(
-                    tr("video.frames"),
+                n_scenes = persistent_widget(
+                    st.slider,
+                    "qc_n_scenes",
+                    5,
+                    label=tr("video.frames"),
                     min_value=3,
                     max_value=30,
-                    value=5,
                     help=tr("video.frames_help"),
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
                 )
                 st.caption(tr("video.frames_label", n=n_scenes))
             else:
@@ -123,11 +260,14 @@ def render_content_input():
             """)
             
             # Batch topics input
-            text_input = st.text_area(
-                tr("batch.topics_label"),
+            text_input = persistent_widget(
+                st.text_area,
+                "qc_batch_topics",
+                "",
+                label=tr("batch.topics_label"),
                 height=300,
                 placeholder=tr("batch.topics_placeholder"),
-                help=tr("batch.topics_help")
+                help=tr("batch.topics_help"),
             )
             
             # Split topics by newline
@@ -159,19 +299,24 @@ def render_content_input():
             st.markdown("---")
             
             # Title prefix (optional)
-            title_prefix = st.text_input(
-                tr("batch.title_prefix_label"),
+            title_prefix = persistent_widget(
+                st.text_input,
+                "qc_title_prefix",
+                "",
+                label=tr("batch.title_prefix_label"),
                 placeholder=tr("batch.title_prefix_placeholder"),
-                help=tr("batch.title_prefix_help")
+                help=tr("batch.title_prefix_help"),
             )
             
             # Number of scenes (unified for all videos)
-            n_scenes = st.slider(
-                tr("batch.n_scenes_label"),
+            n_scenes = persistent_widget(
+                st.slider,
+                "qc_batch_n_scenes",
+                5,
+                label=tr("batch.n_scenes_label"),
                 min_value=3,
                 max_value=30,
-                value=5,
-                help=tr("batch.n_scenes_help")
+                help=tr("batch.n_scenes_help"),
             )
             st.caption(tr("batch.n_scenes_caption", n=n_scenes))
             
@@ -263,16 +408,17 @@ def render_bgm_section(key_prefix=""):
     }
 
 
-def render_version_info():
-    """Render version info and GitHub link"""
+def render_version_info(key_prefix: str = ""):
+    """Render version info and GitHub link.
+
+    key_prefix disambiguates widget keys because the Home page renders every
+    pipeline tab in one script run, and each tab calls this function.
+    """
     with st.container(border=True):
         st.markdown(f"**{tr('version.title')}**")
         version = get_project_version()
-        github_url = "https://github.com/AIDC-AI/Pixelle-Video"
-        
-        # Version and GitHub link in one line
-        github_url = "https://github.com/AIDC-AI/Pixelle-Video"
-        badge_url = "https://img.shields.io/github/stars/AIDC-AI/Pixelle-Video"
+        github_url = f"https://github.com/{REPO_SLUG}"
+        badge_url = f"https://img.shields.io/github/stars/{REPO_SLUG}"
 
         st.markdown(
             f'{tr("version.current")}: `{version}` &nbsp;&nbsp; '
@@ -280,4 +426,27 @@ def render_version_info():
             f'<img src="{badge_url}" alt="GitHub stars" style="vertical-align: middle;">'
             f'</a>',
             unsafe_allow_html=True)
+
+        update = check_for_update()
+        if update and update[1]:
+            latest = update[0]
+            st.markdown(
+                f'🆕 {tr("version.update_available")}: `{latest}` &nbsp; '
+                f'<a href="https://github.com/{REPO_SLUG}/releases/latest" target="_blank">Download</a>',
+                unsafe_allow_html=True)
+
+        if st.button(tr("update.button"), key=f"{key_prefix}btn_check_update", use_container_width=True):
+            with st.status(tr("update.running"), expanded=True) as status:
+                ok, msg, log = perform_update()
+                for line in log:
+                    if line:
+                        st.code(line)
+                status.update(
+                    label=tr("update.done") if ok else tr("update.failed"),
+                    state="complete" if ok else "error",
+                )
+            if ok:
+                st.success(msg)
+            else:
+                st.error(msg)
 

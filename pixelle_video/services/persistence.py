@@ -346,10 +346,11 @@ class PersistenceService:
             "media_width": config.media_width,
             "media_height": config.media_height,
             "media_workflow": config.media_workflow,
+            "api_video_params": config.api_video_params,
             "frame_template": config.frame_template,
             "template_params": config.template_params,
         }
-    
+
     def _dict_to_config(self, data: Dict[str, Any]) -> StoryboardConfig:
         """Convert dict to StoryboardConfig"""
         return StoryboardConfig(
@@ -368,6 +369,7 @@ class PersistenceService:
             media_width=data.get("media_width", data.get("image_width", 1024)),  # Backward compatibility
             media_height=data.get("media_height", data.get("image_height", 1024)),  # Backward compatibility
             media_workflow=data.get("media_workflow", data.get("image_workflow")),  # Backward compatibility
+            api_video_params=data.get("api_video_params"),
             frame_template=data.get("frame_template", "1080x1920/default.html"),
             template_params=data.get("template_params"),
         )

@@ -49,7 +49,7 @@ class ImageToVideoPipelineUI(PipelineUI):
         # ====================================================================
         with left_col:
             asset_params = self.render_audio_visual_input(pixelle_video)
-            render_version_info()
+            render_version_info(key_prefix="i2v_")
 
         # ====================================================================
         # Right Column: Output Preview

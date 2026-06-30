@@ -107,7 +107,7 @@ echo   - Network issue during dependency download (retry)
 echo   - Source code downloaded without setup
 echo.
 echo For regular users, download the ONE-CLICK PACKAGE instead:
-echo   https://github.com/AIDC-AI/Pixelle-Video/releases
+echo   https://github.com/woaiACE/Pixelle-Video/releases
 echo.
 echo For developers:
 echo   1. Install uv: https://docs.astral.sh/uv/

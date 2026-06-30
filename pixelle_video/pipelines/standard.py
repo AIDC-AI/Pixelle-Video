@@ -43,7 +43,8 @@ from pixelle_video.utils.content_generators import (
 )
 from pixelle_video.utils.os_util import (
     create_task_output_dir,
-    get_task_final_video_path
+    get_task_final_video_path,
+    get_output_path
 )
 from pixelle_video.utils.template_util import get_template_type
 from pixelle_video.utils.prompt_helper import build_image_prompt
@@ -79,29 +80,82 @@ class StandardPipeline(LinearVideoPipeline):
         """Step 1: Setup task directory and environment."""
         text = ctx.input_text
         mode = ctx.params.get("mode", "generate")
-        
+
+        # Resume an interrupted task: reuse its directory + restore ctx from the
+        # saved storyboard.json, then the caller skips content/visual steps.
+        resume_task_id = ctx.params.get("resume_task_id")
+        if resume_task_id:
+            await self._resume_from_checkpoint(ctx, resume_task_id)
+            return
+
         logger.info(f"🚀 Starting StandardPipeline in '{mode}' mode")
         logger.info(f"   Text length: {len(text)} chars")
-        
+
         # Create isolated task directory
         task_dir, task_id = create_task_output_dir()
         ctx.task_id = task_id
         ctx.task_dir = task_dir
-        
+
         logger.info(f"📁 Task directory created: {task_dir}")
         logger.info(f"   Task ID: {task_id}")
-        
+
         # Determine final video path
         output_path = ctx.params.get("output_path")
         if output_path is None:
             ctx.final_video_path = get_task_final_video_path(task_id)
         else:
             # We will copy to this path in finalize/post_production
-            # For internal processing, we still use the task dir path? 
+            # For internal processing, we still use the task dir path?
             # Actually StandardPipeline logic used get_task_final_video_path as the target for concat
             # and then copied. Let's stick to that.
             ctx.final_video_path = get_task_final_video_path(task_id)
             logger.info(f"   Will copy final video to: {output_path}")
+
+    async def _resume_from_checkpoint(self, ctx: PipelineContext, task_id: str):
+        """Restore ctx from a saved storyboard.json so produce_assets can continue.
+
+        Config drift guard: the resumed run always uses the checkpoint's config so
+        existing frame artifacts stay visually consistent. Mismatched params passed
+        this run are logged but not applied.
+        """
+        persistence = self.core.persistence
+        if persistence is None:
+            raise RuntimeError("Cannot resume: persistence service unavailable")
+
+        storyboard = await persistence.load_storyboard(task_id)
+        if storyboard is None or not storyboard.frames:
+            raise FileNotFoundError(
+                f"Cannot resume task {task_id}: no storyboard.json found (or empty). "
+                f"The task may have crashed before the first checkpoint."
+            )
+
+        ctx.task_id = task_id
+        ctx.task_dir = get_output_path(task_id)
+        ctx.final_video_path = get_task_final_video_path(task_id)
+        ctx.storyboard = storyboard
+        ctx.config = storyboard.config
+        ctx.title = storyboard.title
+        ctx.narrations = [f.narration for f in storyboard.frames]
+        ctx.image_prompts = [f.image_prompt for f in storyboard.frames]
+
+        # Config drift guard — warn on mismatch, keep checkpoint's config.
+        drift_keys = {
+            "frame_template": (ctx.params.get("frame_template"), storyboard.config.frame_template),
+            "media_workflow": (ctx.params.get("media_workflow"), storyboard.config.media_workflow),
+            "tts_inference_mode": (ctx.params.get("tts_inference_mode"), storyboard.config.tts_inference_mode),
+            "voice_id": (ctx.params.get("tts_voice"), storyboard.config.voice_id),
+        }
+        for key, (passed, saved) in drift_keys.items():
+            if passed is not None and passed != saved:
+                logger.warning(
+                    f"⚠️ Resume config drift: '{key}' passed={passed!r} but checkpoint={saved!r}. "
+                    f"Using checkpoint value to keep existing frames consistent."
+                )
+
+        done = sum(1 for f in storyboard.frames if f.video_segment_path)
+        logger.info(
+            f"▶️ Resuming task {task_id}: {done}/{len(storyboard.frames)} frames already complete"
+        )
 
     async def generate_content(self, ctx: PipelineContext):
         """Step 2: Generate or process script/narrations."""
@@ -314,6 +368,10 @@ class StandardPipeline(LinearVideoPipeline):
             )
             ctx.storyboard.frames.append(frame)
 
+        # Save checkpoint early so an interrupted run can be resumed. storyboard.json
+        # records per-frame path fields; produce_assets updates it incrementally.
+        await self._save_checkpoint(ctx, status="running")
+
     async def produce_assets(self, ctx: PipelineContext):
         """Step 6: Generate audio, images, and render frames (Core processing)."""
         storyboard = ctx.storyboard
@@ -368,7 +426,11 @@ class StandardPipeline(LinearVideoPipeline):
                         total_frames=len(storyboard.frames),
                         progress_callback=frame_progress_callback
                     )
-                    
+
+                    # Update frame in-place so the checkpoint reflects completed work
+                    storyboard.frames[i] = processed_frame
+                    await self._save_checkpoint(ctx, status="running")
+
                     completed_count += 1
                     logger.info(f"✅ Frame {i+1} completed ({processed_frame.duration:.2f}s) [{completed_count}/{len(storyboard.frames)}]")
                     return i, processed_frame
@@ -376,12 +438,11 @@ class StandardPipeline(LinearVideoPipeline):
             # Create all tasks and execute in parallel
             tasks = [process_frame_with_semaphore(i, frame) for i, frame in enumerate(storyboard.frames)]
             results = await asyncio.gather(*tasks)
-            
-            # Update frames in order and calculate total duration
+
+            # Frames were updated in-place inside workers; accumulate total duration
             for idx, processed_frame in sorted(results, key=lambda x: x[0]):
-                storyboard.frames[idx] = processed_frame
                 storyboard.total_duration += processed_frame.duration
-            
+
             logger.info(f"✅ All frames processed in parallel (total duration: {storyboard.total_duration:.2f}s)")
         else:
             logger.info("⚙️ Processing single frame (serial)")
@@ -421,8 +482,10 @@ class StandardPipeline(LinearVideoPipeline):
                     total_frames=len(storyboard.frames),
                     progress_callback=frame_progress_callback
                 )
+                storyboard.frames[i] = processed_frame
                 storyboard.total_duration += processed_frame.duration
                 logger.info(f"✅ Frame {i+1} completed ({processed_frame.duration:.2f}s)")
+                await self._save_checkpoint(ctx, status="running")
 
     async def post_production(self, ctx: PipelineContext):
         """Step 7: Concatenate videos and add BGM."""
@@ -480,6 +543,27 @@ class StandardPipeline(LinearVideoPipeline):
         await self._persist_task_data(ctx)
         
         return result
+
+    async def _save_checkpoint(self, ctx: PipelineContext, status: str = "running"):
+        """Persist storyboard + metadata as a resume checkpoint.
+
+        Best-effort: a checkpoint write failure must not abort the running pipeline,
+        since the in-memory storyboard is still authoritative for the current run.
+        """
+        if not ctx.storyboard or not ctx.task_id:
+            return
+        try:
+            persistence = self.core.persistence
+            await persistence.save_storyboard(ctx.task_id, ctx.storyboard)
+            await persistence.save_task_metadata(ctx.task_id, {
+                "task_id": ctx.task_id,
+                "created_at": ctx.storyboard.created_at.isoformat() if ctx.storyboard.created_at else None,
+                "status": status,
+                "input": {"text": ctx.input_text, "title": ctx.title},
+                "config": persistence._config_to_dict(ctx.storyboard.config),
+            })
+        except Exception as e:
+            logger.warning(f"Checkpoint save failed (non-fatal): {e}")
 
     async def _persist_task_data(self, ctx: PipelineContext):
         """

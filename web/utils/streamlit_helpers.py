@@ -29,6 +29,37 @@ def safe_rerun():
         st.experimental_rerun()
 
 
+def persistent_widget(widget_func, key, default, **kwargs):
+    """Render a widget whose value survives navigation to other pages.
+
+    Streamlit drops widget state for any widget not rendered during a script
+    run (SessionState._remove_stale_widgets). In a multipage app the Home
+    widgets aren't rendered while the user is on History / Voice Designer, so
+    their values are wiped and reset to defaults on return — which empties the
+    script text and breaks generation.
+
+    We mirror the value into a plain (non-widget) ``_persist:<key>`` entry,
+    which Streamlit never drops, and reinstate it before the widget renders.
+    ``default`` is used only on the very first render.
+    """
+    bak = f"_persist:{key}"
+    if key not in st.session_state:
+        candidate = st.session_state.get(bak, default)
+        # selectbox/radio: a stale backup (e.g. a deleted voice design) that's
+        # no longer in options would crash the widget — fall back to default.
+        options = kwargs.get("options")
+        if options is not None and candidate not in options:
+            candidate = default
+        st.session_state[key] = candidate
+    # value=/index= conflict with a session_state-backed key; the widget reads
+    # its initial value from session_state instead.
+    kwargs.pop("value", None)
+    kwargs.pop("index", None)
+    value = widget_func(key=key, **kwargs)
+    st.session_state[bak] = st.session_state[key]
+    return value
+
+
 # ============================================================================
 # SelfHost Workflow Warning - Using Native JavaScript Alert
 # ============================================================================
