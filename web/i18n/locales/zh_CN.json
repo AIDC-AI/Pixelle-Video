@@ -418,6 +418,8 @@
     "pipeline.i2v.description": "输入图片和提示词,AI即刻生成视频",
     "pipeline.action_transfer.name": "动作迁移",
     "pipeline.action_transfer.description": "一张图、一段视频，复刻精彩动作",
+    "pipeline.story_illustration.name": "故事插图视频",
+    "pipeline.story_illustration.description": "输入故事，AI 提取角色场景、分镜、生成一致性插图视频",
     "asset_based.section.assets": "📦 素材上传",
     "asset_based.section.video_info": "📝 视频信息",
     "asset_based.section.source": "⚙️ 服务配置",

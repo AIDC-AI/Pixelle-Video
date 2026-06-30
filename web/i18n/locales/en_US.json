@@ -418,6 +418,8 @@
     "pipeline.i2v.description": "Enter an image and a prompt, and AI will instantly generate a video",
     "pipeline.action_transfer.name": "Action Transfer",
     "pipeline.action_transfer.description": "One image, one video, recreate amazing moves",
+    "pipeline.story_illustration.name": "Story Illustration",
+    "pipeline.story_illustration.description": "Enter a story; AI extracts characters/scenes, storyboards, and generates consistent illustration video",
     "asset_based.section.assets": "📦 Asset Upload",
     "asset_based.section.video_info": "📝 Video Information",
     "asset_based.section.source": "⚙️ Service Configuration",
