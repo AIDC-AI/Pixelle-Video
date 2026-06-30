@@ -33,6 +33,16 @@ https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 
 ## 📋 最近更新
 
+- ✅ **2026-06-30**: 新增「📖 故事插图视频」管线 —— 输入故事，AI 提取角色/场景/道具、分镜、生成跨分镜角色一致性插图视频
+  - **4 步向导 UI**：① 故事输入 + 提取资产描述 → ② 资产库编辑（可单项重生参考图）→ ③ 分镜预览（旁白可编辑）→ ④ 生成视频，顶部进度指示，支持上一步/下一步导航
+  - **后端管线**：继承 `StandardPipeline`，覆写 `generate_content`（故事分镜）+ `plan_visuals`（插图 prompt + 每场景引用的资产图）+ `initialize_storyboard`（参考图挂到 frame）。复用 TTS / 模板渲染 / 拼接 / checkpoint 全链路，无新增 provider
+  - **img2img 角色一致性**：构图说明里提到的角色/场景/道具自动匹配对应资产图（长名优先 + 去重防误匹配），作为 img2img 参考图透传给图片 provider，保证同一角色跨分镜外观一致
+  - **绘本风帧模板**：新增 `1080x1920/image_story.html`（大图 + 少字 + 页码占位），自动发现为 image 类型
+  - **修复：UI key 冲突崩溃** —— `st.tabs` 每次渲染所有 tab，向导原先复用 standard tab 的裸 widget key 导致 `StreamlitDuplicateElementKey` 崩溃。改为命名空间 key（`digital_tts_config` 加 `key_prefix`，向导传 `story_`），Step4 不再复用 `render_output_preview`（它本会丢掉 `pipeline` 参数跑成 standard，并忽略向导旁白）
+  - **修复：资产图路径全塌到 01_image.png** —— `_generate_asset_images` 误用 `_download_media(url, 0, ...)`（frame_index 写死 0），所有资产图互相覆盖。改为直接用 `media()` 已落盘的唯一路径
+  - **修复：向导 i18n 不生效** —— `_has_tr` 检查顶层 locale dict，但 key 在 `"t"` 命名空间下，向导永远回退硬编码中文。已修正，并补全 `section.story_input/asset_library/scenecut/generate/style_config` 双语 key
+  - **端到端验证**：真实调用 Gemini 图 + DeepSeek LLM + Edge TTS 生成 3 分镜视频成功（`final.mp4`，约 6 分钟）
+
 - ✅ **2026-06-30**: Fork 专属优化（[woaiACE/Pixelle-Video](https://github.com/woaiACE/Pixelle-Video)）
   - **Gemini 原生图像生成**：支持用 Gemini 模型生成图像，覆盖 1:1 / 3:4 / 4:3 / 9:16 / 16:9 常用比例，按所选模型自动切换
   - **Qwen TTS 语音合成**：接入千问 TTS，可使用自定义音色 ID 合成配音

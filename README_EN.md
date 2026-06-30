@@ -32,6 +32,15 @@ Just input a **topic**, and Pixelle-Video will automatically:
 
 ## 📋 Recent Updates
 
+- ✅ **2026-06-30**: Added "📖 Story Illustration" pipeline — enter a story; AI extracts characters/scenes/props, storyboards, and generates an illustration video with consistent characters across scenes
+  - **4-step wizard UI**: ① story input + asset extraction → ② asset library editing (per-item regen of reference images) → ③ storyboard preview (editable narration) → ④ generate video, with a top progress indicator and back/next navigation
+  - **Backend pipeline**: subclasses `StandardPipeline`, overriding `generate_content` (story scenecut) + `plan_visuals` (illustration prompts + per-scene asset refs) + `initialize_storyboard` (attach reference images to frames). Reuses the full TTS / template rendering / concatenation / checkpoint chain — no new provider added
+  - **img2img character consistency**: assets mentioned in a scene's composition are matched to their reference images (longest-name-first + dedup to avoid false matches) and passed as img2img references to the image provider, keeping the same character visually consistent across scenes
+  - **Storybook frame template**: new `1080x1920/image_story.html` (large image + sparse text + page-number placeholder), auto-discovered as image type
+  - **Fix: UI key-collision crash** — `st.tabs` renders all tabs every run; the wizard reused the standard tab's bare widget keys, causing `StreamlitDuplicateElementKey`. Switched to namespaced keys (`digital_tts_config` gained a `key_prefix` param; the wizard passes `story_`), and Step 4 no longer reuses `render_output_preview` (it dropped the `pipeline` kwarg → would run standard, and ignored the wizard's narrations)
+  - **Fix: asset images all collapsed to 01_image.png** — `_generate_asset_images` wrongly called `_download_media(url, 0, ...)` (frame_index hardcoded to 0), so every asset overwrote the same file. Now uses the unique path already written by `media()`
+  - **Fix: wizard i18n not applied** — `_has_tr` checked the top-level locale dict, but keys live under the `"t"` namespace, so the wizard always fell back to hardcoded Chinese. Fixed, and added `section.story_input/asset_library/scenecut/generate/style_config` bilingual keys
+  - **End-to-end verified**: real Gemini image + DeepSeek LLM + Edge TTS run produced a 3-scene video (`final.mp4`, ~6 min)
 - ✅ **2026-06-01**: Added direct API media model configuration in WebUI, including image/video provider credentials, Base URLs, and per-provider proxy toggles
 - ✅ **2026-01-26**: Added the Motion Transfer pipeline — upload a reference video and an image to transfer motion.
 - ✅ **2026-01-14**: Added "Digital Human" and "Image-to-Video" pipelines, multi-language TTS voices support
