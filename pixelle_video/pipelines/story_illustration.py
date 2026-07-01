@@ -53,6 +53,12 @@ class StoryIllustrationPipeline(StandardPipeline):
         predefined = ctx.params.get("narrations")
         if predefined and isinstance(predefined, list) and predefined:
             ctx.narrations = predefined
+            # 同步取 UI 编辑后的构图说明，供 plan_visuals 选资产参考图；
+            # 缺失则补空串（保持索引对齐，避免 _select_refs 错位）
+            comps = ctx.params.get("scene_compositions") or []
+            ctx.params["_scene_compositions"] = (
+                list(comps) + [""] * (len(predefined) - len(comps))
+            )[:len(predefined)]
             logger.info(f"✅ Using {len(ctx.narrations)} pre-defined narrations")
             return
 
@@ -78,7 +84,8 @@ class StoryIllustrationPipeline(StandardPipeline):
         # 旁白 + 构图说明都存到 ctx，构图说明在 plan_visuals 用于选资产
         ctx.narrations = [s.get("narration", "").strip() for s in scenes]
         ctx.params["_scene_compositions"] = [s.get("composition", "") for s in scenes]
-        if len(ctx.narrations) > n_scenes:
+        # n_scenes 指定时截断；None（AI 自动决定）则照单全收
+        if n_scenes and len(ctx.narrations) > n_scenes:
             ctx.narrations = ctx.narrations[:n_scenes]
             ctx.params["_scene_compositions"] = ctx.params["_scene_compositions"][:n_scenes]
         logger.info(f"✅ Story split into {len(ctx.narrations)} scenes")
@@ -115,10 +122,11 @@ class StoryIllustrationPipeline(StandardPipeline):
         )
         ctx.image_prompts = [build_image_prompt(p, prompt_prefix) for p in base_prompts]
 
-        # 3. 每场景选定引用的资产图（composition 提到的角色/场景/道具 → 对应 image_path）
+        # 3. 每场景选定引用的资产图（composition + narration 提到的角色/场景/道具 → 对应 image_path）
         compositions = ctx.params.pop("_scene_compositions", [""] * len(ctx.narrations))
         ctx.params["_scene_refs"] = [
-            self._select_refs(comp, asset_library) for comp in compositions
+            self._select_refs(compositions[i], ctx.narrations[i] if i < len(ctx.narrations) else "", asset_library)
+            for i in range(len(compositions))
         ]
         logger.info(f"✅ {len(ctx.image_prompts)} illustration prompts + reference images ready")
 
@@ -162,7 +170,12 @@ class StoryIllustrationPipeline(StandardPipeline):
         return False
 
     async def _generate_asset_images(self, ctx: PipelineContext, lib: dict):
-        """对资产库每项生成参考图，写回 image_path。失败不阻塞（标 None，该资产不入参考图）。"""
+        """对资产库每项生成参考图，写回 image_path。失败不阻塞（标 None，该资产不入参考图）。
+
+        角色：多视角参考图（正面大头特写 + 正面全身 + 侧身全身 + 背面全身，单图四宫格），
+              便于 img2img 时角色跨分镜外观一致。
+        场景/道具：1:1 参考图。
+        """
         provider = ctx.params.get("asset_provider") or ctx.params.get("media_workflow")
         prompt_prefix = ctx.params.get("prompt_prefix", "")
         for kind in ("characters", "scenes", "props"):
@@ -170,17 +183,29 @@ class StoryIllustrationPipeline(StandardPipeline):
                 if it.get("image_path"):
                     continue
                 try:
-                    desc = build_image_prompt(it.get("description", ""), prompt_prefix)
+                    base = it.get("description", "")
+                    if kind == "characters":
+                        # 多视角角色参考图：四视角同框，保证 img2img 一致性
+                        base = (
+                            f"{base}. Character reference sheet, single image with 4 views arranged in a 2x2 grid: "
+                            "top-left front head close-up portrait, top-right front full-body, "
+                            "bottom-left side profile full-body, bottom-right back full-body. "
+                            "Same character, consistent appearance across all 4 views, plain neutral background, "
+                            "no text, no labels."
+                        )
+                    desc = build_image_prompt(base, prompt_prefix)
                     out = get_task_frame_path(ctx.task_id, 0, "image")  # 临时，资产图复用 frame 0 目录
                     # 用 index 区分资产：kind+name 哈希进文件名
                     out = out.replace(f"_frame_0_", f"_asset_{kind}_{abs(hash(it.get('name','')))%99999}_", 1) \
                         if "_frame_0_" in out else out
+                    # 资产图尺寸固定，不受帧模板尺寸影响：场景/道具 1:1，角色多视角 1:1 稍大保细节
+                    asset_w = asset_h = 1280 if kind == "characters" else 1024
                     media_result = await self.core.media(
                         prompt=desc,
                         workflow=provider,
                         media_type="image",
-                        width=ctx.params.get("media_width"),
-                        height=ctx.params.get("media_height"),
+                        width=asset_w,
+                        height=asset_h,
                         output_path=out,
                     )
                     if media_result.is_image:
@@ -192,14 +217,15 @@ class StoryIllustrationPipeline(StandardPipeline):
                     logger.warning(f"  ⚠️ asset {kind}/{it.get('name')} gen failed (skip): {e}")
                     it["image_path"] = None
 
-    def _select_refs(self, composition: str, lib: dict) -> List[str]:
-        """根据构图说明里提到的资产名，选出对应的 image_path（去重，过滤未生成的）。
+    def _select_refs(self, composition: str, narration: str, lib: dict) -> List[str]:
+        """根据构图 + 旁白里提到的资产名，选出对应的 image_path（去重，过滤未生成的）。
 
         长名优先匹配，匹配后从文本中剔除，避免短名（如"白白"）误匹配到长名片段。
+        composition 用代词/别名匹配不上时，narration 提到角色名的概率更高，作补充匹配。
+        两者都匹配不上 → 回退全部角色资产图（角色一致性是首要目标，宁可多给参考图）。
         """
-        if not composition or not lib:
+        if not lib:
             return []
-        comp = composition.lower()
         # 收集所有 (name, path)，按 name 长度降序
         items = []
         for kind in ("characters", "scenes", "props"):
@@ -210,12 +236,45 @@ class StoryIllustrationPipeline(StandardPipeline):
                     items.append((name, path))
         items.sort(key=lambda x: len(x[0]), reverse=True)
 
+        text = f"{composition}\n{narration}".lower()
         refs = []
         seen = set()
         for name, path in items:
             name_l = name.lower()
-            if name_l in comp and path not in seen:
+            if name_l in text and path not in seen:
                 refs.append(path)
                 seen.add(path)
-                comp = comp.replace(name_l, "")  # 剔除已匹配，防短名误命中
+                text = text.replace(name_l, "")  # 剔除已匹配，防短名误命中
+
+        # ponytail: 回退——LLM 用代词/别名时匹配全空，此时给全部角色图保一致性，
+        # 不给场景/道具（无关角色入参考图反而干扰）。上限 4 张防 provider 超限。
+        if not refs:
+            char_paths = [it["image_path"] for it in lib.get("characters", []) if it.get("image_path")]
+            refs = char_paths[:4]
         return refs
+
+
+if __name__ == "__main__":
+    # Self-check: _select_refs 匹配 + 回退逻辑
+    p = StoryIllustrationPipeline.__new__(StoryIllustrationPipeline)
+    lib = {
+        "characters": [
+            {"name": "白白", "image_path": "/a.png"},
+            {"name": "会唱歌的小树", "image_path": "/b.png"},
+        ],
+        "scenes": [{"name": "森林", "image_path": "/s.png"}],
+        "props": [{"name": "发光种子", "image_path": "/p.png"}],
+    }
+    # composition 直接提到资产名
+    r = p._select_refs("白白在森林里捡到种子", "", lib)
+    assert "/a.png" in r and "/s.png" in r, f"direct match failed: {r}"
+    # composition 用代词，narration 提到角色名
+    r2 = p._select_refs("她看着那棵树", "白白每天都来浇水", lib)
+    assert "/a.png" in r2, f"narration fallback failed: {r2}"
+    # 全空匹配 → 回退全部角色图
+    r3 = p._select_refs("一片祥和", "远处传来歌声", lib)
+    assert r3 == ["/a.png", "/b.png"], f"char fallback failed: {r3}"
+    # 长名优先：会唱歌的小树 不被 白白 抢占
+    r4 = p._select_refs("会唱歌的小树长大了", "", lib)
+    assert "/b.png" in r4 and "/a.png" not in r4, f"long-name priority failed: {r4}"
+    print("story_illustration _select_refs self-check OK")

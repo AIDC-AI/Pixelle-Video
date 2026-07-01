@@ -37,6 +37,9 @@ class ImageGemini:
     @staticmethod
     def _encode_image(image_path: str):
         """本地图片 → Gemini inlineData part，失败返回 None。"""
+        # ponytail: 仅认本地文件，远程 URL（http）静默返回 None 被丢弃。
+        # 当前 story-illustration 资产图均经 api_media 落盘为本地路径，不触发；
+        # 若未来 provider 直接返回远程 URL 未落盘，参考图会无声丢失——届时在此加 httpx 下载。
         if not image_path or not os.path.exists(image_path):
             return None
         try:

@@ -46,7 +46,7 @@ STORY_EXTRACTION_PROMPT = """# 角色任务
 
 
 STORY_SCENECUT_PROMPT = """# 角色任务
-你是一位绘本分镜师。用户会输入一段故事文本，你需要把它拆成 {n_scenes} 个分镜，每个分镜包含一段旁白（供 TTS 生成配音）和一段画面构图说明（供插图生成参考）。
+你是一位绘本分镜师。用户会输入一段故事文本，你需要把它拆成{count_hint}，每个分镜包含一段旁白（供 TTS 生成配音）和一段画面构图说明（供插图生成参考）。
 
 # 输入故事
 {story}
@@ -57,7 +57,7 @@ STORY_SCENECUT_PROMPT = """# 角色任务
 # 分镜要求
 - 旁白（narration）：中文，口语化，像给小朋友讲故事，{min_words}~{max_words} 字，句末不加标点，句中用中文标点表停顿。
 - 画面构图（composition）：中文，说明本镜出场的角色/场景/道具名称（必须从上方资产库中选），并简述构图（谁在做什么、镜头景别、氛围）。便于后续插图 prompt 引用正确的资产。
-- {n_scenes} 个分镜连起来要讲完整故事，节奏自然。
+- {count_hint}连起来要讲完整故事，节奏自然；每个分镜信息量均衡，不要过长或过短。
 - 资产库为空时，composition 自由描述画面。
 
 # 输出格式
@@ -80,7 +80,7 @@ def build_story_extraction_prompt(story: str) -> str:
 
 def build_story_scenecut_prompt(
     story: str,
-    n_scenes: int,
+    n_scenes: int | None,
     assets: str,
     min_words: int = 5,
     max_words: int = 30,
@@ -89,12 +89,16 @@ def build_story_scenecut_prompt(
 
     Args:
         story: 故事原文
-        n_scenes: 期望分镜数
+        n_scenes: 期望分镜数；None 时由 AI 根据故事长度自行决定（建议 4~8）
         assets: 资产库文本清单（角色/场景/道具），可为空串
     """
+    if n_scenes:
+        count_hint = f" {n_scenes} 个分镜"
+    else:
+        count_hint = " 若干分镜（请你根据故事长度与节奏自行决定，建议 4~8 个，短故事取下限、长故事取上限）"
     return STORY_SCENECUT_PROMPT.format(
         story=story,
-        n_scenes=n_scenes,
+        count_hint=count_hint,
         assets=assets or "（无）",
         min_words=min_words,
         max_words=max_words,
@@ -129,5 +133,7 @@ if __name__ == "__main__":
         "props": [{"name": "发光种子", "description": "发金光的种子"}],
     }
     p2 = build_story_scenecut_prompt(story, n_scenes=4, assets=assets_to_text(lib))
-    assert "4" in p2 and "白白" in p2 and "narration" in p2, "scenecut prompt broken"
+    assert "4 个分镜" in p2 and "白白" in p2 and "narration" in p2, "scenecut prompt broken"
+    p3 = build_story_scenecut_prompt(story, n_scenes=None, assets=assets_to_text(lib))
+    assert "自行决定" in p3 and "narration" in p3, "auto-scenecut prompt broken"
     print("story_prompts self-check OK")

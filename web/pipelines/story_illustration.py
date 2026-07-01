@@ -109,21 +109,52 @@ class StoryIllustrationPipelineUI(PipelineUI):
             key="story_text_input",
             placeholder="输入一段故事…例如：小兔子白白在森林里捡到一颗发光的种子…",
         )
-        n_scenes = st.number_input("分镜数量", min_value=2, max_value=12, value=_ss("story_n_scenes", 6), key="story_n_scenes_input")
+        title = st.text_input(
+            "视频标题（可选，留空则 AI 自动生成）",
+            value=_ss("story_title", ""),
+            key="story_title_input",
+        )
+
+        # 分镜数量：AI 自动决定（默认）或手动指定
+        auto_scenes = st.checkbox("🎨 AI 自动决定分镜数量（推荐）", value=_ss("story_auto_scenes", True), key="story_auto_scenes_input")
+        if auto_scenes:
+            n_scenes = None
+            st.caption("将根据故事长度与节奏由 AI 推理分镜数。")
+        else:
+            n_scenes = st.number_input("分镜数量", min_value=2, max_value=12, value=_ss("story_n_scenes", 6), key="story_n_scenes_input")
 
         # 画风与 provider（用于资产图 + 插图生成）
         from pixelle_video.prompts.image_generation import IMAGE_STYLE_PRESETS
+        from web.pipelines.api_workflows import list_api_media_workflows
         style_keys = list(IMAGE_STYLE_PRESETS.keys())
+        # 画风用预设的中文 name 显示，key 不变（向后兼容已存 session_state）
+        _style_zh = {k: IMAGE_STYLE_PRESETS[k].get("name", k) for k in style_keys}
         col_a, col_b = st.columns(2)
         with col_a:
-            art_style_key = st.selectbox("画风预设", style_keys, index=style_keys.index("watercolor") if "watercolor" in style_keys else 0, key="story_art_style_key")
+            art_style_key = st.selectbox(
+                "画风预设",
+                style_keys,
+                index=style_keys.index("watercolor") if "watercolor" in style_keys else 0,
+                format_func=lambda k: _style_zh[k],
+                key="story_art_style_key",
+            )
         with col_b:
-            provider = st.selectbox(
+            # 复用已配置的 API 图片工作流，不再硬编码 3 个
+            _img_wfs = list_api_media_workflows(pixelle_video, "image")
+            _img_displays = [w["display_name"] for w in _img_wfs] or ["（未配置图片模型）"]
+            _img_keys = [w["key"] for w in _img_wfs] or [None]
+            _saved = _ss("story_provider")
+            _def_idx = _img_keys.index(_saved) if _saved in _img_keys else (
+                next((i for i, k in enumerate(_img_keys) if k and "gemini" in k), 0)
+            )
+            _sel_display = st.selectbox(
                 "图片生成 Provider",
-                ["api/gemini/gemini-3-pro-image", "api/seedream/doubao-seedream-5-0-260128", "api/dashscope/wan2.7-image"],
+                _img_displays,
+                index=_def_idx,
                 key="story_provider_input",
                 help="资产图与插图用同一 provider。Gemini 的 img2img 契约最干净。",
             )
+            provider = _img_keys[_img_displays.index(_sel_display)]
 
         # 配音配置（复用 digital_tts_config，命名空间 key 不与 standard tab 冲突）
         st.markdown("---")
@@ -133,7 +164,8 @@ class StoryIllustrationPipelineUI(PipelineUI):
         # prompt_prefix 用预设的完整 prefix 串（不是 key），prompt 才能拿到画风描述
         st.session_state["story_art_style"] = IMAGE_STYLE_PRESETS[art_style_key]["prefix"]
         st.session_state["story_provider"] = provider
-        st.session_state["story_n_scenes"] = int(n_scenes)
+        st.session_state["story_n_scenes"] = int(n_scenes) if n_scenes else None
+        st.session_state["story_title"] = title.strip() or None
 
         # 提取按钮
         if st.button("📝 提取角色与场景", type="primary", use_container_width=True):
@@ -152,6 +184,11 @@ class StoryIllustrationPipelineUI(PipelineUI):
                             it["image_path"] = None
                     st.session_state[_ASSET_LIB] = lib
                     st.session_state["story_text"] = story
+                    # T6: 清上一轮 Step2 的 widget key 残留，否则 text_input/text_area
+                    # 因 key 绑定会显示旧故事的名称/描述
+                    for k in list(st.session_state.keys()):
+                        if k.startswith("asset_") and (k.endswith("_name") or k.endswith("_desc")):
+                            del st.session_state[k]
                     _set_step(2)
                     st.success(f"✅ 提取完成：角色 {len(lib.get('characters', []))} / 场景 {len(lib.get('scenes', []))} / 道具 {len(lib.get('props', []))}")
                     st.rerun()
@@ -164,14 +201,14 @@ class StoryIllustrationPipelineUI(PipelineUI):
     def _step2_assets(self, pixelle_video):
         lib = _ss(_ASSET_LIB, {"characters": [], "scenes": [], "props": []})
         st.markdown(f"**{tr('section.asset_library') if _has_tr('section.asset_library') else '资产库编辑'}**")
-        st.caption("可编辑名称/描述，生成参考图。单项可重新生成。资产图将作为插图生成的参考图，保证角色跨分镜一致。")
+        st.caption("可编辑名称/描述，可新增/删除，生成参考图。单项可重新生成。资产图将作为插图生成的参考图，保证角色跨分镜一致。")
 
         kind_label = {"characters": "🧑 角色", "scenes": "🏞️ 场景", "props": "🎒 道具"}
         for kind in ("characters", "scenes", "props"):
             items = lib.setdefault(kind, [])
-            if not items:
-                continue
-            with st.expander(f"{kind_label[kind]}（{len(items)}）", expanded=True):
+            # T5: 仅角色类默认展开，其余折叠，避免首屏过长
+            with st.expander(f"{kind_label[kind]}（{len(items)}）", expanded=(kind == "characters")):
+                # 渲染时遍历副本，删除按 name 匹配（idx 在删除后会变）
                 for idx, it in enumerate(items):
                     c1, c2, c3 = st.columns([2, 3, 1])
                     with c1:
@@ -182,13 +219,27 @@ class StoryIllustrationPipelineUI(PipelineUI):
                         if it.get("image_path"):
                             st.image(it["image_path"], use_container_width=True)
                             if st.button("重生", key=f"asset_{kind}_{idx}_regen"):
-                                self._gen_one_asset(pixelle_video, it)
+                                with st.spinner(f"正在生成 {it.get('name') or '资产'}…"):
+                                    self._gen_one_asset(pixelle_video, it, kind)
                                 st.rerun()
                         else:
                             st.write("—")
                             if st.button("生成", key=f"asset_{kind}_{idx}_gen"):
-                                self._gen_one_asset(pixelle_video, it)
+                                with st.spinner(f"正在生成 {it.get('name') or '资产'}…"):
+                                    self._gen_one_asset(pixelle_video, it, kind)
                                 st.rerun()
+                        # T3: 删除按钮
+                        if st.button("🗑", key=f"asset_{kind}_{idx}_del", help="删除此项"):
+                            items.pop(idx)
+                            st.rerun()
+                    # T1: 失败提示
+                    if it.get("_error"):
+                        st.error(f"❌ 生成失败：{it['_error']}")
+
+                # T3: 新增按钮
+                if st.button("➕ 新增", key=f"asset_{kind}_add"):
+                    items.append({"name": "", "description": "", "image_path": None})
+                    st.rerun()
 
         # 操作行
         st.markdown("---")
@@ -199,47 +250,65 @@ class StoryIllustrationPipelineUI(PipelineUI):
                 st.rerun()
         with col2:
             if st.button("🎨 生成全部资产图", type="primary", use_container_width=True):
-                with st.spinner("正在生成资产图…"):
-                    for kind in ("characters", "scenes", "props"):
-                        for it in lib.get(kind, []):
-                            if not it.get("image_path"):
-                                self._gen_one_asset(pixelle_video, it)
-                st.success("资产图生成完成")
+                pending = [(k, it) for k in ("characters", "scenes", "props") for it in lib.get(k, []) if not it.get("image_path")]
+                n = len(pending)
+                for i, (k, it) in enumerate(pending, 1):
+                    with st.spinner(f"正在生成资产图… ({i}/{n})"):
+                        self._gen_one_asset(pixelle_video, it, k)
+                st.success("资产图生成完成" if n else "无待生成资产")
                 st.rerun()
         with col3:
             n_ready = sum(1 for k in ("characters", "scenes", "props") for it in lib.get(k, []) if it.get("image_path"))
             n_total = sum(len(lib.get(k, [])) for k in ("characters", "scenes", "props"))
-            if st.button(f"下一步：分镜预览 ➡️  ({n_ready}/{n_total} 资产已生成)", use_container_width=True, type="primary" if n_ready else "secondary"):
+            # T7: 不强制生成全部，后端会自动补；文案明示可跳过
+            if st.button(f"下一步：分镜预览 ➡️  ({n_ready}/{n_total} 已生成，可跳过)", use_container_width=True, type="secondary"):
                 _set_step(3)
                 st.rerun()
 
-    def _gen_one_asset(self, pixelle_video, it: dict):
-        """生成单项资产图，下载到临时文件，写回 image_path。失败标 None 不阻塞。"""
+    def _gen_one_asset(self, pixelle_video, it: dict, kind: str = "props"):
+        """生成单项资产图，下载到临时文件，写回 image_path。失败标 None 不阻塞。
+
+        kind=characters 时生成多视角参考图；其余 1:1。与后端 _generate_asset_images 同策略。
+        """
         try:
             import asyncio, tempfile, os
             import httpx
             from pixelle_video.utils.prompt_helper import build_image_prompt
 
+            base = it.get("description", "")
+            if kind == "characters":
+                base = (
+                    f"{base}. Character reference sheet, single image with 4 views arranged in a 2x2 grid: "
+                    "top-left front head close-up portrait, top-right front full-body, "
+                    "bottom-left side profile full-body, bottom-right back full-body. "
+                    "Same character, consistent appearance across all 4 views, plain neutral background, "
+                    "no text, no labels."
+                )
             prefix = _ss("story_art_style", "")
-            prompt = build_image_prompt(it.get("description", ""), prefix)
+            prompt = build_image_prompt(base, prefix)
             provider = _ss("story_provider")
+            asset_w = asset_h = 1280 if kind == "characters" else 1024
             media_result = run_async(pixelle_video.media(
                 prompt=prompt,
                 workflow=provider,
                 media_type="image",
-                width=_ss(_STYLE_PARAMS, {}).get("media_width"),
-                height=_ss(_STYLE_PARAMS, {}).get("media_height"),
+                width=asset_w,
+                height=asset_h,
             ))
             if not media_result.is_image:
                 it["image_path"] = None
+                it["_error"] = "provider 未返回图片（检查 provider 配置或额度）"
                 return
             url = media_result.url
             # file:// 或本地路径直接用
             if url.startswith("file://") or os.path.exists(url):
                 it["image_path"] = url[7:] if url.startswith("file://") else url
+                it["_error"] = None  # 成功，清错误
                 return
-            # 远程 URL：下载到临时文件
-            out = os.path.join(tempfile.gettempdir(), f"story_asset_{abs(hash(it.get('name','')))%999999}.png")
+            # 远程 URL：下载到临时文件（T8: 用 kind+name slug 做文件名，弃 hash）
+            import re
+            _slug = re.sub(r"[^\w]+", "_", (it.get("name") or "asset")).strip("_")[:40] or "asset"
+            out = os.path.join(tempfile.gettempdir(), f"story_asset_{kind}_{_slug}.png")
             async def _dl():
                 async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as c:
                     r = await c.get(url)
@@ -248,57 +317,79 @@ class StoryIllustrationPipelineUI(PipelineUI):
                         f.write(r.content)
             run_async(_dl())
             it["image_path"] = out
+            it["_error"] = None
         except Exception as e:
             logger.warning(f"asset gen failed for {it.get('name')}: {e}")
             it["image_path"] = None
+            it["_error"] = str(e)
 
     # ==================== Step 3: 分镜预览 ====================
 
     def _step3_scenecut(self, pixelle_video):
         st.markdown(f"**{tr('section.scenecut') if _has_tr('section.scenecut') else '分镜预览'}**")
         story = _ss("story_text", "")
-        n_scenes = _ss("story_n_scenes", 6)
+        n_scenes = _ss("story_n_scenes")
         lib = _ss(_ASSET_LIB, {})
 
+        def _run_scenecut():
+            """调 LLM 分镜，成功写 story_scenes。返回 (ok, err)。"""
+            try:
+                resp = run_async(pixelle_video.llm(
+                    build_story_scenecut_prompt(story, n_scenes, assets_to_text(lib)),
+                    temperature=0.8, max_tokens=4000,
+                ))
+                scenes = _parse_json(resp).get("scenes", [])
+                if not scenes:
+                    return False, "分镜返回为空"
+                st.session_state["story_scenes"] = scenes
+                return True, None
+            except Exception as e:
+                logger.exception(e)
+                return False, str(e)
+
+        # 首次进入：自动分镜一次
         if "story_scenes" not in st.session_state:
             with st.spinner("AI 正在分镜…"):
-                try:
-                    resp = run_async(pixelle_video.llm(
-                        build_story_scenecut_prompt(story, n_scenes, assets_to_text(lib)),
-                        temperature=0.8, max_tokens=4000,
-                    ))
-                    scenes = _parse_json(resp).get("scenes", [])
-                    if not scenes:
-                        st.error("分镜失败：返回为空")
-                        return
-                    st.session_state["story_scenes"] = scenes
+                ok, err = _run_scenecut()
+            if ok:
+                st.rerun()
+            else:
+                # B3: 失败不静默死循环——显式重试按钮，不自动 rerun
+                st.error(f"分镜失败：{err}")
+                if st.button("🔄 重试分镜", type="primary"):
                     st.rerun()
-                except Exception as e:
-                    logger.exception(e)
-                    st.error(f"分镜失败：{e}")
-                    return
+                if st.button("⬅️ 返回上一步"):
+                    _set_step(2)
+                    st.rerun()
+                return
 
         scenes = st.session_state["story_scenes"]
-        edited_narrations = []
+        # B2/B5: 旁白 + 构图都可编辑；确认时按索引原样保留（不过滤空串，避免与 composition 错位）
+        edited = []
         for i, sc in enumerate(scenes):
             with st.container(border=True):
                 st.markdown(f"**镜头 {i+1}**")
-                comp = sc.get("composition", "")
-                if comp:
-                    st.caption(f"画面构图：{comp}")
                 n = st.text_area("旁白（可编辑）", value=sc.get("narration", ""), height=68, key=f"scene_narr_{i}")
-                edited_narrations.append(n)
+                c = st.text_area("画面构图（可编辑，影响插图选资产）", value=sc.get("composition", ""), height=68, key=f"scene_comp_{i}")
+                edited.append((n, c))
 
         st.markdown("---")
-        col1, col2 = st.columns([1, 2])
+        col1, col2, col3 = st.columns([1, 1, 2])
         with col1:
+            # B4: 上一步不清 story_scenes，回 Step2 改完资产再回来不必重分镜
             if st.button("⬅️ 上一步", use_container_width=True):
-                st.session_state.pop("story_scenes", None)
                 _set_step(2)
                 st.rerun()
         with col2:
+            # B4: 显式重新分镜入口
+            if st.button("🔄 重新分镜", use_container_width=True, help="丢弃当前分镜，重新调用 AI"):
+                st.session_state.pop("story_scenes", None)
+                st.rerun()
+        with col3:
             if st.button("✅ 确认并生成视频", type="primary", use_container_width=True):
-                st.session_state["story_final_narrations"] = [n.strip() for n in edited_narrations if n.strip()]
+                # B1/B2: 旁白 + 构图都传后端，保留空串占位以维持索引对齐
+                st.session_state["story_final_narrations"] = [n.strip() for n, _ in edited]
+                st.session_state["story_final_compositions"] = [c.strip() for _, c in edited]
                 _set_step(4)
                 st.rerun()
 
@@ -341,8 +432,10 @@ class StoryIllustrationPipelineUI(PipelineUI):
                     "pipeline": self.name,
                     "text": _ss("story_text", ""),
                     "mode": "generate",
-                    "n_scenes": _ss("story_n_scenes", 6),
+                    "title": _ss("story_title"),  # None → pipeline auto-generates
+                    "n_scenes": _ss("story_n_scenes") or len(narrations),
                     "narrations": narrations,
+                    "scene_compositions": _ss("story_final_compositions") or [],
                     "asset_library": lib,
                     "asset_provider": _ss("story_provider"),
                     "prompt_prefix": _ss("story_art_style", ""),
