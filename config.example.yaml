@@ -57,19 +57,20 @@ comfyui:
   # Image-specific configuration
   image:
     # Required: Default workflow to use (no fallback)
-    # Options: runninghub/image_flux.json (recommended, no local setup)
-    #          selfhost/image_flux.json (requires local ComfyUI)
-    default_workflow: runninghub/image_flux.json
-    
+    # Options: selfhost/image_flux.json (default, requires local ComfyUI or Salad Gateway)
+    #          runninghub/image_flux.json (requires RUNNINGHUB_API_KEY)
+    #          api/dashscope/qwen-* (direct API, requires provider API key)
+    default_workflow: selfhost/image_flux.json
+
     # Image prompt prefix (optional)
     prompt_prefix: "Minimalist black-and-white matchstick figure style illustration, clean lines, simple sketch style"
-  
+
   # Video-specific configuration
   video:
     # Required: Default workflow to use (no fallback)
-    # Options: runninghub/video_wan2.1_fusionx.json (recommended, no local setup)
-    #          selfhost/video_wan2.1_fusionx.json (requires local ComfyUI)
-    default_workflow: runninghub/video_wan2.1_fusionx.json
+    # Options: selfhost/video_wan2.1_fusionx.json (default, requires local ComfyUI or Salad Gateway)
+    #          runninghub/video_wan2.1_fusionx.json (requires RUNNINGHUB_API_KEY)
+    default_workflow: selfhost/video_wan2.1_fusionx.json
     
     # Video prompt prefix (optional)
     prompt_prefix: "Minimalist black-and-white matchstick figure style illustration, clean lines, simple sketch style"

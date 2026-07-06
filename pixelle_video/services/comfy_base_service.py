@@ -223,9 +223,34 @@ class ComfyBaseService:
         for wf_info in available_workflows:
             if wf_info["key"] == workflow:
                 logger.info(f"🎬 Using {self.service_name} workflow: {workflow}")
+
+                # 4. Diagnostic: warn if RunningHub workflow selected but no API key configured
+                if wf_info.get("source") == "runninghub":
+                    rh_key = (
+                        self.global_config.get("runninghub_api_key")
+                        or os.getenv("RUNNINGHUB_API_KEY")
+                    )
+                    if not rh_key:
+                        # Find selfhost alternatives with the same workflow name
+                        workflow_name = wf_info["name"]
+                        selfhost_alt = f"selfhost/{workflow_name}"
+                        selfhost_exists = any(
+                            w["key"] == selfhost_alt for w in available_workflows
+                        )
+                        alt_hint = (
+                            f" Use {selfhost_alt} instead."
+                            if selfhost_exists
+                            else ""
+                        )
+                        raise ValueError(
+                            f"RunningHub workflow selected ({workflow}) but "
+                            f"RUNNINGHUB_API_KEY is not configured. For HomeLab/Salad"
+                            f"{alt_hint}"
+                        )
+
                 return wf_info
         
-        # 4. Not found - generate error message
+        # 5. Not found - generate error message
         available_keys = [wf["key"] for wf in available_workflows]
         available_str = ", ".join(available_keys) if available_keys else "none"
         raise ValueError(
