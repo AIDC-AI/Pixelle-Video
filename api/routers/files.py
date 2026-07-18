@@ -60,42 +60,48 @@ async def get_file(file_path: str):
             "data/templates/",
             "resources/",
         ]
-        
+
         # Check if path starts with allowed prefix, otherwise try output/
         full_path = None
         for prefix in allowed_prefixes:
             if file_path.startswith(prefix):
                 full_path = file_path
                 break
-        
+
         # If no prefix matched, assume it's in output/ (backward compatibility)
         if full_path is None:
             full_path = f"output/{file_path}"
-        
-        abs_path = Path.cwd() / full_path
-        
+
+        # Security: resolve the requested path and ensure it lives strictly
+        # inside one of the allowed directories. Using resolve() collapses
+        # any ".." traversal segments and symlinks before the check, which
+        # prevents inputs like "output/../../../etc/passwd" from escaping
+        # the intended sandbox — string-prefix comparisons on an
+        # unresolved path are not sufficient here (CWE-22).
+        cwd = Path.cwd().resolve()
+        allowed_roots = [(cwd / prefix.rstrip('/')).resolve() for prefix in allowed_prefixes]
+
+        try:
+            abs_path = (cwd / full_path).resolve(strict=False)
+        except (OSError, RuntimeError):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        is_allowed = any(
+            abs_path == root or root in abs_path.parents
+            for root in allowed_roots
+        )
+        if not is_allowed:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access denied: only {', '.join(p.rstrip('/') for p in allowed_prefixes)} directories are accessible"
+            )
+
         if not abs_path.exists():
             raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
-        
+
         if not abs_path.is_file():
             raise HTTPException(status_code=400, detail=f"Path is not a file: {file_path}")
-        
-        # Security: only allow access to specified directories
-        try:
-            rel_path = abs_path.relative_to(Path.cwd())
-            rel_path_str = str(rel_path)
-            
-            # Check if path starts with any allowed prefix
-            is_allowed = any(rel_path_str.startswith(prefix.rstrip('/')) for prefix in allowed_prefixes)
-            
-            if not is_allowed:
-                raise HTTPException(
-                    status_code=403, 
-                    detail=f"Access denied: only {', '.join(p.rstrip('/') for p in allowed_prefixes)} directories are accessible"
-                )
-        except ValueError:
-            raise HTTPException(status_code=403, detail="Access denied")
-        
+
         # Determine media type
         suffix = abs_path.suffix.lower()
         media_types = {
@@ -125,4 +131,3 @@ async def get_file(file_path: str):
     except Exception as e:
         logger.error(f"File access error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
