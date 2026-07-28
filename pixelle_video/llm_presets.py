@@ -33,6 +33,12 @@ LLM_PRESETS: List[Dict[str, Any]] = [
         "api_key_url": "https://platform.openai.com/api-keys",
     },
     {
+        "name": "Atlas Cloud",
+        "base_url": "https://api.atlascloud.ai/v1",
+        "model": "deepseek-ai/deepseek-v4-pro",
+        "api_key_url": "https://www.atlascloud.ai/console/api-keys",
+    },
+    {
         "name": "Claude",
         "base_url": "https://api.anthropic.com/v1/",
         "model": "claude-sonnet-4-5",
