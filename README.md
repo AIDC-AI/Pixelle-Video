@@ -474,3 +474,8 @@ Pixelle-Video 的设计受到以下优秀开源项目的启发：
 ## ⭐ Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.com/#AIDC-AI/Pixelle-Video&Date)
+
+
+## Hosted demo
+
+Try [Pixelle-Video in 即时演示](https://demo.autoclaude.cn) for a one-hour, no-setup evaluation in a hosted environment. This is an independent community demo and is not an official Pixelle-Video service.
