@@ -60,7 +60,7 @@ LLM_PRESETS: List[Dict[str, Any]] = [
     {
         "name": "Novita",
         "base_url": "https://api.novita.ai/openai",
-        "model": "deepseek/deepseek-r1",
+        "model": "moonshotai/kimi-k3",
         "api_key_url": "https://novita.ai/settings/key-management",
     },
 ]
