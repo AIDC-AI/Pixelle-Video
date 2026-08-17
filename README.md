@@ -473,4 +473,4 @@ Pixelle-Video 的设计受到以下优秀开源项目的启发：
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.com/#AIDC-AI/Pixelle-Video&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.dera.page/#AIDC-AI/Pixelle-Video&Date)
