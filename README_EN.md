@@ -466,4 +466,4 @@ This project is released under the Apache License 2.0. For details, please see t
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.com/#AIDC-AI/Pixelle-Video&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.dera.page/#AIDC-AI/Pixelle-Video&Date)
