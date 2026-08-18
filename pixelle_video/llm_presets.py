@@ -57,6 +57,12 @@ LLM_PRESETS: List[Dict[str, Any]] = [
         "model": "moonshot-v1-8k",
         "api_key_url": "https://platform.moonshot.cn/console/api-keys",
     },
+    {
+        "name": "Novita",
+        "base_url": "https://api.novita.ai/openai",
+        "model": "moonshotai/kimi-k3",
+        "api_key_url": "https://novita.ai/settings/key-management",
+    },
 ]
 
 
