@@ -12,6 +12,12 @@ llm:
   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
   model: "qwen-plus"
 
+api_providers:
+  ssycloud:
+    api_key: "your-ssycloud-api-key"
+    base_url: "https://router.shengsuanyun.com/api/v1/tasks/generations"
+    use_proxy: false
+
 comfyui:
   comfyui_url: "http://127.0.0.1:8188"
   comfyui_api_key: ""  # ComfyUI API key (optional)
@@ -41,6 +47,16 @@ template:
 - `api_key`: API key
 - `base_url`: API service address (supports any OpenAI-compatible interface)
 - `model`: Model name
+
+## SSYCloud Media Provider Configuration
+
+- `api_providers.ssycloud.api_key`: SSYCloud API key
+- `api_providers.ssycloud.base_url`: SSYCloud unified API base URL
+- `api_providers.ssycloud.use_proxy`: whether to use `api_providers.common.local_proxy`
+
+SSYCloud media configuration is independent from the LLM configuration above. After
+selecting the `API models` source in the WebUI, use an `api/ssycloud/...` image or
+video model. Models of the same media type reuse the existing project parameters.
 
 ---
 
@@ -86,4 +102,3 @@ template:
 ## More Information
 
 The configuration file is automatically created on first run.
-

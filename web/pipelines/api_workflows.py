@@ -190,23 +190,42 @@ def render_api_video_controls(
             )
 
         duration_contract = capabilities.get("duration") or {}
+        allowed_durations = sorted(duration_contract.get("allowed_values") or [])
         min_duration = int(duration_contract.get("min", 3))
         max_duration = int(duration_contract.get("max", 15))
         if show_duration:
-            default_value = min(max(int(default_duration or min_duration), min_duration), max_duration)
-            params["duration"] = st.slider(
-                "视频时长（秒）" if zh else "Duration (seconds)",
-                min_value=min_duration,
-                max_value=max_duration,
-                value=default_value,
-                step=1,
-                key=f"{key_prefix}_api_duration",
-            )
+            if allowed_durations:
+                requested_duration = int(default_duration or allowed_durations[0])
+                default_value = min(
+                    allowed_durations,
+                    key=lambda value: abs(value - requested_duration),
+                )
+                params["duration"] = st.selectbox(
+                    "视频时长（秒）" if zh else "Duration (seconds)",
+                    allowed_durations,
+                    index=allowed_durations.index(default_value),
+                    key=f"{key_prefix}_api_duration",
+                )
+            else:
+                default_value = min(max(int(default_duration or min_duration), min_duration), max_duration)
+                params["duration"] = st.slider(
+                    "视频时长（秒）" if zh else "Duration (seconds)",
+                    min_value=min_duration,
+                    max_value=max_duration,
+                    value=default_value,
+                    step=1,
+                    key=f"{key_prefix}_api_duration",
+                )
         else:
+            duration_description = (
+                "/".join(str(value) for value in allowed_durations)
+                if allowed_durations
+                else f"{min_duration}-{max_duration}"
+            )
             st.caption(
-                f"视频时长将自动跟随每段旁白音频长度，并限制在模型支持范围 {min_duration}-{max_duration}s。"
+                f"视频时长将自动跟随每段旁白音频长度，并限制为模型支持的 {duration_description}s。"
                 if zh
-                else f"Duration follows each scene's narration audio and is clamped to the model range {min_duration}-{max_duration}s."
+                else f"Duration follows each scene's narration audio and is clamped to the model-supported {duration_description}s."
             )
 
         resolutions = capabilities.get("resolutions") or []
@@ -245,7 +264,7 @@ def render_api_video_controls(
                 key=f"{key_prefix}_api_watermark",
             )
 
-        if workflow.get("provider") == "seedance" and workflow.get("api_contract_verified", False):
+        if workflow.get("provider") in {"seedance", "ssycloud"} and workflow.get("api_contract_verified", False):
             params["generate_audio"] = st.checkbox(
                 "让模型生成原生音频" if zh else "Generate native audio",
                 value=False,

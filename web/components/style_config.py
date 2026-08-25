@@ -14,16 +14,15 @@
 Style configuration components for web UI (middle column)
 """
 
-import os
 import base64
+import os
 from pathlib import Path
 
 import streamlit as st
 from loguru import logger
 
-from web.i18n import tr, get_language
-from web.utils.async_helpers import run_async
-from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
+from pixelle_video.config import config_manager
+from web.i18n import get_language, tr
 from web.pipelines.api_workflows import (
     list_api_media_workflows,
     list_local_media_workflows,
@@ -32,7 +31,8 @@ from web.pipelines.api_workflows import (
     workflow_source_help,
     workflow_source_label,
 )
-from pixelle_video.config import config_manager
+from web.utils.async_helpers import run_async
+from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
 
 
 def is_api_workflow(workflow_key: str | None) -> bool:
@@ -299,7 +299,10 @@ def render_style_config(pixelle_video):
         current_lang = get_language()
         
         # Import template utilities
-        from pixelle_video.utils.template_util import get_templates_grouped_by_size_and_type, get_template_type
+        from pixelle_video.utils.template_util import (
+            get_template_type,
+            get_templates_grouped_by_size_and_type,
+        )
         
         # Template type selector
         st.markdown(f"**{tr('template.type_selector')}**")
@@ -512,6 +515,7 @@ def render_style_config(pixelle_video):
         
         # Custom template parameters (for video generation)
         from pixelle_video.services.frame_html import HTMLFrameGenerator
+
         # Resolve template path to support both data/templates/ and templates/
         from pixelle_video.utils.template_util import resolve_template_path
         template_path_for_params = resolve_template_path(frame_template)
@@ -524,7 +528,6 @@ def render_style_config(pixelle_video):
         st.session_state['template_media_height'] = media_height
         
         # Detect template media type
-        from pixelle_video.utils.template_util import get_template_type
         
         template_name = Path(frame_template).name
         template_media_type = get_template_type(template_name)
@@ -720,13 +723,17 @@ def render_style_config(pixelle_video):
                 else:
                     st.markdown(tr("style.workflow_how"))
 
-            source_options = ["runninghub", "selfhost", "api"]
+            source_options = ["runninghub", "selfhost"]
+            if template_media_type == "image":
+                source_options.append("api")
             default_source_index = 0
             for index, source in enumerate(source_options):
                 if saved_workflow.startswith(f"{source}/"):
                     default_source_index = index
                     break
             source_key = "standard_video_workflow_source" if template_media_type == "video" else "standard_image_workflow_source"
+            if st.session_state.get(source_key) not in source_options:
+                st.session_state.pop(source_key, None)
             workflow_source = st.radio(
                 "生成来源" if get_language() == "zh_CN" else "Generation source",
                 source_options,
@@ -738,15 +745,7 @@ def render_style_config(pixelle_video):
             )
 
             if workflow_source == "api":
-                if template_media_type == "video":
-                    workflows = list_api_media_workflows(
-                        pixelle_video,
-                        "video",
-                        required_adapter_abilities=["text_to_video"],
-                        verified_only=True,
-                    )
-                else:
-                    workflows = list_api_media_workflows(pixelle_video, "image")
+                workflows = list_api_media_workflows(pixelle_video, "image")
             elif template_media_type == "video":
                 workflows = list_local_media_workflows(
                     pixelle_video,
@@ -787,18 +786,11 @@ def render_style_config(pixelle_video):
             else:
                 workflow_key = None
                 workflow_info = None
-                if workflow_source == "api" and template_media_type == "video":
-                    st.warning(
-                        "没有找到已验证的 API 文生视频模型，请先配置 DashScope/Seedance 等提供商，或切换到本地/RunningHub 工作流。"
-                        if get_language() == "zh_CN"
-                        else "No verified API text-to-video model found. Configure a provider or switch to local/RunningHub workflows."
-                    )
-                else:
-                    st.warning(
-                        "当前来源下没有可用工作流。"
-                        if get_language() == "zh_CN"
-                        else "No workflow is available for the selected source."
-                    )
+                st.warning(
+                    "当前来源下没有可用工作流。"
+                    if get_language() == "zh_CN"
+                    else "No workflow is available for the selected source."
+                )
             
             # Check and warn for selfhost media workflow (auto popup if not confirmed)
             if workflow_key and not is_api_workflow(workflow_key):

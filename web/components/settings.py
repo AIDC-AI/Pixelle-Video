@@ -16,9 +16,9 @@ System settings component for web UI
 
 import streamlit as st
 
-from web.i18n import tr, get_language
-from web.utils.streamlit_helpers import safe_rerun
 from pixelle_video.config import config_manager
+from web.i18n import get_language, tr
+from web.utils.streamlit_helpers import safe_rerun
 
 
 def render_advanced_settings():
@@ -39,7 +39,11 @@ def render_advanced_settings():
                 st.markdown(f"**{tr('settings.llm.title')}**")
                 
                 # Quick preset selection
-                from pixelle_video.llm_presets import get_preset_names, get_preset, find_preset_by_base_url_and_model
+                from pixelle_video.llm_presets import (
+                    find_preset_by_base_url_and_model,
+                    get_preset,
+                    get_preset_names,
+                )
                 
                 # Custom at the end
                 preset_names = get_preset_names() + ["Custom"]
@@ -296,11 +300,13 @@ def render_advanced_settings():
         zh = get_language() == "zh_CN"
         api_cfg = config_manager.get_api_providers_config()
         common_cfg = api_cfg.get("common", {})
+        ssycloud_cfg = api_cfg.get("ssycloud", {})
         openai_cfg = api_cfg.get("openai", {})
         dashscope_cfg = api_cfg.get("dashscope", {})
         ark_cfg = api_cfg.get("ark", {})
         kling_cfg = api_cfg.get("kling", {})
         default_api_base_urls = {
+            "ssycloud": "https://router.shengsuanyun.com/api/v1/tasks/generations",
             "openai": "https://api.openai.com/v1",
             "dashscope": "https://dashscope.aliyuncs.com/api/v1",
             "ark": "https://ark.cn-beijing.volces.com/api/v3",
@@ -426,6 +432,33 @@ def render_advanced_settings():
                     type="password",
                     key="api_media_kling_secret_key",
                 )
+
+            st.markdown("---")
+            ssycloud_col, _ = st.columns(2)
+            with ssycloud_col:
+                st.markdown("**SSYCloud / 胜算云**")
+                api_ssycloud_use_proxy = st.checkbox(
+                    "启用代理" if zh else "Use proxy",
+                    value=bool(ssycloud_cfg.get("use_proxy", False)),
+                    key="api_media_ssycloud_use_proxy",
+                )
+                api_ssycloud_key = st.text_input(
+                    "SSYCloud API Key",
+                    value=ssycloud_cfg.get("api_key", ""),
+                    type="password",
+                    key="api_media_ssycloud_key",
+                )
+                api_ssycloud_base_url = st.text_input(
+                    "SSYCloud Base URL",
+                    value=ssycloud_cfg.get("base_url") or default_api_base_urls["ssycloud"],
+                    placeholder="https://router.shengsuanyun.com/api/v1/tasks/generations",
+                    key="api_media_ssycloud_base_url",
+                )
+                st.caption(
+                    "通过胜算云统一异步任务接口直连图像和视频模型。支持 GPT Image 2、Doubao Seedream 5.0 Pro、Gemini 3.1 Flash Image，以及 Doubao Seedance 2.5、2.0、2.0 Fast。"
+                    if zh
+                    else "Uses SSYCloud's unified asynchronous API for image and video generation. Supports GPT Image 2, Doubao Seedream 5.0 Pro, Gemini 3.1 Flash Image, and Doubao Seedance 2.5, 2.0, and 2.0 Fast."
+                )
         
         # ====================================================================
         # Action Buttons (full width at bottom)
@@ -457,6 +490,11 @@ def render_advanced_settings():
                     config_manager.set_api_provider_config("common", {
                         "print_model_input": bool(api_print_model_input),
                         "local_proxy": api_local_proxy or "",
+                    })
+                    config_manager.set_api_provider_config("ssycloud", {
+                        "api_key": api_ssycloud_key or "",
+                        "base_url": api_ssycloud_base_url or "",
+                        "use_proxy": bool(api_ssycloud_use_proxy),
                     })
                     config_manager.set_api_provider_config("openai", {
                         "api_key": api_openai_key or "",

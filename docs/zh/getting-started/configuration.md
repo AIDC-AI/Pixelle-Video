@@ -14,6 +14,7 @@ LLM（大语言模型）用于生成视频文案。
    - 通义千问（推荐，性价比高）
    - GPT-4o
    - DeepSeek
+   - SSYCloud（胜算云，多模型统一入口）
    - Ollama（本地运行，完全免费）
 
 2. 系统会自动填充 `base_url` 和 `model`
@@ -22,11 +23,33 @@ LLM（大语言模型）用于生成视频文案。
 
 4. 填入 API Key
 
+### SSYCloud（胜算云）
+
+选择 `SSYCloud` 预设后，系统会使用以下默认配置：
+
+- Base URL：`https://router.shengsuanyun.com/api/v1`
+- 默认模型：`deepseek/deepseek-v4-flash`
+- API Key：[胜算云控制台](https://console.shengsuanyun.com)
+
+胜算云模型 ID 包含供应商前缀，例如 `openai/gpt-5.4` 或
+`anthropic/claude-sonnet-4.6`。可以点击模型旁的「加载」按钮获取当前账号可用的模型，
+也可以手动填写完整模型 ID。
+
 ---
 
 ## 图像/视频生成配置
 
 支持两种方式：
+
+### SSYCloud API 媒体模型
+
+如果需要通过胜算云直接生成图片或视频，在「🧩 API 媒体模型」中的
+`SSYCloud / 胜算云` 区域填写 API Key，并保持默认 Base URL：
+`https://router.shengsuanyun.com/api/v1/tasks/generations`。
+
+保存后，在图像或视频模型来源中选择「API 模型」，再选择 `API SSYCloud` 模型。
+图片模型支持 GPT Image 2、Doubao Seedream 5.0 Pro 和 Gemini 3.1 Flash Image；
+视频模型支持 Doubao Seedance 2.5、2.0 和 2.0 Fast，并共用已有的视频参数。
 
 ### 本地部署
 
@@ -61,4 +84,3 @@ LLM（大语言模型）用于生成视频文案。
 ## 下一步
 
 - [快速开始](quick-start.md) - 生成你的第一个视频
-

@@ -5,10 +5,11 @@
 """Direct API provider media generation adapter."""
 
 import asyncio
-from copy import deepcopy
 import os
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 from loguru import logger
 
@@ -20,7 +21,27 @@ from pixelle_video.utils.os_util import get_output_path
 class APIProviderMediaService:
     """Adapter from Pixelle media calls to direct provider API clients."""
 
+    SSYCLOUD_DISPLAY_NAMES = {
+        "openai/gpt-image-2": "gpt-image-2-API-SSYCloud",
+        "bytedance/doubao-seedream-5-0-pro": "doubao-seedream-5-0-Pro-API-SSYCloud",
+        "google/gemini-3.1-flash-image": "gemini-3-1-image-flash SSYCloud",
+        "bytedance/doubao-seedance-2-5": "doubao-seedance-2-5-SSYCloud",
+        "bytedance/doubao-seedance-2-0": "doubao-seedance-2-0-SSYCloud",
+        "bytedance/doubao-seedance-2-0-fast": "doubao-seedance-2-0-fast-SSYCloud",
+    }
+
+    SSYCLOUD_SEEDANCE_MODELS = {
+        "bytedance/doubao-seedance-2-5",
+        "bytedance/doubao-seedance-2-0",
+        "bytedance/doubao-seedance-2-0-fast",
+    }
+
     IMAGE_MODELS = {
+        "ssycloud": [
+            "openai/gpt-image-2",
+            "bytedance/doubao-seedream-5-0-pro",
+            "google/gemini-3.1-flash-image",
+        ],
         "dashscope": [
             "wan2.7-image",
             "wan2.7-image-pro",
@@ -37,6 +58,11 @@ class APIProviderMediaService:
     }
 
     VIDEO_MODELS = {
+        "ssycloud": [
+            "bytedance/doubao-seedance-2-5",
+            "bytedance/doubao-seedance-2-0",
+            "bytedance/doubao-seedance-2-0-fast",
+        ],
         "dashscope": [
             "wan2.7-t2v",
             "happyhorse-1.0-t2v",
@@ -62,6 +88,37 @@ class APIProviderMediaService:
     }
 
     VIDEO_MODEL_CAPABILITIES: dict[tuple[str, str], dict[str, Any]] = {
+        ("ssycloud", "bytedance/doubao-seedance-2-0"): {
+            "ability_type": "text_to_video",
+            "ability_types": [
+                "text_to_video",
+                "image_to_video",
+                "reference_to_video",
+                "action_transfer",
+                "digital_human",
+                "native_audio",
+            ],
+            "adapter_ability_types": [
+                "text_to_video",
+                "first_frame_i2v",
+                "reference_to_video",
+                "action_transfer",
+                "digital_human",
+                "native_audio",
+            ],
+            "input_modalities": ["text", "image", "video", "audio"],
+            "adapter_input_modalities": ["text", "image", "video", "audio"],
+            "resolutions": ["480p", "720p", "1080p"],
+            "ratios": ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9", "adaptive"],
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": [
+                "https://lean.shengsuanyun.com/apidocs/api/video/vid-bytedance/model-bytedance-doubao-seedance-2-0",
+            ],
+            "contract_issues": [
+                "Pixelle reuses one common multimodal content payload for the registered SSYCloud Seedance models.",
+            ],
+        },
         ("dashscope", "wan2.7-t2v"): {
             "ability_type": "text_to_video",
             "ability_types": ["text_to_video", "native_audio", "multi_shot"],
@@ -395,9 +452,12 @@ class APIProviderMediaService:
 
     def _workflow_info(self, provider: str, model: str, media_type: str) -> dict:
         key = f"api/{provider}/{model}"
+        display_name = None
+        if provider == "ssycloud":
+            display_name = self.SSYCLOUD_DISPLAY_NAMES.get(model, f"{model}-SSYCloud")
         info = {
             "name": model,
-            "display_name": f"{model} - API {provider.title()}",
+            "display_name": display_name or f"{model} - API {provider.title()}",
             "source": "api",
             "provider": provider,
             "model": model,
@@ -477,15 +537,29 @@ class APIProviderMediaService:
         image_paths: Optional[list[str]] = None,
         **params,
     ) -> MediaResult:
-        from pixelle_video.services.api_services.image_client import ImageClient
-
-        client = self._create_image_client()
         save_dir = self._save_dir(output_path, "api_images")
         ratio = self._ratio(width, height)
         resolution = self._resolution(width, height)
         session_id = params.get("session_id") or "pixelle"
 
         logger.info(f"Generating image via API provider={provider}, model={model}")
+        if provider == "ssycloud":
+            client = self._create_ssycloud_client()
+            save_path = output_path or os.path.join(
+                save_dir,
+                f"ssycloud_{session_id}_{uuid4().hex}.png",
+            )
+            result_path = await asyncio.to_thread(
+                client.generate_image,
+                prompt=prompt,
+                model=model,
+                save_path=save_path,
+                aspect_ratio=ratio,
+                seed=params.get("seed"),
+            )
+            return MediaResult(media_type="image", url=result_path)
+
+        client = self._create_image_client()
         paths = await asyncio.to_thread(
             client.generate_image,
             prompt=prompt,
@@ -520,7 +594,6 @@ class APIProviderMediaService:
         height: Optional[int],
         **params,
     ) -> MediaResult:
-        from pixelle_video.services.api_services.video_client import VideoClient
 
         first_clip_path = params.get("first_clip_path") or params.get("first_video_path")
         reference_image_path = params.get("reference_image_path")
@@ -534,10 +607,14 @@ class APIProviderMediaService:
                 "API video models require image_path, first_clip_path, or reference media inputs. "
                 "Use an image template first or pass input image/video/reference media when calling media generation."
             )
-        if first_clip_path and not image_path and provider != "dashscope":
+        if first_clip_path and not image_path and provider not in {"dashscope", "ssycloud"}:
             raise ValueError(f"first_clip_path is only supported for DashScope wan2.7 models, not provider={provider}.")
 
-        client = self._create_video_client()
+        client = (
+            self._create_ssycloud_client()
+            if provider == "ssycloud"
+            else self._create_video_client()
+        )
         save_path = output_path or os.path.join(self._save_dir(None, "api_videos"), "video.mp4")
         ratio = params.get("video_ratio") or params.get("ratio") or self._ratio(width, height)
         requested_duration = int(duration or params.get("duration") or 5)
@@ -553,16 +630,28 @@ class APIProviderMediaService:
                     f"Generating video via API provider={provider}, model={model}"
                     + (f" (safety retry {attempt})" if attempt else "")
                 )
-                await asyncio.to_thread(
-                    client.generate_video,
-                    prompt=prompt_to_use,
-                    image_path=image_path,
-                    save_path=save_path,
-                    model=model,
-                    duration=safe_duration,
-                    video_ratio=ratio,
-                    **video_options,
-                )
+                if provider == "ssycloud":
+                    await asyncio.to_thread(
+                        client.generate_video,
+                        prompt=prompt_to_use,
+                        image_path=image_path,
+                        save_path=save_path,
+                        model=model,
+                        duration=safe_duration,
+                        video_ratio=ratio,
+                        **video_options,
+                    )
+                else:
+                    await asyncio.to_thread(
+                        client.generate_video,
+                        prompt=prompt_to_use,
+                        image_path=image_path,
+                        save_path=save_path,
+                        model=model,
+                        duration=safe_duration,
+                        video_ratio=ratio,
+                        **video_options,
+                    )
                 break
             except Exception as exc:
                 if attempt >= max_safety_retries or not self._is_content_inspection_error(exc):
@@ -682,6 +771,18 @@ class APIProviderMediaService:
             ark_local_proxy=local_proxy if cfg["ark"].get("use_proxy") else None,
         )
 
+    def _create_ssycloud_client(self):
+        from pixelle_video.services.api_services.ssycloud_media import SSYCloudMediaClient
+
+        cfg = config_manager.get_api_providers_config()
+        provider_cfg = cfg["ssycloud"]
+        local_proxy = cfg["common"].get("local_proxy") or None
+        return SSYCloudMediaClient(
+            api_key=provider_cfg.get("api_key") or "",
+            base_url=provider_cfg.get("base_url") or None,
+            local_proxy=local_proxy if provider_cfg.get("use_proxy") else None,
+        )
+
     def _create_video_client(self):
         from pixelle_video.services.api_services.video_client import VideoClient
 
@@ -722,7 +823,7 @@ class APIProviderMediaService:
 
     def _video_resolution(self, provider: str, width: Optional[int], height: Optional[int]) -> str:
         resolution = self._resolution(width, height)
-        if provider == "seedance":
+        if provider in {"seedance", "ssycloud"}:
             return "1080p" if resolution in {"1080P", "2K", "4K"} else "720p"
         return "1080P" if resolution in {"1080P", "2K", "4K"} else "720P"
 
@@ -765,7 +866,10 @@ class APIProviderMediaService:
             "source_urls": [],
             "contract_issues": ["No official API contract metadata has been added for this model."],
         }
-        return deepcopy(self.VIDEO_MODEL_CAPABILITIES.get((provider, model), default))
+        capability_key = (provider, model)
+        if provider == "ssycloud" and model in self.SSYCLOUD_SEEDANCE_MODELS:
+            capability_key = ("ssycloud", "bytedance/doubao-seedance-2-0")
+        return deepcopy(self.VIDEO_MODEL_CAPABILITIES.get(capability_key, default))
 
     def _video_options(
         self,
@@ -808,6 +912,19 @@ class APIProviderMediaService:
         elif provider == "seedance":
             options.update(
                 {
+                    "generate_audio": params.get("generate_audio"),
+                }
+            )
+        elif provider == "ssycloud":
+            options.update(
+                {
+                    "last_image_path": params.get("last_image_path") or params.get("last_frame_path"),
+                    "first_clip_path": params.get("first_clip_path") or params.get("first_video_path"),
+                    "reference_image_path": params.get("reference_image_path"),
+                    "reference_image_paths": params.get("reference_image_paths"),
+                    "reference_video_paths": params.get("reference_video_paths"),
+                    "reference_audio_path": params.get("reference_audio_path") or params.get("reference_voice_path"),
+                    "audio_path": params.get("audio_path") or params.get("driving_audio_path"),
                     "generate_audio": params.get("generate_audio"),
                 }
             )

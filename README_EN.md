@@ -288,6 +288,7 @@ Used for generating video images, video clips, or voices through ComfyUI workflo
 Used to directly call image, video, or asset-analysis model providers without relying on ComfyUI/RunningHub.
 
 **Supported Providers**
+- SSYCloud: calls GPT Image, Seedream, Gemini Image, and Seedance models through a unified asynchronous API
 - OpenAI / GPT Image: for GPT image generation models
 - DashScope / Wan / HappyHorse: for Alibaba Tongyi Wan image and video generation
 - Volcengine ARK / Seedream / Seedance: for Seedream image generation and Seedance video generation
@@ -301,6 +302,11 @@ Used to directly call image, video, or asset-analysis model providers without re
 - Print model request parameters: debug option that prints prompts, model names, and input file paths to the terminal
 
 > 💡 If you only use ComfyUI or RunningHub, you can leave API Media Model Configuration empty. If you choose an `api/...` workflow, configure the corresponding provider credentials first.
+
+SSYCloud image models include `openai/gpt-image-2`, `bytedance/doubao-seedream-5-0-pro`,
+and `google/gemini-3.1-flash-image`. Video models include `bytedance/doubao-seedance-2-5`,
+`bytedance/doubao-seedance-2-0`, and `bytedance/doubao-seedance-2-0-fast`.
+The video models share the same text, image, video, and audio input parameters.
 
 After configuration, click "Save Configuration".
 

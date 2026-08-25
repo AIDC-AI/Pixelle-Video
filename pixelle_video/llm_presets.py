@@ -16,8 +16,9 @@ LLM Presets - Predefined configurations for popular LLM providers
 All providers support OpenAI SDK protocol.
 """
 
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
+from pixelle_video.utils.llm_util import normalize_openai_base_url
 
 LLM_PRESETS: List[Dict[str, Any]] = [
     {
@@ -43,6 +44,12 @@ LLM_PRESETS: List[Dict[str, Any]] = [
         "base_url": "https://api.deepseek.com",
         "model": "deepseek-chat",
         "api_key_url": "https://platform.deepseek.com/api_keys",
+    },
+    {
+        "name": "SSYCloud",
+        "base_url": "https://router.shengsuanyun.com/api/v1",
+        "model": "deepseek/deepseek-v4-flash",
+        "api_key_url": "https://console.shengsuanyun.com",
     },
     {
         "name": "Ollama",
@@ -80,8 +87,9 @@ def find_preset_by_base_url_and_model(base_url: str, model: str) -> str | None:
     Returns:
         Preset name if found, None otherwise
     """
+    normalized_base_url = normalize_openai_base_url(base_url)
     for preset in LLM_PRESETS:
-        if preset["base_url"] == base_url and preset["model"] == model:
+        preset_base_url = normalize_openai_base_url(preset["base_url"])
+        if preset_base_url == normalized_base_url and preset["model"] == model:
             return preset["name"]
     return None
-

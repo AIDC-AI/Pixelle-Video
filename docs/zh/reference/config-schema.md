@@ -12,6 +12,12 @@ llm:
   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
   model: "qwen-plus"
 
+api_providers:
+  ssycloud:
+    api_key: "your-ssycloud-api-key"
+    base_url: "https://router.shengsuanyun.com/api/v1/tasks/generations"
+    use_proxy: false
+
 comfyui:
   comfyui_url: "http://127.0.0.1:8188"
   comfyui_api_key: ""  # ComfyUI API 密钥（可选）
@@ -41,6 +47,15 @@ template:
 - `api_key`: API 密钥
 - `base_url`: API 服务地址（支持任何 OpenAI 兼容接口）
 - `model`: 模型名称
+
+## SSYCloud 媒体模型配置
+
+- `api_providers.ssycloud.api_key`: 胜算云 API Key
+- `api_providers.ssycloud.base_url`: 胜算云统一 API 地址
+- `api_providers.ssycloud.use_proxy`: 是否使用 `api_providers.common.local_proxy`
+
+SSYCloud 媒体配置独立于上方 LLM 配置。WebUI 中选择 `API 模型` 来源后，
+可使用 `api/ssycloud/...` 图像或视频模型；同类模型共用项目已有参数。
 
 ---
 
@@ -86,4 +101,3 @@ template:
 ## 更多信息
 
 配置文件会自动在首次运行时创建。
-
