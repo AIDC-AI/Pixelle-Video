@@ -15,6 +15,7 @@ llm:
 # Qwen Max:        base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"  model: "qwen-max"
 # OpenAI GPT-4o:   base_url: "https://api.openai.com/v1"                          model: "gpt-4o"
 # DeepSeek:        base_url: "https://api.deepseek.com"                           model: "deepseek-chat"
+# SSYCloud:        base_url: "https://router.shengsuanyun.com/api/v1"             model: "deepseek/deepseek-v4-flash"
 # Ollama (Local):  base_url: "http://localhost:11434/v1"                          model: "llama3.2"
 
 # ==================== Direct API Provider Configuration ====================
@@ -23,6 +24,10 @@ api_providers:
   common:
     print_model_input: false
     local_proxy: ""
+  ssycloud:
+    api_key: ""
+    base_url: "https://router.shengsuanyun.com/api/v1/tasks/generations"
+    use_proxy: false
   openai:
     api_key: ""
     base_url: "https://api.openai.com/v1"

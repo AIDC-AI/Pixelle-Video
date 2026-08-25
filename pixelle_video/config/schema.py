@@ -16,6 +16,7 @@ Configuration schema with Pydantic models
 Single source of truth for all configuration defaults and validation.
 """
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -50,6 +51,7 @@ class AccessSecretProviderConfig(BaseModel):
 class APIProvidersConfig(BaseModel):
     """Direct model provider API configuration"""
     common: APIProviderCommonConfig = Field(default_factory=APIProviderCommonConfig)
+    ssycloud: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
     openai: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
     dashscope: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
     deepseek: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)

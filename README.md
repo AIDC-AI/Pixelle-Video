@@ -292,6 +292,7 @@ uv run streamlit run web/app.py
 用于不依赖 ComfyUI/RunningHub，直接调用模型供应商的图像、视频或素材分析能力。
 
 **支持的供应商**
+- SSYCloud / 胜算云：通过统一异步接口调用 GPT Image、Seedream、Gemini Image 和 Seedance 图像/视频模型
 - OpenAI / GPT Image：用于 GPT 图像生成模型
 - DashScope / Wan / HappyHorse：用于通义万象图像、视频生成
 - Volcengine ARK / Seedream / Seedance：用于字节 Seedream 图像和 Seedance 视频生成
@@ -305,6 +306,11 @@ uv run streamlit run web/app.py
 - 打印模型请求参数：调试用，会在终端打印发送给模型的 prompt、模型名和输入文件路径
 
 > 💡 如果你只使用 ComfyUI 或 RunningHub，可以不填写 API 媒体模型配置；如果你选择 `api/...` 工作流，则需要配置对应供应商的密钥。
+
+SSYCloud 图片模型支持 `openai/gpt-image-2`、`bytedance/doubao-seedream-5-0-pro` 和
+`google/gemini-3.1-flash-image`；视频模型支持 `bytedance/doubao-seedance-2-5`、
+`bytedance/doubao-seedance-2-0` 和 `bytedance/doubao-seedance-2-0-fast`。
+这些视频模型共用统一的文本、图片、视频和音频输入参数。
 
 配置完成后点击「保存配置」。
 

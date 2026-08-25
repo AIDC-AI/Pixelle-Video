@@ -14,6 +14,7 @@ LLM (Large Language Model) is used to generate video scripts.
    - Qianwen (recommended, great value)
    - GPT-4o
    - DeepSeek
+   - SSYCloud (unified access to multiple model providers)
    - Ollama (local, completely free)
 
 2. The system will auto-fill `base_url` and `model`
@@ -22,11 +23,34 @@ LLM (Large Language Model) is used to generate video scripts.
 
 4. Enter your API Key
 
+### SSYCloud
+
+Selecting the `SSYCloud` preset applies these defaults:
+
+- Base URL: `https://router.shengsuanyun.com/api/v1`
+- Default model: `deepseek/deepseek-v4-flash`
+- API Key: [SSYCloud console](https://console.shengsuanyun.com)
+
+SSYCloud model IDs include a provider prefix, such as `openai/gpt-5.4` or
+`anthropic/claude-sonnet-4.6`. Use the Load button next to the model field to fetch
+the models available to your account, or enter a complete model ID manually.
+
 ---
 
 ## Image/Video Generation Configuration
 
 Two options available:
+
+### SSYCloud API Media Models
+
+To generate images or videos directly through SSYCloud, enter an API key in the
+`SSYCloud` section under `🧩 API Media Models` and keep the default Base URL:
+`https://router.shengsuanyun.com/api/v1/tasks/generations`.
+
+After saving, select `API models` as the image or video source, then select an
+`API SSYCloud` model. Image models include GPT Image 2, Doubao Seedream 5.0 Pro, and
+Gemini 3.1 Flash Image. Video models include Doubao Seedance 2.5, 2.0, and 2.0 Fast,
+and reuse the existing video parameters.
 
 ### Local Deployment
 
@@ -61,4 +85,3 @@ Configuration will be saved to `config.yaml` file.
 ## Next Steps
 
 - [Quick Start](quick-start.md) - Create your first video
-
