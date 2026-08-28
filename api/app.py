@@ -54,6 +54,7 @@ from api.routers import (
     files_router,
     resources_router,
     frame_router,
+    publish_router,
 )
 
 
@@ -90,6 +91,7 @@ app = FastAPI(
     - 🎨 **Image**: AI image generation
     - 📝 **Content**: Automated content generation
     - 🎬 **Video**: End-to-end video generation
+    - 📤 **Publish**: One-click distribution to TikTok, Instagram, YouTube and more
     
     ### Video Generation Modes
     - **Sync**: `/api/video/generate/sync` - For small videos (< 30s)
@@ -133,6 +135,7 @@ app.include_router(tasks_router, prefix=api_config.api_prefix)
 app.include_router(files_router, prefix=api_config.api_prefix)
 app.include_router(resources_router, prefix=api_config.api_prefix)
 app.include_router(frame_router, prefix=api_config.api_prefix)
+app.include_router(publish_router, prefix=api_config.api_prefix)
 
 
 @app.get("/")
@@ -153,6 +156,7 @@ async def root():
             "files": f"{api_config.api_prefix}/files",
             "resources": f"{api_config.api_prefix}/resources",
             "frame": f"{api_config.api_prefix}/frame",
+            "publish": f"{api_config.api_prefix}/publish",
         }
     }
 

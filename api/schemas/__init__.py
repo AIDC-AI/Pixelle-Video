@@ -31,6 +31,11 @@ from api.schemas.video import (
     VideoGenerateResponse,
     VideoGenerateAsyncResponse,
 )
+from api.schemas.publish import (
+    PublishVideoRequest,
+    PublishVideoResponse,
+    PublishStatusResponse,
+)
 
 __all__ = [
     # Base
@@ -56,5 +61,9 @@ __all__ = [
     "VideoGenerateRequest",
     "VideoGenerateResponse",
     "VideoGenerateAsyncResponse",
+    # Publish
+    "PublishVideoRequest",
+    "PublishVideoResponse",
+    "PublishStatusResponse",
 ]
 

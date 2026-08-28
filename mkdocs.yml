@@ -79,6 +79,7 @@ plugins:
             API Usage: API 使用
             Workflows: 工作流定制
             Templates: 模板开发
+            Publishing: 视频发布
             Gallery: 示例库
             Tutorials: 教程
             Your First Video: 生成你的第一个视频
@@ -147,6 +148,7 @@ nav:
     - API Usage: user-guide/api.md
     - Workflows: user-guide/workflows.md
     - Templates: user-guide/templates.md
+    - Publishing: user-guide/publishing.md
   - Gallery: gallery/index.md
   - Tutorials:
     - Your First Video: tutorials/your-first-video.md

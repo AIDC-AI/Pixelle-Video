@@ -22,6 +22,7 @@ https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 - 🗣️ 合成语音解说  
 - 🎵 添加背景音乐  
 - 🎬 一键合成视频  
+- 📤 一键发布到 TikTok / Instagram / YouTube 等平台（可选）
 
 **零门槛，零剪辑经验**，让视频创作成为一句话的事！
 
