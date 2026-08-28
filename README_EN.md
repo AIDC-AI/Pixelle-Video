@@ -20,6 +20,7 @@ Just input a **topic**, and Pixelle-Video will automatically:
 - 🗣️ Synthesize voice narration
 - 🎵 Add background music
 - 🎬 Create video with one click
+- 📤 Publish to TikTok / Instagram / YouTube and more with one click (optional)
 
 
 **Zero threshold, zero editing experience** - Make video creation as simple as typing a sentence!

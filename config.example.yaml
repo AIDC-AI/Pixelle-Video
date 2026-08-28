@@ -89,3 +89,19 @@ template:
   #   - 1920x1080 (horizontal/landscape): image_film.html, image_full.html, etc.
   # See templates/ directory for all available templates
   default_template: "1080x1920/image_default.html"
+
+# ==================== Publish Configuration ====================
+# Optional: publish finished videos straight to social platforms.
+# Publishing goes through Upload-Post (https://upload-post.com), so one API key
+# covers every platform — no per-platform developer app, OAuth flow or token
+# refresh to maintain here. Free tier: 10 uploads/month.
+publish:
+  enabled: false           # Set to true to enable one-click publishing
+  api_key: ""              # Upload-Post API key (Dashboard → API Keys)
+  user: ""                 # Upload-Post profile that owns the connected accounts
+  # Supported: tiktok, instagram, youtube, facebook, linkedin, x, threads,
+  #            pinterest, bluesky, reddit, telegram, discord, google_business
+  platforms:
+    - tiktok
+    - instagram
+    - youtube

@@ -15,7 +15,7 @@ Configuration schema with Pydantic models
 
 Single source of truth for all configuration defaults and validation.
 """
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -120,6 +120,17 @@ class TemplateConfig(BaseModel):
     )
 
 
+class PublishConfig(BaseModel):
+    """Social publishing configuration (Upload-Post)"""
+    enabled: bool = Field(default=False, description="Enable publishing generated videos to social platforms")
+    api_key: str = Field(default="", description="Upload-Post API Key (https://upload-post.com)")
+    user: str = Field(default="", description="Upload-Post profile name that owns the connected social accounts")
+    platforms: List[str] = Field(
+        default_factory=lambda: ["tiktok", "instagram", "youtube"],
+        description="Default target platforms",
+    )
+
+
 class PixelleVideoConfig(BaseModel):
     """Pixelle-Video main configuration"""
     project_name: str = Field(default="Pixelle-Video", description="Project name")
@@ -127,6 +138,7 @@ class PixelleVideoConfig(BaseModel):
     api_providers: APIProvidersConfig = Field(default_factory=APIProvidersConfig)
     comfyui: ComfyUIConfig = Field(default_factory=ComfyUIConfig)
     template: TemplateConfig = Field(default_factory=TemplateConfig)
+    publish: PublishConfig = Field(default_factory=PublishConfig)
     
     def is_llm_configured(self) -> bool:
         """Check if LLM is properly configured"""
