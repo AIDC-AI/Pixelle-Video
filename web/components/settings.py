@@ -16,9 +16,9 @@ System settings component for web UI
 
 import streamlit as st
 
-from web.i18n import tr, get_language
-from web.utils.streamlit_helpers import safe_rerun
 from pixelle_video.config import config_manager
+from web.i18n import get_language, tr
+from web.utils.streamlit_helpers import safe_rerun
 
 
 def render_advanced_settings():
@@ -39,7 +39,11 @@ def render_advanced_settings():
                 st.markdown(f"**{tr('settings.llm.title')}**")
                 
                 # Quick preset selection
-                from pixelle_video.llm_presets import get_preset_names, get_preset, find_preset_by_base_url_and_model
+                from pixelle_video.llm_presets import (
+                    find_preset_by_base_url_and_model,
+                    get_preset,
+                    get_preset_names,
+                )
                 
                 # Custom at the end
                 preset_names = get_preset_names() + ["Custom"]
@@ -300,11 +304,13 @@ def render_advanced_settings():
         dashscope_cfg = api_cfg.get("dashscope", {})
         ark_cfg = api_cfg.get("ark", {})
         kling_cfg = api_cfg.get("kling", {})
+        muapi_cfg = api_cfg.get("muapi", {})
         default_api_base_urls = {
             "openai": "https://api.openai.com/v1",
             "dashscope": "https://dashscope.aliyuncs.com/api/v1",
             "ark": "https://ark.cn-beijing.volces.com/api/v3",
             "kling": "https://api-beijing.klingai.com",
+            "muapi": "https://api.muapi.ai/api/v1",
         }
 
         with st.container(border=True):
@@ -426,6 +432,25 @@ def render_advanced_settings():
                     type="password",
                     key="api_media_kling_secret_key",
                 )
+
+                st.markdown("**MuAPI Image / Video**")
+                api_muapi_use_proxy = st.checkbox(
+                    "MuAPI 启用代理" if zh else "Use proxy for MuAPI",
+                    value=bool(muapi_cfg.get("use_proxy", False)),
+                    key="api_media_muapi_use_proxy",
+                )
+                api_muapi_key = st.text_input(
+                    "MuAPI API Key",
+                    value=muapi_cfg.get("api_key", ""),
+                    type="password",
+                    key="api_media_muapi_key",
+                )
+                api_muapi_base_url = st.text_input(
+                    "MuAPI Base URL",
+                    value=muapi_cfg.get("base_url") or default_api_base_urls["muapi"],
+                    placeholder="https://api.muapi.ai/api/v1",
+                    key="api_media_muapi_base_url",
+                )
         
         # ====================================================================
         # Action Buttons (full width at bottom)
@@ -478,6 +503,11 @@ def render_advanced_settings():
                         "access_key": api_kling_access_key or "",
                         "secret_key": api_kling_secret_key or "",
                         "use_proxy": bool(api_kling_use_proxy),
+                    })
+                    config_manager.set_api_provider_config("muapi", {
+                        "api_key": api_muapi_key or "",
+                        "base_url": api_muapi_base_url or "",
+                        "use_proxy": bool(api_muapi_use_proxy),
                     })
                     
                     # Only save to file if LLM config is valid

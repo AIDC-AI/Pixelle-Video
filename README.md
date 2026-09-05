@@ -53,7 +53,7 @@ https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 - ✅ **AI 智能文案** - 根据主题智能创作解说词，无需自己写脚本
 - ✅ **AI 生成配图** - 每句话都配上精美的 AI 插图
 - ✅ **AI 生成视频** - 支持使用 AI 视频生成模型（如 WAN 2.1）创建动态视频内容
-- ✅ **直连模型 API** - 可直接调用 DashScope、OpenAI、Seedream、Seedance、Kling 等图像/视频生成服务
+- ✅ **直连模型 API** - 可直接调用 DashScope、OpenAI、Seedream、Seedance、Kling、MuAPI 等图像/视频生成服务
 - ✅ **AI 生成语音** - 支持 Edge-TTS、Index-TTS 等众多主流 TTS 方案
 - ✅ **背景音乐** - 支持添加 BGM，让视频更有氛围
 - ✅ **视觉风格** - 多种模板可选，打造独特视频风格
@@ -250,7 +250,7 @@ uv run streamlit run web/app.py
 首次使用时，展开「⚙️ 系统配置」面板，填写：
 - **LLM 配置**: 选择 AI 模型（如通义千问、GPT 等）并填入 API Key
 - **ComfyUI / RunningHub 配置**: 如需使用工作流生成图片、视频或语音，配置本地 ComfyUI 地址或 RunningHub API Key
-- **API 媒体模型配置**: 如需直连图像/视频模型，配置 DashScope、OpenAI、ARK、Kling 等供应商的 API Key、Base URL 和代理选项
+- **API 媒体模型配置**: 如需直连图像/视频模型，配置 DashScope、OpenAI、ARK、Kling、MuAPI 等供应商的 API Key、Base URL 和代理选项
 
 配置好后点击「保存配置」，就可以开始生成视频了！
 
@@ -296,6 +296,7 @@ uv run streamlit run web/app.py
 - DashScope / Wan / HappyHorse：用于通义万象图像、视频生成
 - Volcengine ARK / Seedream / Seedance：用于字节 Seedream 图像和 Seedance 视频生成
 - Kling AI / 可灵：用于可灵视频生成
+- MuAPI：用于 Nano Banana Pro 图像生成/编辑，以及 Seedance 2.5 文生视频/图生视频（[图像 API](https://muapi.ai/ai-image-api)，[视频 API](https://muapi.ai/ai-video-api)）
 
 **可配置项**
 - API Key / Access Key / Secret Key：模型供应商鉴权信息
@@ -381,7 +382,7 @@ uv run streamlit run web/app.py
 #### API 视频生成
 当选择支持动态视频的模板或扩展工作流时，可以使用直连 API 视频模型生成片段。
 
-- 支持 DashScope Wan / HappyHorse、Kling、Seedance 等视频模型
+- 支持 DashScope Wan / HappyHorse、Kling、Seedance、MuAPI 等视频模型
 - 支持按模型能力显示分辨率、画幅比例、时长、水印、原生音频等参数
 - 支持网络下载重试与内容审核失败后的提示词中性化重试
 - 在「自定义素材」工作流中，API 视频片段会尽量根据旁白音频时长生成，并使用相邻片段信息提升连贯性

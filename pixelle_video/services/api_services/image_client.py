@@ -1,20 +1,21 @@
-import os
-import time
-import uuid
 import logging
+import os
 from typing import List, Optional
+
 from .config import Config
 
 try:
     from .image_dashscope import DashScopeClient
-    from .image_seedream import SeedreamClient
     from .image_gpt import ImageGPT
     from .image_processor import ImageProcessor
+    from .image_seedream import SeedreamClient
+    from .muapi import MuapiImageClient
 except ImportError:
     from .image_dashscope import DashScopeClient
-    from .image_seedream import SeedreamClient
     from .image_gpt import ImageGPT
     from .image_processor import ImageProcessor
+    from .image_seedream import SeedreamClient
+    from .muapi import MuapiImageClient
 
 class ImageClient:
     def __init__(self,
@@ -26,7 +27,10 @@ class ImageClient:
                  local_proxy: Optional[str] = None,
                  ark_api_key: Optional[str] = None,
                  ark_base_url: Optional[str] = None,
-                 ark_local_proxy: Optional[str] = None):
+                 ark_local_proxy: Optional[str] = None,
+                 muapi_api_key: Optional[str] = None,
+                 muapi_base_url: Optional[str] = None,
+                 muapi_local_proxy: Optional[str] = None):
         """
         Unified Image Generation Client
         Routes requests to DashScope, Seedream, or GPT based on model name.
@@ -43,9 +47,14 @@ class ImageClient:
         self._ark_base_url = ark_base_url or Config.ARK_BASE_URL
         self._ark_local_proxy = ark_local_proxy
 
+        self._muapi_api_key = muapi_api_key or Config.MUAPI_API_KEY
+        self._muapi_base_url = muapi_base_url or Config.MUAPI_BASE_URL
+        self._muapi_local_proxy = muapi_local_proxy
+
         self._dashscope_client = None
         self._seedream_client = None
         self._gpt_client = None
+        self._muapi_client = None
 
         # Initialize Image Processor for downloads
         self.image_processor = ImageProcessor()
@@ -90,6 +99,17 @@ class ImageClient:
             )
         return self._gpt_client
 
+    @property
+    def muapi_client(self):
+        """Create the MuAPI client only when a MuAPI model is selected."""
+        if self._muapi_client is None:
+            self._muapi_client = MuapiImageClient(
+                api_key=self._muapi_api_key,
+                base_url=self._muapi_base_url,
+                local_proxy=self._muapi_local_proxy,
+            )
+        return self._muapi_client
+
     def generate_image(self,
                        prompt: str,
                        image_paths: Optional[List[str]] = None,
@@ -97,7 +117,8 @@ class ImageClient:
                        save_dir: Optional[str] = None,
                        session_id: Optional[str] = None,
                        video_ratio: Optional[str] = "16:9",
-                       resolution: Optional[str] = "2K") -> List[str]:
+                       resolution: Optional[str] = "2K",
+                       provider: Optional[str] = None) -> List[str]:
         """
         Generate images based on prompt and optional reference images.
 
@@ -160,7 +181,7 @@ class ImageClient:
                 print(f"Refs: {len(image_paths)}")
                 for p in image_paths:
                     if str(p).startswith("data:"):
-                        print(f" - [Base64图片]")
+                        print(" - [Base64图片]")
                     else:
                         print(f" - {p}")
             print(f"Model: {model}")
@@ -174,6 +195,7 @@ class ImageClient:
         # Determine backend provider
         is_seedream = "seedream" in model.lower()
         is_sora = "sora" in model.lower() or "gpt" in model.lower()
+        is_muapi = provider == "muapi"
         
         # Prepare save directory
         if not save_dir:
@@ -185,7 +207,21 @@ class ImageClient:
         
         generated_local_paths = []
 
-        if is_seedream:
+        if is_muapi:
+            logging.info(f"ImageClient requesting MuAPI: {model}")
+            paths = self.muapi_client.generate_image(
+                prompt=prompt,
+                image_paths=image_paths,
+                model=model,
+                session_id=session_id,
+                video_ratio=video_ratio,
+                resolution=resolution,
+                save_dir=save_dir,
+            )
+            if paths:
+                generated_local_paths.extend(paths)
+
+        elif is_seedream:
             # --- Seedream Logic ---
             try:
                 logging.info(f"ImageClient requesting Seedream: {model}")

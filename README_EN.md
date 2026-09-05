@@ -52,7 +52,7 @@ Just input a **topic**, and Pixelle-Video will automatically:
 - ✅ **AI Smart Copywriting** - Intelligently create narration based on topic, no need to write scripts yourself
 - ✅ **AI Generated Images** - Each sentence comes with beautiful AI illustrations
 - ✅ **AI Generated Videos** - Support AI video generation models (like WAN 2.1) to create dynamic video content
-- ✅ **Direct Model APIs** - Directly call image/video generation services from DashScope, OpenAI, Seedream, Seedance, Kling, and more
+- ✅ **Direct Model APIs** - Directly call image/video generation services from DashScope, OpenAI, Seedream, Seedance, Kling, MuAPI, and more
 - ✅ **AI Generated Voice** - Support Edge-TTS, Index-TTS and many other mainstream TTS solutions
 - ✅ **Background Music** - Support adding BGM to make videos more atmospheric
 - ✅ **Visual Styles** - Multiple templates to choose from, create unique video styles
@@ -246,7 +246,7 @@ Browser will automatically open http://localhost:8501
 On first use, expand the "⚙️ System Configuration" panel and fill in:
 - **LLM Configuration**: Select AI model (such as Qwen, GPT, etc.) and enter API Key
 - **ComfyUI / RunningHub Configuration**: Configure local ComfyUI or RunningHub API Key if you want to use workflow-based image, video, or voice generation
-- **API Media Model Configuration**: Configure API Key, Base URL, and proxy options for direct image/video model providers such as DashScope, OpenAI, ARK, and Kling
+- **API Media Model Configuration**: Configure API Key, Base URL, and proxy options for direct image/video model providers such as DashScope, OpenAI, ARK, Kling, and MuAPI
 
 After configuration, click "Save Configuration", and you can start generating videos!
 
@@ -292,6 +292,7 @@ Used to directly call image, video, or asset-analysis model providers without re
 - DashScope / Wan / HappyHorse: for Alibaba Tongyi Wan image and video generation
 - Volcengine ARK / Seedream / Seedance: for Seedream image generation and Seedance video generation
 - Kling AI: for Kling video generation
+- MuAPI: for Nano Banana Pro image generation/editing and Seedance 2.5 text/image-to-video generation ([image API](https://muapi.ai/ai-image-api), [video API](https://muapi.ai/ai-video-api))
 
 **Configurable Items**
 - API Key / Access Key / Secret Key: provider credentials
@@ -377,7 +378,7 @@ Determines video layout and design.
 #### API Video Generation
 When using dynamic video templates or extension workflows, you can generate clips through direct API video models.
 
-- Supports DashScope Wan / HappyHorse, Kling, Seedance and other video models
+- Supports DashScope Wan / HappyHorse, Kling, Seedance, MuAPI and other video models
 - Displays model-aware options such as resolution, aspect ratio, duration, watermark, and native audio
 - Supports network/download retries and LLM-based prompt neutralization retry for content-inspection failures
 - In the Custom Media workflow, API video segments try to follow narration audio duration and use neighboring segment information to improve continuity

@@ -16,6 +16,7 @@ Configuration schema with Pydantic models
 Single source of truth for all configuration defaults and validation.
 """
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -56,6 +57,7 @@ class APIProvidersConfig(BaseModel):
     gemini: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
     ark: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
     kling: AccessSecretProviderConfig = Field(default_factory=AccessSecretProviderConfig)
+    muapi: APIKeyProviderConfig = Field(default_factory=APIKeyProviderConfig)
 
 
 class TTSLocalConfig(BaseModel):
