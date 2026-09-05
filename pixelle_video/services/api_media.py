@@ -5,8 +5,8 @@
 """Direct API provider media generation adapter."""
 
 import asyncio
-from copy import deepcopy
 import os
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Optional
 
@@ -34,6 +34,10 @@ class APIProviderMediaService:
             "doubao-seedream-4-5-251128",
             "doubao-seedream-4-0-250828",
         ],
+        "muapi": [
+            "nano-banana-pro",
+            "nano-banana-pro-edit",
+        ],
     }
 
     VIDEO_MODELS = {
@@ -58,6 +62,10 @@ class APIProviderMediaService:
             "doubao-seedance-2-0-fast-260128",
             "seedance-1-0-pro",
             "seedance-1-0-lite",
+        ],
+        "muapi": [
+            "seedance-2.5-text-to-video",
+            "seedance-2.5-image-to-video",
         ],
     }
 
@@ -373,6 +381,32 @@ class APIProviderMediaService:
                 "Exact official model ID was not found. Volcengine docs refer to doubao-seedance model IDs, so this alias must be confirmed before relying on it.",
             ],
         },
+        ("muapi", "seedance-2.5-text-to-video"): {
+            "ability_type": "text_to_video",
+            "ability_types": ["text_to_video"],
+            "adapter_ability_types": ["text_to_video"],
+            "input_modalities": ["text"],
+            "adapter_input_modalities": ["text"],
+            "duration": {"min": 4, "max": 30, "integer": True, "verified": True},
+            "ratios": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"],
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": ["https://muapi.ai/ai-video-api"],
+            "contract_issues": [],
+        },
+        ("muapi", "seedance-2.5-image-to-video"): {
+            "ability_type": "image_to_video",
+            "ability_types": ["first_frame_i2v"],
+            "adapter_ability_types": ["first_frame_i2v"],
+            "input_modalities": ["text", "image"],
+            "adapter_input_modalities": ["text", "image"],
+            "duration": {"min": 4, "max": 30, "integer": True, "verified": True},
+            "ratios": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"],
+            "format": "mp4",
+            "api_contract_verified": True,
+            "source_urls": ["https://muapi.ai/ai-video-api"],
+            "contract_issues": [],
+        },
     }
 
     def __init__(self, config: dict, core=None):
@@ -477,12 +511,13 @@ class APIProviderMediaService:
         image_paths: Optional[list[str]] = None,
         **params,
     ) -> MediaResult:
-        from pixelle_video.services.api_services.image_client import ImageClient
 
         client = self._create_image_client()
         save_dir = self._save_dir(output_path, "api_images")
         ratio = self._ratio(width, height)
         resolution = self._resolution(width, height)
+        if provider == "muapi":
+            resolution = {"1080P": "1K", "2K": "2K", "4K": "4K"}.get(resolution, "1K")
         session_id = params.get("session_id") or "pixelle"
 
         logger.info(f"Generating image via API provider={provider}, model={model}")
@@ -495,6 +530,7 @@ class APIProviderMediaService:
             session_id=session_id,
             video_ratio=ratio,
             resolution=resolution,
+            provider=provider,
         )
 
         if not paths:
@@ -520,7 +556,6 @@ class APIProviderMediaService:
         height: Optional[int],
         **params,
     ) -> MediaResult:
-        from pixelle_video.services.api_services.video_client import VideoClient
 
         first_clip_path = params.get("first_clip_path") or params.get("first_video_path")
         reference_image_path = params.get("reference_image_path")
@@ -561,6 +596,7 @@ class APIProviderMediaService:
                     model=model,
                     duration=safe_duration,
                     video_ratio=ratio,
+                    provider=provider,
                     **video_options,
                 )
                 break
@@ -680,6 +716,9 @@ class APIProviderMediaService:
             ark_api_key=cfg["ark"].get("api_key") or None,
             ark_base_url=cfg["ark"].get("base_url") or None,
             ark_local_proxy=local_proxy if cfg["ark"].get("use_proxy") else None,
+            muapi_api_key=cfg["muapi"].get("api_key") or None,
+            muapi_base_url=cfg["muapi"].get("base_url") or None,
+            muapi_local_proxy=local_proxy if cfg["muapi"].get("use_proxy") else None,
         )
 
     def _create_video_client(self):
@@ -698,6 +737,9 @@ class APIProviderMediaService:
             ark_api_key=cfg["ark"].get("api_key") or None,
             ark_base_url=cfg["ark"].get("base_url") or None,
             ark_local_proxy=local_proxy if cfg["ark"].get("use_proxy") else None,
+            muapi_api_key=cfg["muapi"].get("api_key") or None,
+            muapi_base_url=cfg["muapi"].get("base_url") or None,
+            muapi_local_proxy=local_proxy if cfg["muapi"].get("use_proxy") else None,
         )
 
     def _save_dir(self, output_path: Optional[str], fallback_name: str) -> str:
