@@ -14,7 +14,7 @@ Showcase of videos created with Pixelle-Video, including complete production par
 
     ---
 
-    ![视频缩略图](https://via.placeholder.com/400x225?text=Reading+Habit)
+    ![视频缩略图](https://placeholder.photo/400x225?text=Reading+Habit)
     
     **时长 Duration**: 45s | **分镜 Scenes**: 5 | **尺寸 Size**: 1080x1920
     
@@ -28,7 +28,7 @@ Showcase of videos created with Pixelle-Video, including complete production par
 
     ---
 
-    ![视频缩略图](https://via.placeholder.com/400x225?text=Work+Efficiency)
+    ![视频缩略图](https://placeholder.photo/400x225?text=Work+Efficiency)
     
     **时长 Duration**: 30s | **分镜 Scenes**: 3 | **尺寸 Size**: 1920x1080
     
@@ -42,7 +42,7 @@ Showcase of videos created with Pixelle-Video, including complete production par
 
     ---
 
-    ![视频缩略图](https://via.placeholder.com/400x225?text=Healthy+Diet)
+    ![视频缩略图](https://placeholder.photo/400x225?text=Healthy+Diet)
     
     **时长 Duration**: 60s | **分镜 Scenes**: 6 | **尺寸 Size**: 1080x1080
     
